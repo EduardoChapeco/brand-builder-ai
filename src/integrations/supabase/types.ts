@@ -14,7 +14,189 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      briefing: {
+        Row: {
+          brand_dna: string | null
+          company_name: string | null
+          competitors: Json | null
+          font_preference: string | null
+          id: string
+          inspirations: Json | null
+          logo_url: string | null
+          main_differentials: string | null
+          primary_color: string | null
+          secondary_color: string | null
+          segment: string | null
+          target_audience: string | null
+          tone_of_voice: string | null
+          updated_at: string | null
+          visual_style: string | null
+        }
+        Insert: {
+          brand_dna?: string | null
+          company_name?: string | null
+          competitors?: Json | null
+          font_preference?: string | null
+          id?: string
+          inspirations?: Json | null
+          logo_url?: string | null
+          main_differentials?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          segment?: string | null
+          target_audience?: string | null
+          tone_of_voice?: string | null
+          updated_at?: string | null
+          visual_style?: string | null
+        }
+        Update: {
+          brand_dna?: string | null
+          company_name?: string | null
+          competitors?: Json | null
+          font_preference?: string | null
+          id?: string
+          inspirations?: Json | null
+          logo_url?: string | null
+          main_differentials?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          segment?: string | null
+          target_audience?: string | null
+          tone_of_voice?: string | null
+          updated_at?: string | null
+          visual_style?: string | null
+        }
+        Relationships: []
+      }
+      competitor_analyses: {
+        Row: {
+          analyzed_at: string | null
+          extracted_dna: string | null
+          id: string
+          name: string | null
+          raw_content: string | null
+          screenshot_url: string | null
+          url: string
+        }
+        Insert: {
+          analyzed_at?: string | null
+          extracted_dna?: string | null
+          id?: string
+          name?: string | null
+          raw_content?: string | null
+          screenshot_url?: string | null
+          url: string
+        }
+        Update: {
+          analyzed_at?: string | null
+          extracted_dna?: string | null
+          id?: string
+          name?: string | null
+          raw_content?: string | null
+          screenshot_url?: string | null
+          url?: string
+        }
+        Relationships: []
+      }
+      messages: {
+        Row: {
+          content: string | null
+          created_at: string | null
+          id: string
+          post_data: Json | null
+          role: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string | null
+          id?: string
+          post_data?: Json | null
+          role: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string | null
+          id?: string
+          post_data?: Json | null
+          role?: string
+        }
+        Relationships: []
+      }
+      posts: {
+        Row: {
+          caption: string | null
+          created_at: string | null
+          format: string | null
+          hashtags: string | null
+          html_content: Json | null
+          id: string
+          image_urls: Json | null
+          is_saved_template: boolean | null
+          slides_count: number | null
+          template_name: string | null
+          title: string | null
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string | null
+          format?: string | null
+          hashtags?: string | null
+          html_content?: Json | null
+          id?: string
+          image_urls?: Json | null
+          is_saved_template?: boolean | null
+          slides_count?: number | null
+          template_name?: string | null
+          title?: string | null
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string | null
+          format?: string | null
+          hashtags?: string | null
+          html_content?: Json | null
+          id?: string
+          image_urls?: Json | null
+          is_saved_template?: boolean | null
+          slides_count?: number | null
+          template_name?: string | null
+          title?: string | null
+        }
+        Relationships: []
+      }
+      templates: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          html_base: string | null
+          id: string
+          is_system: boolean | null
+          name: string
+          preview_url: string | null
+          tags: string[] | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          html_base?: string | null
+          id?: string
+          is_system?: boolean | null
+          name: string
+          preview_url?: string | null
+          tags?: string[] | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          html_base?: string | null
+          id?: string
+          is_system?: boolean | null
+          name?: string
+          preview_url?: string | null
+          tags?: string[] | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
