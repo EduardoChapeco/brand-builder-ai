@@ -2,10 +2,12 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowUp, ChevronLeft, ChevronRight, Download, Copy, Bookmark,
-  Sparkles, RefreshCw,
+  Sparkles, Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 type Message = {
   id: string;
@@ -37,50 +39,6 @@ const agentSteps = [
   { emoji: "🎨", name: "Carla", action: "Criando layout...", color: "text-success" },
 ];
 
-const MOCK_SLIDES: string[] = [
-  `<div style="width:540px;height:540px;background:linear-gradient(135deg,#7C3AED 0%,#4C1D95 100%);display:flex;flex-direction:column;justify-content:center;align-items:center;padding:60px;font-family:'DM Sans',sans-serif;color:white;position:relative;overflow:hidden;">
-    <div style="position:absolute;top:-60px;right:-60px;width:200px;height:200px;border-radius:50%;background:rgba(255,255,255,0.08);"></div>
-    <div style="position:absolute;bottom:-40px;left:-40px;width:150px;height:150px;border-radius:50%;background:rgba(6,182,212,0.15);"></div>
-    <div style="font-size:14px;letter-spacing:3px;text-transform:uppercase;opacity:0.7;margin-bottom:20px;">PostGen AI</div>
-    <div style="font-size:42px;font-weight:700;text-align:center;line-height:1.2;margin-bottom:24px;">5 Dicas Para Crescer Seu Negócio</div>
-    <div style="font-size:16px;opacity:0.8;text-align:center;">Estratégias comprovadas para escalar</div>
-  </div>`,
-  `<div style="width:540px;height:540px;background:#111119;display:flex;flex-direction:column;justify-content:center;padding:60px;font-family:'DM Sans',sans-serif;color:white;position:relative;">
-    <div style="position:absolute;top:40px;left:60px;font-size:64px;font-weight:800;color:rgba(124,58,237,0.15);">01</div>
-    <div style="font-size:13px;color:#06B6D4;letter-spacing:2px;text-transform:uppercase;margin-bottom:16px;">Dica #1</div>
-    <div style="font-size:32px;font-weight:700;line-height:1.3;margin-bottom:20px;">Conheça Seu Público-Alvo</div>
-    <div style="font-size:16px;color:#94a3b8;line-height:1.7;">Entenda profundamente quem são seus clientes. Pesquise seus hábitos, dores e desejos para criar soluções certeiras.</div>
-    <div style="position:absolute;bottom:40px;left:60px;right:60px;height:3px;background:linear-gradient(90deg,#7C3AED,transparent);border-radius:2px;"></div>
-  </div>`,
-  `<div style="width:540px;height:540px;background:#111119;display:flex;flex-direction:column;justify-content:center;padding:60px;font-family:'DM Sans',sans-serif;color:white;position:relative;">
-    <div style="position:absolute;top:40px;left:60px;font-size:64px;font-weight:800;color:rgba(124,58,237,0.15);">02</div>
-    <div style="font-size:13px;color:#06B6D4;letter-spacing:2px;text-transform:uppercase;margin-bottom:16px;">Dica #2</div>
-    <div style="font-size:32px;font-weight:700;line-height:1.3;margin-bottom:20px;">Invista em Marketing Digital</div>
-    <div style="font-size:16px;color:#94a3b8;line-height:1.7;">Presença online é essencial. Crie conteúdo relevante, use redes sociais estrategicamente e construa autoridade.</div>
-    <div style="position:absolute;bottom:40px;left:60px;right:60px;height:3px;background:linear-gradient(90deg,#7C3AED,transparent);border-radius:2px;"></div>
-  </div>`,
-  `<div style="width:540px;height:540px;background:#111119;display:flex;flex-direction:column;justify-content:center;padding:60px;font-family:'DM Sans',sans-serif;color:white;position:relative;">
-    <div style="position:absolute;top:40px;left:60px;font-size:64px;font-weight:800;color:rgba(124,58,237,0.15);">03</div>
-    <div style="font-size:13px;color:#06B6D4;letter-spacing:2px;text-transform:uppercase;margin-bottom:16px;">Dica #3</div>
-    <div style="font-size:32px;font-weight:700;line-height:1.3;margin-bottom:20px;">Automatize Processos</div>
-    <div style="font-size:16px;color:#94a3b8;line-height:1.7;">Use tecnologia para eliminar tarefas repetitivas. Foque seu tempo e energia no que realmente importa para crescer.</div>
-    <div style="position:absolute;bottom:40px;left:60px;right:60px;height:3px;background:linear-gradient(90deg,#7C3AED,transparent);border-radius:2px;"></div>
-  </div>`,
-  `<div style="width:540px;height:540px;background:linear-gradient(135deg,#4C1D95 0%,#7C3AED 50%,#06B6D4 100%);display:flex;flex-direction:column;justify-content:center;align-items:center;padding:60px;font-family:'DM Sans',sans-serif;color:white;text-align:center;">
-    <div style="font-size:36px;font-weight:700;margin-bottom:20px;">Pronto Para Crescer?</div>
-    <div style="font-size:16px;opacity:0.85;margin-bottom:32px;line-height:1.6;">Aplique essas dicas hoje e veja a diferença no seu negócio.</div>
-    <div style="padding:14px 40px;background:white;color:#4C1D95;border-radius:50px;font-weight:700;font-size:16px;">Fale Conosco →</div>
-  </div>`,
-];
-
-const MOCK_CAPTION = `🚀 5 dicas essenciais para fazer seu negócio crescer de forma sustentável!
-
-Cada uma dessas estratégias foi comprovada por empresas que saíram do zero ao sucesso. O segredo? Consistência e ação.
-
-Salve este post para consultar sempre que precisar de inspiração! 💡`;
-
-const MOCK_HASHTAGS = "#empreendedorismo #marketing #negocios #crescimento #dicas #estrategia #sucesso #marketingdigital";
-
 const ChatPage = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -90,10 +48,63 @@ const ChatPage = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isGenerating]);
+
+  // Load messages on mount
+  useEffect(() => {
+    const loadMessages = async () => {
+      const { data } = await supabase
+        .from("messages")
+        .select("*")
+        .order("created_at", { ascending: true });
+      if (data) {
+        setMessages(
+          data.map((m) => ({
+            id: m.id,
+            role: m.role as "user" | "assistant",
+            content: m.content || "",
+            postData: m.post_data as PostData | null,
+          }))
+        );
+        // Set last post as active
+        const lastPost = [...(data || [])].reverse().find((m) => m.post_data);
+        if (lastPost?.post_data) {
+          setActivePost(lastPost.post_data as PostData);
+          setCurrentSlide(0);
+        }
+      }
+    };
+    loadMessages();
+  }, []);
+
+  const fetchBriefing = async () => {
+    const { data } = await supabase.from("briefing").select("*").limit(1).maybeSingle();
+    return data;
+  };
+
+  const saveMessage = async (role: string, content: string, postData?: PostData | null) => {
+    await supabase.from("messages").insert({
+      role,
+      content,
+      post_data: postData ? (postData as any) : null,
+    });
+  };
+
+  const savePost = async (postData: PostData) => {
+    await supabase.from("posts").insert({
+      title: postData.title,
+      format: postData.format,
+      slides_count: postData.slides_html.length,
+      html_content: postData.slides_html as any,
+      caption: postData.caption,
+      hashtags: postData.hashtags,
+      template_name: postData.template,
+    });
+  };
 
   const handleSend = async () => {
     const text = input.trim();
@@ -105,35 +116,77 @@ const ChatPage = () => {
     setIsGenerating(true);
     setActiveStep(0);
 
-    // Simulate agent steps
-    for (let i = 0; i < agentSteps.length; i++) {
-      await new Promise((r) => setTimeout(r, 1200));
-      setActiveStep(i + 1);
+    // Save user message
+    saveMessage("user", text);
+
+    try {
+      // Fetch briefing
+      const briefing = await fetchBriefing();
+
+      // Simulate agent step progression (UI only)
+      const stepTimer1 = setTimeout(() => setActiveStep(1), 3000);
+      const stepTimer2 = setTimeout(() => setActiveStep(2), 7000);
+
+      // Call real edge function
+      const { data, error } = await supabase.functions.invoke("orchestrate-post", {
+        body: { user_message: text, briefing },
+      });
+
+      clearTimeout(stepTimer1);
+      clearTimeout(stepTimer2);
+
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+
+      const postData: PostData = {
+        title: data.post.title,
+        format: data.post.format,
+        slides_html: data.post.slides_html,
+        caption: data.post.caption,
+        hashtags: data.post.hashtags,
+        template: data.post.template,
+      };
+
+      // Show all steps as done briefly
+      setActiveStep(3);
+      await new Promise((r) => setTimeout(r, 600));
+
+      const assistantMsg: Message = {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content: `Pronto! Criei ${postData.format === "carousel" ? `um carrossel com ${postData.slides_html.length} slides` : "um post"} — "${postData.title}". Confira o preview ao lado!`,
+        postData,
+      };
+
+      setMessages((prev) => [...prev, assistantMsg]);
+      setActivePost(postData);
+      setCurrentSlide(0);
+
+      // Save to DB
+      saveMessage("assistant", assistantMsg.content, postData);
+      savePost(postData);
+
+      toast({ title: "✨ Post gerado!", description: `${postData.slides_html.length} slides criados com sucesso.` });
+    } catch (err: any) {
+      console.error("Generation error:", err);
+      const errMsg = err?.message || "Erro desconhecido";
+
+      const errorAssistant: Message = {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content: `❌ Erro ao gerar o post: ${errMsg}`,
+      };
+      setMessages((prev) => [...prev, errorAssistant]);
+
+      toast({
+        title: "Erro na geração",
+        description: errMsg,
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
+      setActiveStep(-1);
     }
-
-    await new Promise((r) => setTimeout(r, 800));
-
-    const postData: PostData = {
-      title: "5 Dicas Para Crescer Seu Negócio",
-      format: "carousel",
-      slides_html: MOCK_SLIDES,
-      caption: MOCK_CAPTION,
-      hashtags: MOCK_HASHTAGS,
-      template: "minimal-dark",
-    };
-
-    const assistantMsg: Message = {
-      id: crypto.randomUUID(),
-      role: "assistant",
-      content: "Pronto! Criei um carrossel com 5 slides sobre crescimento de negócios. Confira o preview ao lado e faça download quando quiser.",
-      postData,
-    };
-
-    setMessages((prev) => [...prev, assistantMsg]);
-    setActivePost(postData);
-    setCurrentSlide(0);
-    setIsGenerating(false);
-    setActiveStep(-1);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -146,6 +199,7 @@ const ChatPage = () => {
   const handleCopyCaption = () => {
     if (!activePost) return;
     navigator.clipboard.writeText(activePost.caption + "\n\n" + activePost.hashtags);
+    toast({ title: "✅ Legenda copiada!" });
   };
 
   return (
@@ -159,7 +213,7 @@ const ChatPage = () => {
             <p className="text-xs text-muted-foreground">Gerador de posts com IA</p>
           </div>
           <Badge variant="secondary" className="font-mono text-xs">
-            llama-3.3-70b
+            gemini-3-flash
           </Badge>
         </div>
 
@@ -176,8 +230,8 @@ const ChatPage = () => {
               </div>
               <div className="grid max-w-lg gap-3">
                 {[
-                  "📱 Crie um carrossel com 5 dicas sobre meu segmento",
-                  "🚀 Post de lançamento para meu produto",
+                  "📱 Crie um carrossel com 5 dicas sobre marketing digital",
+                  "🚀 Post de lançamento para um novo produto SaaS",
                   "💬 Post com depoimento de cliente satisfeito",
                 ].map((prompt) => (
                   <button
@@ -257,7 +311,7 @@ const ChatPage = () => {
                       {i < activeStep ? (
                         <span className="text-success">✓</span>
                       ) : i === activeStep ? (
-                        <span className="inline-block h-2 w-2 rounded-full bg-primary animate-pulse-violet" />
+                        <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
                       ) : (
                         <span className="inline-block h-2 w-2 rounded-full bg-muted" />
                       )}
@@ -296,6 +350,7 @@ const ChatPage = () => {
               rows={1}
               className="w-full resize-none rounded-xl border border-border bg-card px-4 py-3 pr-12 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               style={{ maxHeight: "120px" }}
+              disabled={isGenerating}
             />
             <Button
               size="icon"
@@ -303,11 +358,11 @@ const ChatPage = () => {
               disabled={!input.trim() || isGenerating}
               className="absolute bottom-2 right-2 h-8 w-8 rounded-lg"
             >
-              <ArrowUp className="h-4 w-4" />
+              {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUp className="h-4 w-4" />}
             </Button>
           </div>
           <p className="mt-2 text-center text-[11px] text-muted-foreground">
-            PostGen usa seus agentes IA configurados em Settings
+            PostGen usa agentes IA para gerar posts profissionais
           </p>
         </div>
       </div>
