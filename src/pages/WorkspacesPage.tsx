@@ -62,8 +62,8 @@ const WorkspacesPage = () => {
 
   return (
     <div
-      className="min-h-screen flex flex-col gradient-mesh"
-      style={{ background: 'var(--bg-app)' }}
+      className="min-h-screen flex flex-col gradient-mesh overflow-y-auto"
+      style={{ background: 'var(--bg-app)', scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
     >
       {/* Header */}
       <header className="flex items-center justify-between px-8 py-6">

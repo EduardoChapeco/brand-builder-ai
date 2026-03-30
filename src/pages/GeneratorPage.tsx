@@ -787,24 +787,44 @@ const GeneratorPage = () => {
           <div className="panel-section">
             <p className="panel-section-title">Slides ({slides.length})</p>
             <div className="flex flex-col gap-2 max-h-48 overflow-y-auto">
-              {slides.map((html, i) => (
-                <button key={i} onClick={() => setCurrentSlide(i)}
-                  className="relative rounded-lg overflow-hidden shrink-0 transition-all"
-                  style={{
-                    height: 60,
-                    border: `2px solid ${i === currentSlide ? 'var(--primary)' : 'var(--border)'}`,
-                  }}>
-                  <SlideFrame slideHtml={html} width={width} height={height} />
-                  <div className="absolute inset-0" style={{ transform: `scale(${60 / height})`, transformOrigin: 'top left', pointerEvents: 'none' }} />
-                  <span className="absolute top-1 left-1 text-[9px] font-bold px-1 py-0.5 rounded"
-                    style={{ background: i === currentSlide ? 'var(--primary)' : 'rgba(0,0,0,0.5)', color: 'white' }}>
-                    {i + 1}
-                  </span>
-                </button>
-              ))}
+              {slides.map((html, i) => {
+                // Scale the full artboard down to fit the 60px tall thumbnail
+                const thumbHeight = 60;
+                const thumbWidth = Math.round((width / height) * thumbHeight);
+                const thumbScale = thumbHeight / height;
+                return (
+                  <button key={i} onClick={() => setCurrentSlide(i)}
+                    className="relative rounded-lg overflow-hidden shrink-0 transition-all"
+                    style={{
+                      height: thumbHeight,
+                      width: thumbWidth,
+                      border: `2px solid ${i === currentSlide ? 'var(--primary)' : 'var(--border)'}`,
+                      alignSelf: 'stretch',
+                    }}>
+                    {/* Scaled-down iframe — acts like a static image thumbnail */}
+                    <div style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width,
+                      height,
+                      transform: `scale(${thumbScale})`,
+                      transformOrigin: 'top left',
+                      pointerEvents: 'none',
+                    }}>
+                      <SlideFrame slideHtml={html} width={width} height={height} />
+                    </div>
+                    <span className="absolute top-1 left-1 text-[9px] font-bold px-1 py-0.5 rounded"
+                      style={{ background: i === currentSlide ? 'var(--primary)' : 'rgba(0,0,0,0.5)', color: 'white' }}>
+                      {i + 1}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
+
 
         {/* Caption */}
         {generated && (

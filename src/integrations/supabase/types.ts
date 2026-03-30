@@ -178,6 +178,29 @@ type LegacyCompetitorAnalysisRow = {
   analyzed_at: string | null;
 };
 
+type BrandTemplateRow = {
+  id: string;
+  workspace_id: string;
+  source_url: string;
+  source_name: string | null;
+  source_platform: string | null;
+  layout_dna: Json | null;
+  brand_dna: Json | null;
+  copy_dna: Json | null;
+  html_template: string | null;
+  screenshot_url: string | null;
+  thumbnail_url: string | null;
+  style_tags: string[] | null;
+  category: string | null;
+  status: string | null;
+  error_message: string | null;
+  is_public: boolean | null;
+  view_count: number | null;
+  use_count: number | null;
+  created_at: string | null;
+  analyzed_at: string | null;
+};
+
 export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.4";
@@ -196,6 +219,7 @@ export type Database = {
       posts: TableDefinition<LegacyPostRow>;
       templates: TableDefinition<LegacyTemplateRow>;
       competitor_analyses: TableDefinition<LegacyCompetitorAnalysisRow>;
+      brand_templates: TableDefinition<BrandTemplateRow>;
     };
     Views: {
       [_ in never]: never;

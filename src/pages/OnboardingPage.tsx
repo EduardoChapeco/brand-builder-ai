@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowRight, Check, Plus, Trash2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
 
 const SEGMENTS = [
   'Marketing Digital',
@@ -144,7 +145,7 @@ const OnboardingPage = () => {
           tone_of_voice: form.tone,
           main_differentials: form.differentials,
           instagram_handle: form.instagramHandle,
-          main_competitors: competitors,
+          main_competitors: competitors as unknown as Json,
         }),
         supabase.from('brand_kits').insert({
           workspace_id: workspace.id,
@@ -175,8 +176,8 @@ const OnboardingPage = () => {
 
   return (
     <div
-      className="min-h-screen flex flex-col items-center justify-center p-6 gradient-mesh"
-      style={{ background: 'var(--bg-app)' }}
+      className="min-h-screen flex flex-col items-center justify-center p-6 gradient-mesh overflow-y-auto"
+      style={{ background: 'var(--bg-app)', scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
     >
       <div className="w-full max-w-xl mb-8">
         <div className="flex items-center gap-2 mb-3">

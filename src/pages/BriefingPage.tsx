@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
 
 interface BriefingForm {
   company_name: string;
@@ -135,7 +136,7 @@ const BriefingPage = () => {
         keywords: form.keywords
           ? form.keywords.split(',').map(keyword => keyword.trim()).filter(Boolean)
           : [],
-        main_competitors: competitors,
+        main_competitors: competitors as unknown as Json,
         updated_at: new Date().toISOString(),
       };
 
