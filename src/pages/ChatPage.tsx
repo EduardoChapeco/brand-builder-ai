@@ -90,7 +90,7 @@ const ChatPage = () => {
     await supabase.from("messages").insert({
       role,
       content,
-      post_data: postData ? (postData as any) : null,
+      post_data: postData ?? null,
     });
   };
 
@@ -99,7 +99,7 @@ const ChatPage = () => {
       title: postData.title,
       format: postData.format,
       slides_count: postData.slides_html.length,
-      html_content: postData.slides_html as any,
+      html_content: postData.slides_html,
       caption: postData.caption,
       hashtags: postData.hashtags,
       template_name: postData.template,
@@ -167,9 +167,9 @@ const ChatPage = () => {
       savePost(postData);
 
       toast({ title: "✨ Post gerado!", description: `${postData.slides_html.length} slides criados com sucesso.` });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Generation error:", err);
-      const errMsg = err?.message || "Erro desconhecido";
+      const errMsg = err instanceof Error ? err.message : "Erro desconhecido";
 
       const errorAssistant: Message = {
         id: crypto.randomUUID(),

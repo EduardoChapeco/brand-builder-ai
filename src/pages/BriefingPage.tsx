@@ -1,144 +1,498 @@
-import { useState } from "react";
-import { Plus, ExternalLink, Search as SearchIcon } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { FileText, Plus, Save, Search, Sparkles } from 'lucide-react';
+import { toast } from 'sonner';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
+import { supabase } from '@/integrations/supabase/client';
+
+interface BriefingForm {
+  company_name: string;
+  segment: string;
+  target_audience: string;
+  main_differentials: string;
+  tone_of_voice: string;
+  pain_points: string;
+  market_position: string;
+  avoid_topics: string;
+  instagram_handle: string;
+  linkedin_handle: string;
+  keywords: string;
+}
+
+interface CompetitorItem {
+  name: string;
+  url: string;
+  notes: string;
+}
+
+interface CompetitorAnalysis {
+  id: string;
+  url: string;
+  name: string | null;
+  dna_text: string | null;
+  raw_markdown: string | null;
+  analyzed_at: string | null;
+}
+
+const EMPTY_FORM: BriefingForm = {
+  company_name: '',
+  segment: '',
+  target_audience: '',
+  main_differentials: '',
+  tone_of_voice: '',
+  pain_points: '',
+  market_position: '',
+  avoid_topics: '',
+  instagram_handle: '',
+  linkedin_handle: '',
+  keywords: '',
+};
+
+const EMPTY_COMPETITOR: CompetitorItem = {
+  name: '',
+  url: '',
+  notes: '',
+};
 
 const BriefingPage = () => {
-  const [competitors, setCompetitors] = useState([{ name: "", url: "", notes: "" }]);
+  const navigate = useNavigate();
+  const { workspace, briefing: wsBriefing, refreshBriefing } = useWorkspace();
+
+  const [form, setForm] = useState<BriefingForm>(EMPTY_FORM);
+  const [competitors, setCompetitors] = useState<CompetitorItem[]>([]);
+  const [draftCompetitor, setDraftCompetitor] = useState<CompetitorItem>(EMPTY_COMPETITOR);
+  const [analyses, setAnalyses] = useState<CompetitorAnalysis[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+  const [analyzingUrl, setAnalyzingUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!wsBriefing) {
+      setForm(EMPTY_FORM);
+      setCompetitors([]);
+      return;
+    }
+
+    setForm({
+      company_name: wsBriefing.company_name || '',
+      segment: wsBriefing.segment || '',
+      target_audience: wsBriefing.target_audience || '',
+      main_differentials: wsBriefing.main_differentials || '',
+      tone_of_voice: wsBriefing.tone_of_voice || '',
+      pain_points: wsBriefing.pain_points || '',
+      market_position: wsBriefing.market_position || '',
+      avoid_topics: wsBriefing.avoid_topics || '',
+      instagram_handle: wsBriefing.instagram_handle || '',
+      linkedin_handle: wsBriefing.linkedin_handle || '',
+      keywords: Array.isArray(wsBriefing.keywords) ? wsBriefing.keywords.join(', ') : '',
+    });
+
+    setCompetitors(Array.isArray(wsBriefing.main_competitors) ? wsBriefing.main_competitors : []);
+  }, [wsBriefing]);
+
+  const fetchAnalyses = useCallback(async () => {
+    if (!workspace?.id) return;
+
+    const { data, error } = await supabase
+      .from('competitor_analyses_v2')
+      .select('*')
+      .eq('workspace_id', workspace.id)
+      .order('analyzed_at', { ascending: false });
+
+    if (error) {
+      toast.error('Erro ao carregar analises de concorrentes');
+      return;
+    }
+
+    setAnalyses((data || []) as CompetitorAnalysis[]);
+  }, [workspace?.id]);
+
+  useEffect(() => {
+    fetchAnalyses();
+  }, [fetchAnalyses]);
+
+  const setField = <K extends keyof BriefingForm>(field: K, value: BriefingForm[K]) => {
+    setForm(current => ({ ...current, [field]: value }));
+  };
+
+  const handleSave = async () => {
+    if (!workspace?.id) return;
+
+    setIsSaving(true);
+    try {
+      const payload = {
+        workspace_id: workspace.id,
+        company_name: form.company_name,
+        segment: form.segment,
+        target_audience: form.target_audience,
+        main_differentials: form.main_differentials,
+        tone_of_voice: form.tone_of_voice,
+        pain_points: form.pain_points,
+        market_position: form.market_position,
+        avoid_topics: form.avoid_topics,
+        instagram_handle: form.instagram_handle,
+        linkedin_handle: form.linkedin_handle,
+        keywords: form.keywords
+          ? form.keywords.split(',').map(keyword => keyword.trim()).filter(Boolean)
+          : [],
+        main_competitors: competitors,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (wsBriefing) {
+        await supabase.from('briefings').update(payload).eq('workspace_id', workspace.id);
+      } else {
+        await supabase.from('briefings').insert(payload);
+      }
+
+      await refreshBriefing();
+      toast.success('Briefing salvo');
+    } catch (error) {
+      console.error(error);
+      toast.error('Erro ao salvar briefing');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleAddCompetitor = () => {
+    if (!draftCompetitor.url.trim()) {
+      toast.error('Informe a URL do concorrente');
+      return;
+    }
+
+    setCompetitors(current => [
+      ...current,
+      {
+        name: draftCompetitor.name.trim(),
+        url: draftCompetitor.url.trim(),
+        notes: draftCompetitor.notes.trim(),
+      },
+    ]);
+    setDraftCompetitor(EMPTY_COMPETITOR);
+  };
+
+  const handleRemoveCompetitor = (url: string) => {
+    setCompetitors(current => current.filter(item => item.url !== url));
+  };
+
+  const handleAnalyzeCompetitor = async (competitor: CompetitorItem) => {
+    if (!workspace?.id) return;
+
+    setAnalyzingUrl(competitor.url);
+    try {
+      const { error } = await supabase.functions.invoke('analyze-url', {
+        body: {
+          workspace_id: workspace.id,
+          url: competitor.url,
+          name: competitor.name || null,
+          notes: competitor.notes || null,
+        },
+      });
+
+      if (error) throw error;
+
+      await Promise.all([fetchAnalyses(), refreshBriefing()]);
+      toast.success('Concorrente analisado');
+    } catch (error) {
+      console.error(error);
+      toast.error('Erro ao analisar concorrente');
+    } finally {
+      setAnalyzingUrl(null);
+    }
+  };
+
+  const getAnalysisByUrl = (url: string) => analyses.find(item => item.url === url);
+
+  const textareaStyle = {
+    background: 'var(--bg-elevated)',
+    border: '1px solid var(--border)',
+    color: 'var(--text-1)',
+  };
+  const inputStyle = {
+    background: 'var(--bg-elevated)',
+    border: '1px solid var(--border)',
+    color: 'var(--text-1)',
+  };
+  const labelStyle = { color: 'var(--text-2)' };
+  const fieldClass = 'w-full px-3 py-2.5 rounded-xl text-sm outline-none transition-colors';
+
+  const Field = ({
+    label,
+    field,
+    rows,
+    placeholder,
+  }: {
+    label: string;
+    field: keyof BriefingForm;
+    rows?: number;
+    placeholder?: string;
+  }) => (
+    <div>
+      <label className="block text-xs font-medium mb-1.5" style={labelStyle}>
+        {label}
+      </label>
+      {rows ? (
+        <textarea
+          value={form[field]}
+          onChange={event => setField(field, event.target.value)}
+          rows={rows}
+          placeholder={placeholder}
+          className={`${fieldClass} resize-none`}
+          style={textareaStyle}
+        />
+      ) : (
+        <input
+          value={form[field]}
+          onChange={event => setField(field, event.target.value)}
+          placeholder={placeholder}
+          className={fieldClass}
+          style={inputStyle}
+        />
+      )}
+    </div>
+  );
 
   return (
-    <div className="chat-scrollbar h-full overflow-y-auto">
-      <div className="mx-auto max-w-2xl px-6 py-8">
-        <h1 className="text-xl font-bold text-foreground">Briefing da Empresa</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Configure sua marca para que os agentes gerem posts personalizados.</p>
+    <div className="flex flex-col h-full overflow-hidden" style={{ background: 'var(--bg-app)' }}>
+      <div
+        className="flex items-center gap-3 px-6 py-4 shrink-0"
+        style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)' }}
+      >
+        <FileText size={20} style={{ color: 'var(--primary)' }} />
+        <h1 className="text-lg font-bold font-display" style={{ color: 'var(--text-1)' }}>
+          Briefing
+        </h1>
+        <span
+          className="text-xs px-2 py-0.5 rounded-full"
+          style={{ background: 'var(--primary-muted)', color: 'var(--primary)' }}
+        >
+          Base de conhecimento da IA
+        </span>
+      </div>
 
-        <Accordion type="multiple" defaultValue={["empresa", "visual"]} className="mt-6">
-          {/* Section 1 */}
-          <AccordionItem value="empresa">
-            <AccordionTrigger className="text-base font-semibold">🏢 Empresa</AccordionTrigger>
-            <AccordionContent className="space-y-4 pt-2">
-              <div className="space-y-2">
-                <Label>Nome da empresa</Label>
-                <Input placeholder="Ex: PostGen AI" />
-              </div>
-              <div className="space-y-2">
-                <Label>Segmento / Nicho</Label>
-                <Input placeholder="Ex: SaaS de Marketing" />
-              </div>
-              <div className="space-y-2">
-                <Label>Público-alvo</Label>
-                <Input placeholder="Ex: Empreendedores e profissionais de marketing" />
-              </div>
-              <div className="space-y-2">
-                <Label>Diferenciais principais</Label>
-                <Textarea placeholder="O que torna sua empresa única?" rows={3} />
-              </div>
-              <div className="space-y-2">
-                <Label>Tom de voz</Label>
-                <Textarea placeholder="Ex: descontraído, jovem, direto ao ponto, sem jargões..." rows={2} />
-              </div>
-            </AccordionContent>
-          </AccordionItem>
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-3xl mx-auto p-6">
+          <Accordion type="multiple" defaultValue={['empresa', 'publico', 'concorrentes']} className="space-y-3">
+            <AccordionItem value="empresa" className="rounded-2xl overflow-hidden" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+              <AccordionTrigger className="px-5 py-4 font-semibold font-display hover:no-underline" style={{ color: 'var(--text-1)' }}>
+                Empresa
+              </AccordionTrigger>
+              <AccordionContent className="px-5 pb-5 space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Nome da empresa" field="company_name" placeholder="Studio Criativo" />
+                  <Field label="Segmento / nicho" field="segment" placeholder="Marketing Digital" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Instagram" field="instagram_handle" placeholder="@suaempresa" />
+                  <Field label="LinkedIn" field="linkedin_handle" placeholder="sua-empresa" />
+                </div>
+              </AccordionContent>
+            </AccordionItem>
 
-          {/* Section 2 */}
-          <AccordionItem value="visual">
-            <AccordionTrigger className="text-base font-semibold">🎨 Identidade Visual</AccordionTrigger>
-            <AccordionContent className="space-y-4 pt-2">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Cor primária</Label>
+            <AccordionItem value="publico" className="rounded-2xl overflow-hidden" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+              <AccordionTrigger className="px-5 py-4 font-semibold font-display hover:no-underline" style={{ color: 'var(--text-1)' }}>
+                Publico-alvo
+              </AccordionTrigger>
+              <AccordionContent className="px-5 pb-5 space-y-4">
+                <Field label="Quem e seu publico?" field="target_audience" rows={3} placeholder="Ex: empreendedores, donos de pequenas empresas..." />
+                <Field label="Principais dores" field="pain_points" rows={3} placeholder="O que trava a decisao de compra?" />
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="posicionamento" className="rounded-2xl overflow-hidden" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+              <AccordionTrigger className="px-5 py-4 font-semibold font-display hover:no-underline" style={{ color: 'var(--text-1)' }}>
+                Posicionamento
+              </AccordionTrigger>
+              <AccordionContent className="px-5 pb-5 space-y-4">
+                <Field label="Principais diferenciais" field="main_differentials" rows={3} placeholder="O que te diferencia da concorrencia?" />
+                <Field label="Posicao no mercado" field="market_position" placeholder="Lider em X, desafiante em Y..." />
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="tom" className="rounded-2xl overflow-hidden" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+              <AccordionTrigger className="px-5 py-4 font-semibold font-display hover:no-underline" style={{ color: 'var(--text-1)' }}>
+                Tom e voz
+              </AccordionTrigger>
+              <AccordionContent className="px-5 pb-5 space-y-4">
+                <Field label="Tom de voz" field="tone_of_voice" rows={2} placeholder="Direto, didatico, sem jargoes..." />
+                <Field label="Temas para evitar" field="avoid_topics" rows={2} placeholder="Nao mencionar X, evitar Y..." />
+                <Field label="Palavras-chave" field="keywords" placeholder="produtividade, IA, automacao..." />
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="concorrentes" className="rounded-2xl overflow-hidden" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+              <AccordionTrigger className="px-5 py-4 font-semibold font-display hover:no-underline" style={{ color: 'var(--text-1)' }}>
+                Concorrentes e inspiracoes
+              </AccordionTrigger>
+              <AccordionContent className="px-5 pb-5 space-y-4">
+                <div className="grid grid-cols-3 gap-2">
+                  <input
+                    value={draftCompetitor.name}
+                    onChange={event => setDraftCompetitor(current => ({ ...current, name: event.target.value }))}
+                    placeholder="Nome"
+                    className={fieldClass}
+                    style={inputStyle}
+                  />
+                  <input
+                    value={draftCompetitor.url}
+                    onChange={event => setDraftCompetitor(current => ({ ...current, url: event.target.value }))}
+                    placeholder="https://site.com"
+                    className={fieldClass}
+                    style={inputStyle}
+                  />
                   <div className="flex gap-2">
-                    <input type="color" defaultValue="#7C3AED" className="h-9 w-12 cursor-pointer rounded-lg border border-border bg-card" />
-                    <Input defaultValue="#7C3AED" className="flex-1 font-mono text-xs" />
+                    <input
+                      value={draftCompetitor.notes}
+                      onChange={event => setDraftCompetitor(current => ({ ...current, notes: event.target.value }))}
+                      placeholder="Notas"
+                      className={`${fieldClass} flex-1`}
+                      style={inputStyle}
+                    />
+                    <button
+                      onClick={handleAddCompetitor}
+                      className="px-3 rounded-xl text-sm font-medium"
+                      style={{ background: 'var(--primary)', color: 'white' }}
+                    >
+                      <Plus size={14} />
+                    </button>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Cor secundária</Label>
-                  <div className="flex gap-2">
-                    <input type="color" defaultValue="#06B6D4" className="h-9 w-12 cursor-pointer rounded-lg border border-border bg-card" />
-                    <Input defaultValue="#06B6D4" className="flex-1 font-mono text-xs" />
+
+                {competitors.length === 0 ? (
+                  <div
+                    className="rounded-xl px-4 py-3 text-sm"
+                    style={{ background: 'var(--bg-elevated)', border: '1px dashed var(--border)', color: 'var(--text-3)' }}
+                  >
+                    Adicione concorrentes para gerar DNA de comunicacao e referencias.
                   </div>
+                ) : (
+                  <div className="space-y-3">
+                    {competitors.map(competitor => {
+                      const analysis = getAnalysisByUrl(competitor.url);
+                      const isAnalyzing = analyzingUrl === competitor.url;
+
+                      return (
+                        <div
+                          key={competitor.url}
+                          className="rounded-xl p-4 space-y-3"
+                          style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-1)' }}>
+                                {competitor.name || competitor.url}
+                              </p>
+                              <p className="text-xs truncate" style={{ color: 'var(--text-3)' }}>
+                                {competitor.url}
+                              </p>
+                              {competitor.notes && (
+                                <p className="text-xs mt-1" style={{ color: 'var(--text-2)' }}>
+                                  {competitor.notes}
+                                </p>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span
+                                className="text-[10px] px-2 py-0.5 rounded-full"
+                                style={{
+                                  background: analysis ? '#10B98120' : '#47556920',
+                                  color: analysis ? '#10B981' : '#94A3B8',
+                                }}
+                              >
+                                {analysis ? 'Analisado' : 'Pendente'}
+                              </span>
+                              <button
+                                onClick={() => handleAnalyzeCompetitor(competitor)}
+                                disabled={isAnalyzing}
+                                className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-medium disabled:opacity-60"
+                                style={{ background: 'var(--primary-muted)', border: '1px solid var(--primary)', color: 'var(--primary)' }}
+                              >
+                                {isAnalyzing ? <Sparkles size={12} className="animate-spin" /> : <Search size={12} />}
+                                {isAnalyzing ? 'Analisando...' : 'Analisar'}
+                              </button>
+                              <button
+                                onClick={() => handleRemoveCompetitor(competitor.url)}
+                                className="px-3 py-2 rounded-xl text-xs font-medium"
+                                style={{ background: 'var(--bg-app)', border: '1px solid var(--border)', color: 'var(--text-2)' }}
+                              >
+                                Remover
+                              </button>
+                            </div>
+                          </div>
+
+                          {analysis?.dna_text && (
+                            <div
+                              className="rounded-xl p-3 text-xs whitespace-pre-wrap"
+                              style={{ background: 'var(--bg-app)', border: '1px solid var(--border)', color: 'var(--text-2)' }}
+                            >
+                              {analysis.dna_text}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="dna" className="rounded-2xl overflow-hidden" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+              <AccordionTrigger className="px-5 py-4 font-semibold font-display hover:no-underline" style={{ color: 'var(--text-1)' }}>
+                DNA da marca
+              </AccordionTrigger>
+              <AccordionContent className="px-5 pb-5 space-y-4">
+                <div
+                  className="rounded-xl p-4 text-sm whitespace-pre-wrap"
+                  style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-2)', minHeight: 180 }}
+                >
+                  {wsBriefing?.brand_dna || 'Analise concorrentes para gerar um DNA consolidado da marca.'}
                 </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Estilo tipográfico</Label>
-                <Select defaultValue="moderna">
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="moderna">Moderna e clean (DM Sans, Inter)</SelectItem>
-                    <SelectItem value="serifada">Serifada e elegante (Playfair Display)</SelectItem>
-                    <SelectItem value="bold">Bold e impactante (Space Grotesk)</SelectItem>
-                    <SelectItem value="minimalista">Minimalista (Geist)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Estilo visual</Label>
-                <Select defaultValue="dark">
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="dark">Dark e premium</SelectItem>
-                    <SelectItem value="vibrante">Vibrante e colorido</SelectItem>
-                    <SelectItem value="clean">Clean e minimalista</SelectItem>
-                    <SelectItem value="editorial">Editorial e magazine</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </AccordionContent>
-          </AccordionItem>
+              </AccordionContent>
+            </AccordionItem>
 
-          {/* Section 3 */}
-          <AccordionItem value="concorrentes">
-            <AccordionTrigger className="text-base font-semibold">🔍 Concorrentes & Inspirações</AccordionTrigger>
-            <AccordionContent className="space-y-4 pt-2">
-              {competitors.map((c, i) => (
-                <div key={i} className="rounded-xl border border-border bg-card p-4 space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <Input placeholder="Nome" value={c.name} onChange={(e) => { const n = [...competitors]; n[i].name = e.target.value; setCompetitors(n); }} />
-                    <Input placeholder="URL" value={c.url} onChange={(e) => { const n = [...competitors]; n[i].url = e.target.value; setCompetitors(n); }} />
+            <AccordionItem value="rss" className="rounded-2xl overflow-hidden" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+              <AccordionTrigger className="px-5 py-4 font-semibold font-display hover:no-underline" style={{ color: 'var(--text-1)' }}>
+                Feeds RSS
+              </AccordionTrigger>
+              <AccordionContent className="px-5 pb-5">
+                <div
+                  className="rounded-xl p-4 flex items-center justify-between gap-4"
+                  style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}
+                >
+                  <div>
+                    <p className="text-sm font-medium" style={{ color: 'var(--text-1)' }}>
+                      Gerencie seus feeds na pagina de configuracoes.
+                    </p>
+                    <p className="text-xs mt-1" style={{ color: 'var(--text-3)' }}>
+                      O gerador usa esses feeds para sugerir topicos recentes sem custo de IA.
+                    </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="text-xs text-muted-foreground">Não analisado</Badge>
-                    <Button size="sm" variant="ghost" className="ml-auto gap-1.5 text-xs">
-                      <SearchIcon className="h-3 w-3" /> Analisar
-                    </Button>
-                  </div>
+                  <button
+                    onClick={() => navigate('../settings')}
+                    className="px-3 py-2 rounded-xl text-xs font-medium"
+                    style={{ background: 'var(--primary)', color: 'white' }}
+                  >
+                    Ir para Settings
+                  </button>
                 </div>
-              ))}
-              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setCompetitors([...competitors, { name: "", url: "", notes: "" }])}>
-                <Plus className="h-3.5 w-3.5" /> Adicionar Concorrente
-              </Button>
-            </AccordionContent>
-          </AccordionItem>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
 
-          {/* Section 4 */}
-          <AccordionItem value="dna">
-            <AccordionTrigger className="text-base font-semibold">🧠 DNA da Marca (IA)</AccordionTrigger>
-            <AccordionContent className="pt-2">
-              <div className="rounded-xl border border-dashed border-border bg-muted/30 p-6 text-center">
-                <p className="text-sm text-muted-foreground">Analise seus concorrentes para gerar o DNA da marca automaticamente.</p>
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
-
-        <Button className="mt-8 w-full gap-2" size="lg">💾 Salvar Briefing</Button>
+          <div className="mt-6">
+            <button
+              onClick={handleSave}
+              disabled={isSaving}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all disabled:opacity-60"
+              style={{ background: 'var(--primary)', color: 'white', boxShadow: '0 8px 24px rgba(124,58,237,0.25)' }}
+            >
+              <Save size={15} />
+              {isSaving ? 'Salvando...' : 'Salvar briefing'}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

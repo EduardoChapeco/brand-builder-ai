@@ -1,30 +1,47 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { Toaster } from "@/components/ui/toaster";
+import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
 import AppShell from "@/components/AppShell";
-import ChatPage from "@/pages/ChatPage";
+import WorkspacesPage from "@/pages/WorkspacesPage";
+import OnboardingPage from "@/pages/OnboardingPage";
+import GeneratorPage from "@/pages/GeneratorPage";
 import LibraryPage from "@/pages/LibraryPage";
+import BrandKitPage from "@/pages/BrandKitPage";
 import BriefingPage from "@/pages/BriefingPage";
 import SettingsPage from "@/pages/SettingsPage";
 import NotFound from "@/pages/NotFound";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { staleTime: 1000 * 60 * 5, retry: 1 },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
+      <Toaster position="top-right" richColors />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Navigate to="/chat" replace />} />
-          <Route element={<AppShell />}>
-            <Route path="/chat" element={<ChatPage />} />
-            <Route path="/library" element={<LibraryPage />} />
-            <Route path="/briefing" element={<BriefingPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/" element={<Navigate to="/workspaces" replace />} />
+          <Route path="/workspaces" element={<WorkspacesPage />} />
+          <Route path="/onboarding" element={<OnboardingPage />} />
+          <Route
+            path="/workspace/:workspaceId/*"
+            element={
+              <WorkspaceProvider>
+                <AppShell />
+              </WorkspaceProvider>
+            }
+          >
+            <Route index element={<Navigate to="generator" replace />} />
+            <Route path="generator" element={<GeneratorPage />} />
+            <Route path="library" element={<LibraryPage />} />
+            <Route path="brand-kit" element={<BrandKitPage />} />
+            <Route path="briefing" element={<BriefingPage />} />
+            <Route path="settings" element={<SettingsPage />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

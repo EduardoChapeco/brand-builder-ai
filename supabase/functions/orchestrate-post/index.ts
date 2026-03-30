@@ -8,6 +8,26 @@ const corsHeaders = {
 
 const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
+type StrategyOutput = {
+  format: "single" | "carousel";
+  slides_count: number;
+  template: string;
+  theme: string;
+  slide_structure: Array<{ index: number; type: string; key_message: string }>;
+  cta: string;
+  title: string;
+};
+
+type WriterOutput = {
+  slides: Array<{ index: number; headline: string; body: string; cta: string | null }>;
+  caption: string;
+  hashtags: string;
+};
+
+type DesignerOutput = {
+  slides_html: string[];
+};
+
 async function callAgent(
   apiKey: string,
   systemPrompt: string,
@@ -40,11 +60,11 @@ async function callAgent(
   return data.choices?.[0]?.message?.content || "";
 }
 
-function extractJson(text: string): any {
+function extractJson<T>(text: string): T {
   // Try to extract JSON from markdown code blocks or raw text
   const codeBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
   const jsonStr = codeBlockMatch ? codeBlockMatch[1].trim() : text.trim();
-  return JSON.parse(jsonStr);
+  return JSON.parse(jsonStr) as T;
 }
 
 serve(async (req) => {
@@ -99,9 +119,9 @@ Responda APENAS com JSON válido (sem markdown, sem explicações):
     const ariaRaw = await callAgent(LOVABLE_API_KEY, ariaSystem, user_message);
     console.log("🧭 Aria raw:", ariaRaw.substring(0, 200));
     
-    let ariaOutput: any;
+    let ariaOutput: StrategyOutput;
     try {
-      ariaOutput = extractJson(ariaRaw);
+      ariaOutput = extractJson<StrategyOutput>(ariaRaw);
     } catch {
       // Fallback structure
       ariaOutput = {
@@ -142,9 +162,9 @@ Responda APENAS com JSON válido (sem markdown, sem explicações):
     const brunoRaw = await callAgent(LOVABLE_API_KEY, brunoSystem, brunoContext);
     console.log("✍️ Bruno raw:", brunoRaw.substring(0, 200));
 
-    let brunoOutput: any;
+    let brunoOutput: WriterOutput;
     try {
-      brunoOutput = extractJson(brunoRaw);
+      brunoOutput = extractJson<WriterOutput>(brunoRaw);
     } catch {
       const count = ariaOutput.slides_count || 3;
       brunoOutput = {
@@ -209,14 +229,14 @@ Responda APENAS com JSON válido (sem markdown, sem explicações):
     const carlaRaw = await callAgent(LOVABLE_API_KEY, carlaSystem, carlaContext);
     console.log("🎨 Carla raw:", carlaRaw.substring(0, 200));
 
-    let carlaOutput: any;
+    let carlaOutput: DesignerOutput;
     try {
-      carlaOutput = extractJson(carlaRaw);
+      carlaOutput = extractJson<DesignerOutput>(carlaRaw);
     } catch {
       // Emergency fallback: generate basic slides
       const count = brunoOutput.slides.length;
       carlaOutput = {
-        slides_html: brunoOutput.slides.map((s: any, i: number) => {
+        slides_html: brunoOutput.slides.map((s, i: number) => {
           const isFirst = i === 0;
           const isLast = i === count - 1;
           return `<div style="width:540px;height:540px;background:${isFirst || isLast ? `linear-gradient(135deg,${primaryColor} 0%,#1a1a2e 100%)` : '#111119'};display:flex;flex-direction:column;justify-content:center;padding:60px;font-family:'${fontFamily}',sans-serif;color:white;position:relative;overflow:hidden;">

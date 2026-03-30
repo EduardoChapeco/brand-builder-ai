@@ -1,55 +1,84 @@
-import { NavLink, useLocation } from "react-router-dom";
-import { MessageSquare, Images, FileText, Settings, Sparkles } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { NavLink, useParams } from 'react-router-dom';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Wand2, Images, Palette, FileText, Settings } from 'lucide-react';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
 
 const navItems = [
-  { icon: MessageSquare, label: "Chat", path: "/chat" },
-  { icon: Images, label: "Biblioteca", path: "/library" },
-  { icon: FileText, label: "Briefing", path: "/briefing" },
-  { icon: Settings, label: "Configurações", path: "/settings" },
+  { icon: Wand2,    label: 'Criar Post',  path: 'generator' },
+  { icon: Images,   label: 'Biblioteca',  path: 'library'   },
+  { icon: Palette,  label: 'Brand Kit',   path: 'brand-kit' },
+  { icon: FileText, label: 'Briefing',    path: 'briefing'  },
+  { icon: Settings, label: 'Config',      path: 'settings'  },
 ];
 
 const AppSidebar = () => {
-  const location = useLocation();
+  const { workspaceId } = useParams();
+  const { workspace, brandKit } = useWorkspace();
+
+  const initials = workspace?.name
+    ? workspace.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+    : 'P';
+
+  const primaryColor = brandKit?.color_primary || '#7C3AED';
 
   return (
-    <aside className="flex h-screen w-16 flex-col items-center border-r border-border bg-background py-4">
+    <aside
+      className="flex flex-col items-center py-4 gap-2 shrink-0"
+      style={{
+        width: 64,
+        background: 'var(--bg-surface)',
+        borderRight: '1px solid var(--border)',
+        zIndex: 50,
+      }}
+    >
       {/* Logo */}
-      <div className="mb-8 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/20">
-        <Sparkles className="h-5 w-5 text-primary" />
+      <div
+        className="w-10 h-10 rounded-xl flex items-center justify-center mb-2 shrink-0"
+        style={{ background: primaryColor }}
+      >
+        <span className="text-white font-bold text-base" style={{ fontFamily: 'var(--font-display)' }}>P</span>
       </div>
 
       {/* Nav */}
-      <nav className="flex flex-1 flex-col items-center gap-2">
-        {navItems.map((item) => {
-          const isActive = location.pathname === item.path;
-          return (
-            <Tooltip key={item.path} delayDuration={0}>
-              <TooltipTrigger asChild>
-                <NavLink
-                  to={item.path}
-                  className={`relative flex h-10 w-10 items-center justify-center rounded-lg transition-colors ${
+      <nav className="flex flex-col gap-1 flex-1">
+        {navItems.map(({ icon: Icon, label, path }) => (
+          <Tooltip key={path} delayDuration={300}>
+            <TooltipTrigger asChild>
+              <NavLink
+                to={`/workspace/${workspaceId}/${path}`}
+                className={({ isActive }) =>
+                  `w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-150 ${
                     isActive
-                      ? "bg-primary/15 text-primary"
-                      : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-                  }`}
-                >
-                  {isActive && (
-                    <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-primary" />
-                  )}
-                  <item.icon className="h-5 w-5" />
-                </NavLink>
-              </TooltipTrigger>
-              <TooltipContent side="right" className="bg-card text-card-foreground border-border">
-                {item.label}
-              </TooltipContent>
-            </Tooltip>
-          );
-        })}
+                      ? 'text-white'
+                      : 'text-[color:var(--text-3)] hover:text-[color:var(--text-1)] hover:bg-[color:var(--bg-card)]'
+                  }`
+                }
+                style={({ isActive }) => isActive ? { background: primaryColor } : {}}
+              >
+                <Icon size={18} strokeWidth={1.8} />
+              </NavLink>
+            </TooltipTrigger>
+            <TooltipContent side="right" sideOffset={8}>
+              <p className="text-xs font-medium">{label}</p>
+            </TooltipContent>
+          </Tooltip>
+        ))}
       </nav>
 
-      {/* Version */}
-      <span className="font-mono text-[10px] text-muted-foreground">v1.0</span>
+      {/* Workspace badge */}
+      <Tooltip delayDuration={300}>
+        <TooltipTrigger asChild>
+          <div
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold text-white cursor-default shrink-0"
+            style={{ background: primaryColor, opacity: 0.8 }}
+          >
+            {initials}
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="right" sideOffset={8}>
+          <p className="text-xs">{workspace?.name}</p>
+        </TooltipContent>
+      </Tooltip>
     </aside>
   );
 };
