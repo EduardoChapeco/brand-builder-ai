@@ -105,13 +105,13 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   const refreshBrandKit = async () => {
     if (!workspaceId) return;
     const { data } = await supabase.from('brand_kits').select('*').eq('workspace_id', workspaceId).maybeSingle();
-    setBrandKit(data as BrandKit | null);
+    setBrandKit(data as unknown as BrandKit | null);
   };
 
   const refreshBriefing = async () => {
     if (!workspaceId) return;
     const { data } = await supabase.from('briefings').select('*').eq('workspace_id', workspaceId).maybeSingle();
-    setBriefing(data as Briefing | null);
+    setBriefing(data as unknown as Briefing | null);
   };
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
