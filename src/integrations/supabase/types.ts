@@ -14,6 +14,186 @@ export type Database = {
   }
   public: {
     Tables: {
+      api_keys: {
+        Row: {
+          alias: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          key_value: string
+          provider: string
+          workspace_id: string
+        }
+        Insert: {
+          alias?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          key_value: string
+          provider: string
+          workspace_id: string
+        }
+        Update: {
+          alias?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          key_value?: string
+          provider?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_keys_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brand_kits: {
+        Row: {
+          color_accent: string
+          color_bg_dark: string
+          color_bg_light: string
+          color_primary: string
+          color_secondary: string
+          color_text_dark: string
+          color_text_light: string
+          custom_colors: Json | null
+          font_accent: string
+          font_body: string
+          font_headline: string
+          id: string
+          logo_dark_url: string | null
+          logo_url: string | null
+          updated_at: string | null
+          watermark_text: string | null
+          workspace_id: string
+        }
+        Insert: {
+          color_accent?: string
+          color_bg_dark?: string
+          color_bg_light?: string
+          color_primary?: string
+          color_secondary?: string
+          color_text_dark?: string
+          color_text_light?: string
+          custom_colors?: Json | null
+          font_accent?: string
+          font_body?: string
+          font_headline?: string
+          id?: string
+          logo_dark_url?: string | null
+          logo_url?: string | null
+          updated_at?: string | null
+          watermark_text?: string | null
+          workspace_id: string
+        }
+        Update: {
+          color_accent?: string
+          color_bg_dark?: string
+          color_bg_light?: string
+          color_primary?: string
+          color_secondary?: string
+          color_text_dark?: string
+          color_text_light?: string
+          custom_colors?: Json | null
+          font_accent?: string
+          font_body?: string
+          font_headline?: string
+          id?: string
+          logo_dark_url?: string | null
+          logo_url?: string | null
+          updated_at?: string | null
+          watermark_text?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_kits_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brand_templates: {
+        Row: {
+          analyzed_at: string | null
+          brand_dna: Json | null
+          category: string | null
+          copy_dna: Json | null
+          created_at: string
+          error_message: string | null
+          html_template: string | null
+          id: string
+          is_public: boolean
+          layout_dna: Json | null
+          layout_style: Json | null
+          screenshot_url: string | null
+          source_name: string | null
+          source_platform: string | null
+          source_url: string
+          status: string | null
+          style_tags: string[] | null
+          use_count: number
+          workspace_id: string
+        }
+        Insert: {
+          analyzed_at?: string | null
+          brand_dna?: Json | null
+          category?: string | null
+          copy_dna?: Json | null
+          created_at?: string
+          error_message?: string | null
+          html_template?: string | null
+          id?: string
+          is_public?: boolean
+          layout_dna?: Json | null
+          layout_style?: Json | null
+          screenshot_url?: string | null
+          source_name?: string | null
+          source_platform?: string | null
+          source_url: string
+          status?: string | null
+          style_tags?: string[] | null
+          use_count?: number
+          workspace_id: string
+        }
+        Update: {
+          analyzed_at?: string | null
+          brand_dna?: Json | null
+          category?: string | null
+          copy_dna?: Json | null
+          created_at?: string
+          error_message?: string | null
+          html_template?: string | null
+          id?: string
+          is_public?: boolean
+          layout_dna?: Json | null
+          layout_style?: Json | null
+          screenshot_url?: string | null
+          source_name?: string | null
+          source_platform?: string | null
+          source_url?: string
+          status?: string | null
+          style_tags?: string[] | null
+          use_count?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_templates_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       briefing: {
         Row: {
           brand_dna: string | null
@@ -68,6 +248,74 @@ export type Database = {
         }
         Relationships: []
       }
+      briefings: {
+        Row: {
+          avoid_topics: string | null
+          brand_dna: string | null
+          company_name: string | null
+          content_pillars: Json | null
+          id: string
+          instagram_handle: string | null
+          keywords: string[] | null
+          linkedin_handle: string | null
+          main_competitors: Json | null
+          main_differentials: string | null
+          market_position: string | null
+          pain_points: string | null
+          segment: string | null
+          target_audience: string | null
+          tone_of_voice: string | null
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          avoid_topics?: string | null
+          brand_dna?: string | null
+          company_name?: string | null
+          content_pillars?: Json | null
+          id?: string
+          instagram_handle?: string | null
+          keywords?: string[] | null
+          linkedin_handle?: string | null
+          main_competitors?: Json | null
+          main_differentials?: string | null
+          market_position?: string | null
+          pain_points?: string | null
+          segment?: string | null
+          target_audience?: string | null
+          tone_of_voice?: string | null
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          avoid_topics?: string | null
+          brand_dna?: string | null
+          company_name?: string | null
+          content_pillars?: Json | null
+          id?: string
+          instagram_handle?: string | null
+          keywords?: string[] | null
+          linkedin_handle?: string | null
+          main_competitors?: Json | null
+          main_differentials?: string | null
+          market_position?: string | null
+          pain_points?: string | null
+          segment?: string | null
+          target_audience?: string | null
+          tone_of_voice?: string | null
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "briefings_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       competitor_analyses: {
         Row: {
           analyzed_at: string | null
@@ -97,6 +345,44 @@ export type Database = {
           url?: string
         }
         Relationships: []
+      }
+      competitor_analyses_v2: {
+        Row: {
+          analyzed_at: string | null
+          dna_text: string | null
+          id: string
+          name: string | null
+          raw_markdown: string | null
+          url: string
+          workspace_id: string
+        }
+        Insert: {
+          analyzed_at?: string | null
+          dna_text?: string | null
+          id?: string
+          name?: string | null
+          raw_markdown?: string | null
+          url: string
+          workspace_id: string
+        }
+        Update: {
+          analyzed_at?: string | null
+          dna_text?: string | null
+          id?: string
+          name?: string | null
+          raw_markdown?: string | null
+          url?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "competitor_analyses_v2_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       messages: {
         Row: {
@@ -194,6 +480,30 @@ export type Database = {
           name?: string
           preview_url?: string | null
           tags?: string[] | null
+        }
+        Relationships: []
+      }
+      workspaces: {
+        Row: {
+          created_at: string
+          id: string
+          logo_url: string | null
+          name: string
+          slug: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          name: string
+          slug?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          name?: string
+          slug?: string | null
         }
         Relationships: []
       }
