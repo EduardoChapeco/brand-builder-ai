@@ -149,6 +149,7 @@ const BrandKitPage = () => {
     try {
       const payload = {
         ...form,
+        custom_colors: form.custom_colors as unknown as import('@/integrations/supabase/types').Json,
         logo_url: form.logo_url || null,
         logo_dark_url: form.logo_dark_url || null,
         watermark_text: form.watermark_text || null,
@@ -158,7 +159,7 @@ const BrandKitPage = () => {
       if (wsBrandKit) {
         await supabase.from('brand_kits').update(payload).eq('workspace_id', workspace.id);
       } else {
-        await supabase.from('brand_kits').insert({ ...payload, workspace_id: workspace.id });
+        await supabase.from('brand_kits').insert({ ...payload, workspace_id: workspace.id } as any);
       }
 
       await refreshBrandKit();
