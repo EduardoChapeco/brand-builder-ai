@@ -173,7 +173,7 @@ const GeneratorPage = () => {
   const [postTitle,    setPostTitle]    = useState('');
   const [selectedSourceUrl, setSelectedSourceUrl] = useState<string | undefined>();
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
-  const [clonedDna, setClonedDna] = useState<{ id: string; html: string; name: string } | null>(null);
+  const [clonedDna, setClonedDna] = useState<{ id: string; html: string; name: string; brand_dna?: any } | null>(null);
 
   // Generation state
   const [isGenerating, setIsGenerating] = useState(false);
@@ -217,6 +217,8 @@ const GeneratorPage = () => {
             --color-text: ${brand.color_text_dark};
             --font-headline: '${brand.font_headline}', sans-serif;
             --font-body: '${brand.font_body}', sans-serif;
+            --radius: ${customDna?.brand_dna?.radius || '12px'};
+            --shadow: ${customDna?.brand_dna?.shadow || '0 8px 32px rgba(0,0,0,0.1)'};
           }
         `;
         doc.head.appendChild(styleEl);
@@ -278,6 +280,7 @@ const GeneratorPage = () => {
           id: state.dnaTemplate.id,
           html: state.dnaTemplate.html_template,
           name: state.dnaTemplate.source_name || 'Template Clonado',
+          brand_dna: (state.dnaTemplate as any).brand_dna,
         });
         setSelectedTpl('dna-clone');
         // Clean history so we don't trigger again on refresh

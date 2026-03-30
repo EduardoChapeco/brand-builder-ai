@@ -34,24 +34,37 @@ serve(async (req) => {
     console.log(`📡 Solicitando Visão Computacional para ${provider} na imagem: ${screenshotUrl}`);
 
     const prompt = `
-      Você é um Lead Designer de Produto e Analista de Copywriting. 
-      Analise o screenshot acima (um perfil/post do Instagram ou website).
-      Extraia a estrutura visual matemática do grid, as cores exatas (HEX), a proporção de espaço (margin/padding) e o tom de voz do texto.
-      Me resuma sua análise de 'Visual DNA' e crie um único template HTML estático + CSS in-line usando a classe <div class="artboard flex flex-col items-center"> ou similar, onde blocos de texto principais usem "data-postgen-field='headline'" e "data-postgen-field='body'". Utilize glassmorphism se houver. Deixe fundos de div preparados para receber imagens via CSS background-image futuramente.
+      Você é um Lead Designer de Produto, Engenheiro Frontend UI/UX e Especialista em Criação de Templates. 
+      Analise o screenshot com extrema precisão visual. Identifique:
+      1. Paleta de cores exata (HEX) e Contrastes.
+      2. Raios de borda (border-radius), espaçamentos (padding/margin), Sombras (box-shadow) e Efeitos Especiais (Blur, Glassmorphism).
+      3. Tipografia: O peso, hierarquia e se usa fontes Serif/Sans-serif modernas.
+      4. Tom de Voz: O estilo de copy (direto, misterioso, luxo, corporativo).
+
+      Sua principal missão é gerar um \`html_template\` de altíssima qualidade (PREMIUM EXTREME) que seja a réplica fiel e expansível do que viu.
       
-      Retorne APENAS um JSON estrito neste exato formato:
+      REGRAS CRÍTICAS DE ENGENHARIA DO CSS/HTML:
+      - O container base DEVE ser estritamente: <div class="artboard" style="position:relative; width:100%; height:100%; display:flex; flex-direction:column; background-color: var(--color-bg); overflow: hidden;">
+      - UTILIZE AS VARIÁVEIS CSS ABAIXO obrigatoriamente (NÃO use cores hex hardcoded para as fontes principais ou fundos gerais). O motor da plataforma alimentará:
+        var(--color-primary), var(--color-secondary), var(--color-accent), var(--color-bg), var(--color-text), var(--font-headline), var(--font-body), var(--radius), var(--shadow).
+      - Atribua marcações mágicas às variáveis de texto. As tags que conterão o conteúdo mutável devem ter atributo: data-postgen-field='headline', data-postgen-field='body', data-postgen-field='cta'.
+      - Construa o layout com divs aninhadas, Flexbox complexo e Absolute Positioning para marcações decorativas. Aplique filtros complexos como backdrop-filter: blur(16px) ou mix-blend-mode se detectados.
+
+      Retorne APENAS um JSON estrito, sem markdown backticks no início e no fim, neste formato exato:
       {
         "brand_dna": {
           "color_palette": ["#...", "#..."],
           "font_headline": "string",
           "font_body": "string",
-          "tone_of_voice": "string"
+          "tone_of_voice": "string",
+          "radius": "12px",
+          "shadow": "0 8px 32px rgba(0,0,0,0.1)"
         },
         "layout": {
           "grid_type": "string",
           "alignment": "center|left|right"
         },
-        "html_template": "string puro html/css sem escape extra. Evite markdown no value."
+        "html_template": "<div class='artboard'>...</div>"
       }
     `;
 

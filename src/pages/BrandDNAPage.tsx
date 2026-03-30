@@ -332,23 +332,31 @@ const BrandDNAPage = () => {
       {/* ─ Orchestrator & Templates Grid ─ */}
       <div className="flex-1 overflow-y-auto p-6">
         {isCloning ? (
-          <div className="flex flex-col md:flex-row gap-6 h-full items-stretch justify-center max-w-5xl mx-auto py-8">
-            <div className="flex-1 flex flex-col gap-4 p-6 rounded-2xl border bg-[color:var(--bg-elevated)]" style={{ borderColor: 'var(--border)' }}>
-              <h2 className="font-bold flex items-center gap-2" style={{ color: 'var(--text-1)' }}>
+          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col md:flex-row gap-6 h-full items-stretch justify-center max-w-5xl mx-auto py-8">
+            {/* Terminal Panel */}
+            <div className="flex-1 flex flex-col gap-4 p-6 rounded-3xl border shadow-2xl relative overflow-hidden" 
+                 style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+              {/* Premium Glow / Blur background for terminal */}
+              <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/10 rounded-full blur-[80px] pointer-events-none" />
+              <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/10 rounded-full blur-[80px] pointer-events-none" />
+              
+              <h2 className="font-bold flex items-center gap-2 relative z-10" style={{ color: 'var(--text-1)' }}>
                 <Terminal size={18} style={{ color: 'var(--primary)' }} /> Terminal do Esquadrão
               </h2>
               
-              <div className="flex-1 flex flex-col gap-3 font-mono text-[11px] overflow-y-auto p-4 rounded-xl bg-black/5 dark:bg-black/30 text-left min-h-[300px]">
+              <div className="flex-1 flex flex-col gap-3 font-mono text-[11.5px] overflow-y-auto p-5 rounded-2xl relative z-10 text-left min-h-[300px]"
+                   style={{ background: 'var(--bg-app)', border: '1px solid var(--border)' }}>
                 {squadLogs.map(log => (
-                  <div key={log.id} className="flex gap-3 items-start animate-in fade-in slide-in-from-bottom-2">
-                    <span className="opacity-40 shrink-0">[{log.time}]</span>
+                  <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} key={log.id} className="flex gap-3 items-start">
+                    <span className="opacity-40 shrink-0 select-none">[{log.time}]</span>
                     <span style={{ 
-                      color: log.status === 'error' ? '#ef4444' : log.status === 'success' ? '#10b981' : 'var(--text-2)' 
+                      color: log.status === 'error' ? '#ef4444' : log.status === 'success' ? '#10b981' : 'var(--text-2)',
+                      fontWeight: log.status === 'success' ? 600 : 400
                     }}>
                       {log.msg}
-                      {log.status === 'loading' && <span className="animate-pulse ml-1">...</span>}
+                      {log.status === 'loading' && <span className="animate-pulse ml-1 inline-block">_</span>}
                     </span>
-                  </div>
+                  </motion.div>
                 ))}
                 {squadLogs.length > 0 && squadLogs[squadLogs.length - 1].status === 'loading' && (
                   <div className="flex justify-start mt-2 opacity-30"><Loader2 size={14} className="animate-spin" /></div>
@@ -358,29 +366,38 @@ const BrandDNAPage = () => {
               {squadLogs.some(l => l.status === 'error') && (
                 <button 
                   onClick={() => setIsCloning(false)} 
-                  className="mt-4 py-2 px-4 rounded-xl text-xs font-bold w-full border transition-colors hover:bg-neutral-500/10" 
+                  className="mt-4 py-3 px-4 rounded-xl text-sm font-bold w-full border transition-colors hover:bg-neutral-500/10 relative z-10" 
                   style={{ borderColor: 'var(--border)', color: 'var(--text-1)' }}>
-                  Fechar Orquestrador
+                  Anotar Erro e Fechar
                 </button>
               )}
             </div>
 
-            <div className="flex-1 p-6 rounded-2xl border flex flex-col gap-4 items-center justify-center bg-[color:var(--bg-elevated)]" style={{ borderColor: 'var(--border)', borderStyle: 'dashed' }}>
+            {/* Vision Sandbox Panel */}
+            <div className="flex-1 p-6 rounded-3xl border flex flex-col gap-4 items-center justify-center relative overflow-hidden" 
+                 style={{ background: 'var(--bg-elevated)', borderColor: 'var(--primary)', borderStyle: clonedImage ? 'solid' : 'dashed' }}>
               {clonedImage ? (
-                <div className="relative w-full h-full rounded-lg overflow-hidden flex items-center justify-center bg-black/10 min-h-[300px]">
-                  <img src={clonedImage} alt="Scraped View" className="max-w-full max-h-full object-contain mix-blend-multiply dark:mix-blend-normal rounded-md" />
-                  <div className="absolute top-2 right-2 px-2 py-1 rounded bg-black/70 backdrop-blur-md text-[9px] text-white font-bold flex items-center gap-1 shadow-xl">
-                    <ImageIcon size={10} /> Visão do Agente
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="relative w-full h-full rounded-xl overflow-hidden flex items-center justify-center p-2"
+                     style={{ background: 'var(--bg-card)' }}>
+                  <img src={clonedImage} alt="Scraped View" className="max-w-full max-h-full object-contain mix-blend-multiply dark:mix-blend-normal rounded-lg shadow-sm" />
+                  <div className="absolute top-4 right-4 px-3 py-1.5 rounded-full backdrop-blur-md text-[10px] text-white font-bold flex items-center gap-1.5 shadow-xl border border-white/10"
+                       style={{ background: 'linear-gradient(135deg, rgba(124,58,237,0.8), rgba(67,56,202,0.8))' }}>
+                    <Activity size={12} className="animate-pulse" /> Visão Multimodal do Agente
                   </div>
-                </div>
+                </motion.div>
               ) : (
-                <div className="text-center opacity-40 flex flex-col items-center gap-3">
-                  <Globe size={32} />
-                  <p className="text-xs font-medium">Aguardando telemetria sandbox...</p>
+                <div className="text-center opacity-50 flex flex-col items-center gap-4">
+                  <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 8, ease: "linear" }}>
+                    <Globe size={36} style={{ color: 'var(--primary)' }} />
+                  </motion.div>
+                  <div className="space-y-1">
+                    <p className="text-sm font-semibold" style={{ color: 'var(--text-1)' }}>Conectando à página alvo...</p>
+                    <p className="text-[11px] font-mono">Aguardando telemetria sandbox ser concluída.</p>
+                  </div>
                 </div>
               )}
             </div>
-          </div>
+          </motion.div>
         ) : isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {Array.from({ length: 6 }).map((_, i) => (

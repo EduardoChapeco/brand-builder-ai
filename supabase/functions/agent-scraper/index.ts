@@ -42,7 +42,9 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           url,
-          formats: ['screenshot@fullPage']
+          formats: ['screenshot@fullPage'],
+          timeout: 30000,
+          waitFor: 3000 // Aguarda 3 segundos pro DOM carregar totalmente
         })
       });
 
