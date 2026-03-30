@@ -226,6 +226,66 @@ Liste 5 topicos relevantes para posts e carrosseis.`;
   return [];
 };
 
+const searchNewsViaFirecrawl = async (
+  supabase: ReturnType<typeof createClient>,
+  workspaceId: string,
+  segment: string,
+): Promise<TopicItem[]> => {
+  if (!segment || segment.trim() === "geral") return [];
+
+  const { data: keys } = await supabase
+    .from("api_keys")
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .eq("provider", "firecrawl")
+    .eq("is_active", true)
+    .order("calls_today", { ascending: true })
+    .limit(1);
+
+  if (!keys?.length) return [];
+  const key = keys[0];
+  if ((key.calls_today || 0) >= (key.daily_limit || 0)) return [];
+
+  try {
+    const query = `últimas notícias tendências blogs ${segment}`;
+    const response = await fetch("https://api.firecrawl.dev/v1/search", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${key.key_value}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        query,
+        pageOptions: { fetchPageContent: false },
+        searchOptions: { limit: 6 }
+      }),
+    });
+
+    if (!response.ok) {
+      if (response.status === 429) await markKeyError(supabase, key.id, "429 Rate Limited", true);
+      else await markKeyError(supabase, key.id, `Firecrawl Error ${response.status}`);
+      return [];
+    }
+
+    const payload = await response.json();
+    await incrementKeyUsage(supabase, key);
+
+    if (!payload.success || !Array.isArray(payload.data)) return [];
+
+    return payload.data.slice(0, 6).map((item: { title?: string; description?: string; snippet?: string; url?: string }) => ({
+      title: item.title || "Notícia Recente",
+      description: (item.description || item.snippet || "").slice(0, 200),
+      url: item.url || "",
+      source_name: "Firecrawl Scout",
+      published_at: new Date().toISOString(),
+      source_type: "ai" as const,
+    }));
+  } catch (error) {
+    await markKeyError(supabase, key.id, error instanceof Error ? error.message : String(error));
+    return [];
+  }
+};
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -261,33 +321,39 @@ Deno.serve(async (req: Request) => {
       funnel_type || null,
     );
 
-    const rssResults = feeds?.length
-      ? await Promise.allSettled(
-          feeds.map(async (feed) => {
-            const response = await fetch(feed.url, {
-              headers: { "User-Agent": "PostGen/1.0 RSS Reader" },
-            });
+    let rssTopics: TopicItem[] = [];
 
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    if (feeds?.length) {
+      const rssResults = await Promise.allSettled(
+        feeds.map(async (feed) => {
+          const response = await fetch(feed.url, {
+            headers: { "User-Agent": "PostGen/1.0 RSS Reader" },
+          });
 
-            const xml = await response.text();
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-            await supabase
-              .from("rss_feeds")
-              .update({ last_fetched_at: new Date().toISOString() })
-              .eq("id", feed.id);
+          const xml = await response.text();
 
-            return parseRssXml(xml, feed.name || feed.url);
-          }),
-        )
-      : [];
+          await supabase
+            .from("rss_feeds")
+            .update({ last_fetched_at: new Date().toISOString() })
+            .eq("id", feed.id);
 
-    const rssTopics: TopicItem[] = [];
-    for (const result of rssResults) {
-      if (result.status === "fulfilled") {
-        rssTopics.push(...result.value);
+          return parseRssXml(xml, feed.name || feed.url);
+        }),
+      );
+
+      for (const result of rssResults) {
+        if (result.status === "fulfilled") {
+          rssTopics.push(...result.value);
+        }
       }
+    } else if (briefing?.segment) {
+      // Automatic RSS Search (AI Scout) if no explicit feeds
+      rssTopics = await searchNewsViaFirecrawl(supabase, workspace_id, briefing.segment);
     }
+
+
 
     rssTopics.sort((left, right) => {
       const leftDate = left.published_at ? new Date(left.published_at).getTime() : 0;

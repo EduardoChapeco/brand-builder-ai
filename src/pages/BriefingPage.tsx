@@ -56,6 +56,57 @@ const EMPTY_COMPETITOR: CompetitorItem = {
   notes: '',
 };
 
+const textareaStyle = {
+  background: 'var(--bg-elevated)',
+  border: '1px solid var(--border)',
+  color: 'var(--text-1)',
+};
+const inputStyle = {
+  background: 'var(--bg-elevated)',
+  border: '1px solid var(--border)',
+  color: 'var(--text-1)',
+};
+const labelStyle = { color: 'var(--text-2)' };
+const fieldClass = 'w-full px-3 py-2.5 rounded-xl text-sm outline-none transition-colors';
+
+const Field = ({
+  label,
+  value,
+  onChange,
+  rows,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (val: string) => void;
+  rows?: number;
+  placeholder?: string;
+}) => (
+  <div>
+    <label className="block text-xs font-medium mb-1.5" style={labelStyle}>
+      {label}
+    </label>
+    {rows ? (
+      <textarea
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        rows={rows}
+        placeholder={placeholder}
+        className={`${fieldClass} resize-none`}
+        style={textareaStyle}
+      />
+    ) : (
+      <input
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        className={fieldClass}
+        style={inputStyle}
+      />
+    )}
+  </div>
+);
+
 const BriefingPage = () => {
   const navigate = useNavigate();
   const { workspace, briefing: wsBriefing, refreshBriefing } = useWorkspace();
@@ -195,64 +246,15 @@ const BriefingPage = () => {
 
       await Promise.all([fetchAnalyses(), refreshBriefing()]);
       toast.success('Concorrente analisado');
-    } catch (error) {
-      console.error(error);
-      toast.error('Erro ao analisar concorrente');
+      const errMessage = error instanceof Error ? error.message : String(error);
+      const isMissingKeys = errMessage.toLowerCase().includes('chave') || errMessage.toLowerCase().includes('key');
+      toast.error(isMissingKeys ? 'Erro: Configure suas APIs (Firecrawl / LLM) em Settings.' : 'Erro ao analisar concorrente.');
     } finally {
       setAnalyzingUrl(null);
     }
   };
 
   const getAnalysisByUrl = (url: string) => analyses.find(item => item.url === url);
-
-  const textareaStyle = {
-    background: 'var(--bg-elevated)',
-    border: '1px solid var(--border)',
-    color: 'var(--text-1)',
-  };
-  const inputStyle = {
-    background: 'var(--bg-elevated)',
-    border: '1px solid var(--border)',
-    color: 'var(--text-1)',
-  };
-  const labelStyle = { color: 'var(--text-2)' };
-  const fieldClass = 'w-full px-3 py-2.5 rounded-xl text-sm outline-none transition-colors';
-
-  const Field = ({
-    label,
-    field,
-    rows,
-    placeholder,
-  }: {
-    label: string;
-    field: keyof BriefingForm;
-    rows?: number;
-    placeholder?: string;
-  }) => (
-    <div>
-      <label className="block text-xs font-medium mb-1.5" style={labelStyle}>
-        {label}
-      </label>
-      {rows ? (
-        <textarea
-          value={form[field]}
-          onChange={event => setField(field, event.target.value)}
-          rows={rows}
-          placeholder={placeholder}
-          className={`${fieldClass} resize-none`}
-          style={textareaStyle}
-        />
-      ) : (
-        <input
-          value={form[field]}
-          onChange={event => setField(field, event.target.value)}
-          placeholder={placeholder}
-          className={fieldClass}
-          style={inputStyle}
-        />
-      )}
-    </div>
-  );
 
   return (
     <div className="flex flex-col h-full overflow-hidden" style={{ background: 'var(--bg-app)' }}>
@@ -281,12 +283,12 @@ const BriefingPage = () => {
               </AccordionTrigger>
               <AccordionContent className="px-5 pb-5 space-y-4">
                 <div className="grid grid-cols-2 gap-3">
-                  <Field label="Nome da empresa" field="company_name" placeholder="Studio Criativo" />
-                  <Field label="Segmento / nicho" field="segment" placeholder="Marketing Digital" />
+                  <Field label="Nome da empresa" value={form.company_name} onChange={v => setField('company_name', v)} placeholder="Studio Criativo" />
+                  <Field label="Segmento / nicho" value={form.segment} onChange={v => setField('segment', v)} placeholder="Marketing Digital" />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <Field label="Instagram" field="instagram_handle" placeholder="@suaempresa" />
-                  <Field label="LinkedIn" field="linkedin_handle" placeholder="sua-empresa" />
+                  <Field label="Instagram" value={form.instagram_handle} onChange={v => setField('instagram_handle', v)} placeholder="@suaempresa" />
+                  <Field label="LinkedIn" value={form.linkedin_handle} onChange={v => setField('linkedin_handle', v)} placeholder="sua-empresa" />
                 </div>
               </AccordionContent>
             </AccordionItem>
@@ -296,8 +298,8 @@ const BriefingPage = () => {
                 Publico-alvo
               </AccordionTrigger>
               <AccordionContent className="px-5 pb-5 space-y-4">
-                <Field label="Quem e seu publico?" field="target_audience" rows={3} placeholder="Ex: empreendedores, donos de pequenas empresas..." />
-                <Field label="Principais dores" field="pain_points" rows={3} placeholder="O que trava a decisao de compra?" />
+                <Field label="Quem e seu publico?" value={form.target_audience} onChange={v => setField('target_audience', v)} rows={3} placeholder="Ex: empreendedores, donos de pequenas empresas..." />
+                <Field label="Principais dores" value={form.pain_points} onChange={v => setField('pain_points', v)} rows={3} placeholder="O que trava a decisao de compra?" />
               </AccordionContent>
             </AccordionItem>
 
@@ -306,8 +308,8 @@ const BriefingPage = () => {
                 Posicionamento
               </AccordionTrigger>
               <AccordionContent className="px-5 pb-5 space-y-4">
-                <Field label="Principais diferenciais" field="main_differentials" rows={3} placeholder="O que te diferencia da concorrencia?" />
-                <Field label="Posicao no mercado" field="market_position" placeholder="Lider em X, desafiante em Y..." />
+                <Field label="Principais diferenciais" value={form.main_differentials} onChange={v => setField('main_differentials', v)} rows={3} placeholder="O que te diferencia da concorrencia?" />
+                <Field label="Posicao no mercado" value={form.market_position} onChange={v => setField('market_position', v)} placeholder="Lider em X, desafiante em Y..." />
               </AccordionContent>
             </AccordionItem>
 
@@ -316,9 +318,9 @@ const BriefingPage = () => {
                 Tom e voz
               </AccordionTrigger>
               <AccordionContent className="px-5 pb-5 space-y-4">
-                <Field label="Tom de voz" field="tone_of_voice" rows={2} placeholder="Direto, didatico, sem jargoes..." />
-                <Field label="Temas para evitar" field="avoid_topics" rows={2} placeholder="Nao mencionar X, evitar Y..." />
-                <Field label="Palavras-chave" field="keywords" placeholder="produtividade, IA, automacao..." />
+                <Field label="Tom de voz" value={form.tone_of_voice} onChange={v => setField('tone_of_voice', v)} rows={2} placeholder="Direto, didatico, sem jargoes..." />
+                <Field label="Temas para evitar" value={form.avoid_topics} onChange={v => setField('avoid_topics', v)} rows={2} placeholder="Nao mencionar X, evitar Y..." />
+                <Field label="Palavras-chave" value={form.keywords} onChange={v => setField('keywords', v)} placeholder="produtividade, IA, automacao..." />
               </AccordionContent>
             </AccordionItem>
 

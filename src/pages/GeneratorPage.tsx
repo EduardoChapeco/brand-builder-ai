@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Wand2, Search, Upload, RefreshCw, Download, Copy, ChevronLeft, ChevronRight, X, Save } from 'lucide-react';
+import { Wand2, Search, Upload, RefreshCw, Download, Copy, ChevronLeft, ChevronRight, X, Save, Trash, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
@@ -173,7 +173,7 @@ const GeneratorPage = () => {
   const [postTitle,    setPostTitle]    = useState('');
   const [selectedSourceUrl, setSelectedSourceUrl] = useState<string | undefined>();
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
-  const [clonedDna, setClonedDna] = useState<{ id: string; html: string; name: string; brand_dna?: any } | null>(null);
+  const [clonedDna, setClonedDna] = useState<{ id: string; html: string; name: string; brand_dna?: Record<string, unknown> } | null>(null);
 
   // Generation state
   const [isGenerating, setIsGenerating] = useState(false);
@@ -182,10 +182,17 @@ const GeneratorPage = () => {
   const [slides,       setSlides]       = useState<string[]>([]);
   const [currentSlide, setCurrentSlide] = useState(0);
 
+  // Inspector State
+  interface SelectedNode { nodeId: string; tag: string; text: string; styles: Record<string, string>; }
+  const [selectedNode, setSelectedNode] = useState<SelectedNode | null>(null);
+
   // RSS state
   const [isFetchingRss, setIsFetchingRss] = useState(false);
   const [rssTopics,    setRssTopics]    = useState<RssTopic[]>([]);
   const [showRssPanel, setShowRssPanel] = useState(false);
+
+  // Wizard State
+  const [wizardStep, setWizardStep] = useState<1 | 2 | 3 | 4>(1);
 
   // BG image state
   const [bgImageUrl,   setBgImageUrl]   = useState<string | undefined>();
@@ -271,7 +278,7 @@ const GeneratorPage = () => {
   }, [selectedTpl, clonedDna, brand, format]);
 
   useEffect(() => {
-    const state = location.state as { post?: EditablePost; dnaTemplate?: { id: string; html_template: string; source_name: string | null } } | null;
+    const state = location.state as { post?: EditablePost; dnaTemplate?: { id: string; html_template: string; source_name: string | null; brand_dna?: Record<string, unknown> } } | null;
     
     // Load incoming DNA cloned template
     if (state?.dnaTemplate) {
@@ -280,7 +287,7 @@ const GeneratorPage = () => {
           id: state.dnaTemplate.id,
           html: state.dnaTemplate.html_template,
           name: state.dnaTemplate.source_name || 'Template Clonado',
-          brand_dna: (state.dnaTemplate as any).brand_dna,
+          brand_dna: state.dnaTemplate.brand_dna,
         });
         setSelectedTpl('dna-clone');
         // Clean history so we don't trigger again on refresh
@@ -320,6 +327,7 @@ const GeneratorPage = () => {
       return;
     }
     setIsGenerating(true);
+    setWizardStep(3); // Step 3: Gerando Mágica
     setGenStep('📋 Analisando briefing...');
     try {
       await new Promise(r => setTimeout(r, 600));
@@ -377,7 +385,38 @@ const GeneratorPage = () => {
     } finally {
       setIsGenerating(false);
       setGenStep('');
+      setWizardStep(4); // Advance to Editor
     }
+  };
+
+  useEffect(() => {
+    const handleMsg = (e: MessageEvent) => {
+      if (e.data?.type === 'POSTGEN_NODE_SELECT') {
+        setSelectedNode(e.data);
+      } else if (e.data?.type === 'POSTGEN_NODE_DESELECT') {
+        setSelectedNode(null);
+      }
+    };
+    window.addEventListener('message', handleMsg);
+    return () => window.removeEventListener('message', handleMsg);
+  }, []);
+
+  const handleStyleUpdate = (updates: Record<string, string>) => {
+    if (!selectedNode) return;
+    setSelectedNode(prev => prev ? { ...prev, styles: { ...prev.styles, ...updates } } : null);
+    
+    // Broadcast message to all preview iframes
+    const iframes = document.querySelectorAll('iframe[title="slide-preview"]');
+    iframes.forEach(iframe => {
+       const cw = (iframe as HTMLIFrameElement).contentWindow;
+       if (cw) {
+          cw.postMessage({
+             type: 'POSTGEN_INSPECTOR_UPDATE',
+             nodeId: selectedNode.nodeId,
+             updates
+          }, '*');
+       }
+    });
   };
 
   // Re-render when template changes
@@ -397,9 +436,18 @@ const GeneratorPage = () => {
         body: { workspace_id: workspace?.id, funnel_type: funnel, tone },
       });
       if (error) throw error;
-      setRssTopics(data?.topics || []);
-    } catch {
-      toast.error('Erro ao buscar feeds RSS. Configure feeds em Configurações.');
+      
+      const fetchedTopics = data?.topics || [];
+      if (fetchedTopics.length === 0 && data?.message) {
+        toast.warning(data.message);
+      } else if (fetchedTopics.length > 0) {
+        toast.success(`Foram encontradas ${fetchedTopics.length} sugestões (Feeds + IA Scout).`);
+      }
+      
+      setRssTopics(fetchedTopics);
+    } catch (err) {
+      const errMessage = err instanceof Error ? err.message : String(err);
+      toast.error('Erro ao buscar News/Feeds: ' + errMessage);
       setRssTopics([]);
     } finally {
       setIsFetchingRss(false);
@@ -508,6 +556,162 @@ const GeneratorPage = () => {
 
   const removeHashtag = (tag: string) => setHashtags(prev => prev.filter(h => h !== tag));
 
+  const renderWizard = () => (
+    <div className="flex flex-col items-center justify-center p-8 h-full w-full overflow-y-auto" style={{ background: 'var(--bg-app)' }}>
+      <div className="max-w-xl w-full p-8 rounded-[2rem] relative" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', boxShadow: '0 20px 40px rgba(0,0,0,0.1)' }}>
+        
+        {/* Step Indicator */}
+        <div className="flex items-center gap-3 mb-8">
+          {[1, 2, 3].map(step => (
+            <div key={step} className="flex-1 h-1.5 rounded-full transition-all duration-500" style={{ background: wizardStep >= step ? 'var(--primary)' : 'var(--bg-elevated)' }} />
+          ))}
+        </div>
+
+        {wizardStep === 1 && (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <h2 className="text-2xl font-display font-bold mb-2" style={{ color: 'var(--text-1)' }}>Sobre o que vamos falar hoje?</h2>
+            <p className="text-sm mb-6" style={{ color: 'var(--text-2)' }}>Escolha um assunto, ou selecione uma sugestao para a IA redigir.</p>
+            
+            <button
+              onClick={handleFetchRss}
+              disabled={isFetchingRss}
+              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-medium mb-4 transition-all"
+              style={{ border: '1px solid var(--primary)', color: 'var(--primary)', background: 'var(--primary-muted)' }}
+            >
+              {isFetchingRss ? <><RefreshCw size={16} className="animate-spin" /> Buscando Noticias...</> : <><Search size={16} /> Ver Tendências & RSS (IA Scout)</>}
+            </button>
+
+            {showRssPanel && (
+              <div className="mb-4 rounded-2xl overflow-hidden" style={{ border: '1px solid var(--border)', background: 'var(--bg-card)' }}>
+                <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
+                  <span className="text-sm font-semibold" style={{ color: 'var(--text-2)' }}>{rssTopics.length} sugestões</span>
+                  <button onClick={() => setShowRssPanel(false)}><X size={16} style={{ color: 'var(--text-3)' }} /></button>
+                </div>
+                <div className="max-h-60 overflow-y-auto">
+                  {rssTopics.map((t, i) => (
+                    <button key={i} onClick={() => { setTopic(t.title); setSelectedSourceUrl(t.url || undefined); setShowRssPanel(false); }}
+                      className="w-full text-left px-4 py-3 hover:bg-white/5 transition-colors"
+                      style={{ borderBottom: i < rssTopics.length - 1 ? '1px solid var(--border-subtle)' : 'none' }}>
+                      <p className="font-semibold text-sm mb-1" style={{ color: 'var(--text-1)' }}>{t.title}</p>
+                      <p className="text-xs" style={{ color: 'var(--text-3)' }}>{t.source_name}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <textarea
+              value={topic}
+              onChange={e => { setTopic(e.target.value); setSelectedSourceUrl(undefined); }}
+              onKeyDown={e => { if (e.ctrlKey && e.key === 'Enter' && topic.trim()) setWizardStep(2); }}
+              placeholder="Digite seu proprio tema... ↵"
+              rows={4}
+              className="w-full px-4 py-4 rounded-2xl text-sm resize-none outline-none transition-colors mb-6 shadow-sm"
+              style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-1)', lineHeight: 1.6 }}
+              onFocus={e => e.target.style.borderColor = 'var(--primary)'}
+              onBlur={e => e.target.style.borderColor = 'var(--border)'}
+            />
+
+            <button
+              onClick={() => {
+                if (!topic.trim()) { toast.error('Defina um tópico para continuar.'); return; }
+                setWizardStep(2);
+              }}
+              className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-[15px] font-bold transition-all"
+              style={{ background: 'var(--primary)', color: 'white', boxShadow: '0 8px 32px rgba(124,58,237,0.3)' }}
+            >
+              Avançar para Configurações →
+            </button>
+          </div>
+        )}
+
+        {wizardStep === 2 && (
+          <div className="animate-in fade-in slide-in-from-right-8 duration-500">
+            <h2 className="text-2xl font-display font-bold mb-2" style={{ color: 'var(--text-1)' }}>Ajustes Finais</h2>
+            <p className="text-sm mb-6" style={{ color: 'var(--text-2)' }}>Como a IA deve estruturar este post?</p>
+
+            <div className="space-y-6 mb-8">
+              <div>
+                <p className="text-sm font-semibold mb-3">Formato</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {FORMAT_OPTIONS.map(([fmt, dim]) => (
+                    <button key={fmt} onClick={() => setFormat(fmt)} className={`format-btn ${format === fmt ? 'active' : ''}`} style={{ padding: '12px' }}>
+                      <span className="text-sm font-medium">{dim.label}</span>
+                      <span className="text-xs block mt-0.5 opacity-70">{dim.aspectLabel}</span>
+                    </button>
+                  ))}
+                </div>
+                {format === 'square' && (
+                  <div className="mt-3">
+                    <p className="text-xs mb-2 opacity-70">Quantidade de Slides</p>
+                    <div className="flex gap-2">
+                      {[1, 3, 5, 7, 8].map(n => (
+                        <button key={n} onClick={() => setSlideCount(n)}
+                          className="flex-1 py-2 rounded-xl text-sm font-bold transition-all"
+                          style={{
+                            background: slideCount === n ? 'var(--primary-muted)' : 'var(--bg-card)',
+                            border: `1px solid ${slideCount === n ? 'var(--primary)' : 'var(--border)'}`,
+                            color: slideCount === n ? 'var(--primary)' : 'var(--text-2)',
+                          }}
+                        >{n}</button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <p className="text-sm font-semibold mb-3">Tom de Voz</p>
+                <div className="flex flex-wrap gap-2">
+                  {TONES.map(t => (
+                    <button key={t} onClick={() => setTone(t)} className={`chip ${tone === t ? 'active' : ''}`}>{t}</button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-sm font-semibold mb-3">Objetivo do Funil</p>
+                <div className="flex flex-wrap gap-2">
+                  {FUNNELS.map(f => (
+                    <button key={f} onClick={() => setFunnel(f)} className={`chip ${funnel === f ? 'active' : ''}`}>{f}</button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button onClick={() => setWizardStep(1)}
+                className="px-6 py-4 rounded-2xl text-[15px] font-bold transition-all hover:opacity-80"
+                style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-2)' }}>
+                Voltar
+              </button>
+              <button onClick={handleGenerate}
+                className="flex-1 flex items-center justify-center gap-2 py-4 rounded-2xl text-[15px] font-bold transition-all hover:scale-[1.02]"
+                style={{ background: 'var(--primary)', color: 'white', boxShadow: '0 8px 32px rgba(124,58,237,0.4)' }}>
+                <Wand2 size={18} /> Criar Post com IA
+              </button>
+            </div>
+          </div>
+        )}
+
+        {wizardStep === 3 && (
+          <div className="animate-in fade-in zoom-in duration-500 py-12 flex flex-col items-center justify-center text-center">
+            <div className="relative mb-8">
+              <div className="absolute inset-0 rounded-full animate-ping opacity-20" style={{ background: 'var(--primary)' }} />
+              <div className="w-20 h-20 rounded-full flex items-center justify-center animate-spin" style={{ background: 'var(--primary-muted)', border: '2px solid var(--primary)' }}>
+                <Wand2 size={32} style={{ color: 'var(--primary)' }} />
+              </div>
+            </div>
+            <h2 className="text-2xl font-display font-bold mb-3" style={{ color: 'var(--text-1)' }}>Extraindo Genialidade...</h2>
+            <p className="text-sm" style={{ color: 'var(--text-2)' }}>{genStep}</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  if (wizardStep < 4) return renderWizard();
+
   return (
     <div className="flex h-full overflow-hidden" style={{ background: 'var(--bg-app)' }}>
       <input
@@ -525,150 +729,16 @@ const GeneratorPage = () => {
       {/* ─── LEFT PANEL ─── */}
       <div className="panel-left" style={{ width: 300, minWidth: 300 }}>
 
-        {/* Format */}
-        <div className="panel-section">
-          <p className="panel-section-title">Formato</p>
-          <div className="grid grid-cols-2 gap-1.5 mb-3">
-            {FORMAT_OPTIONS.map(([fmt, dim]) => (
-              <button key={fmt} onClick={() => setFormat(fmt)} className={`format-btn ${format === fmt ? 'active' : ''}`}>
-                <span className="text-xs">{dim.label}</span>
-                <span className="text-[10px]" style={{ color: 'var(--text-3)' }}>{dim.aspectLabel}</span>
-              </button>
-            ))}
-          </div>
-          {format === 'square' && (
-            <div>
-              <p className="text-xs mb-1.5" style={{ color: 'var(--text-3)' }}>Slides no carrossel</p>
-              <div className="flex gap-1.5">
-                {[1, 3, 5, 7, 8].map(n => (
-                  <button key={n} onClick={() => setSlideCount(n)}
-                    className="flex-1 py-1.5 rounded-lg text-xs font-medium transition-all"
-                    style={{
-                      background: slideCount === n ? 'var(--primary-muted)' : 'var(--bg-card)',
-                      border: `1px solid ${slideCount === n ? 'var(--primary)' : 'var(--border)'}`,
-                      color: slideCount === n ? 'var(--primary)' : 'var(--text-2)',
-                    }}
-                  >{n}</button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Tone */}
-        <div className="panel-section">
-          <p className="panel-section-title">Tom</p>
-          <div className="flex flex-wrap gap-1.5">
-            {TONES.map(t => (
-              <button key={t} onClick={() => setTone(t)} className={`chip ${tone === t ? 'active' : ''}`}>{t}</button>
-            ))}
-          </div>
-        </div>
-
-        {/* Funnel */}
-        <div className="panel-section">
-          <p className="panel-section-title">Objetivo</p>
-          <div className="flex flex-wrap gap-1.5">
-            {FUNNELS.map(f => (
-              <button key={f} onClick={() => setFunnel(f)} className={`chip ${funnel === f ? 'active' : ''}`}>{f}</button>
-            ))}
-          </div>
-        </div>
-
-        {/* Topic */}
-        <div className="panel-section">
-          <p className="panel-section-title">Tópico</p>
-
-          {/* RSS button */}
-          <button
-            onClick={handleFetchRss}
-            disabled={isFetchingRss}
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium mb-3 transition-all"
-            style={{ border: '1px solid var(--primary)', color: 'var(--primary)', background: 'var(--primary-muted)' }}
-          >
-            {isFetchingRss ? (
-              <><RefreshCw size={14} className="animate-spin" /> Buscando feeds...</>
-            ) : (
-              <><Search size={14} /> Buscar Tendências + RSS</>
-            )}
-          </button>
-
-          {/* RSS Topics panel */}
-          {showRssPanel && (
-            <div className="mb-3 rounded-xl overflow-hidden" style={{ border: '1px solid var(--border)', background: 'var(--bg-card)' }}>
-              <div className="flex items-center justify-between px-3 py-2" style={{ borderBottom: '1px solid var(--border)' }}>
-                <span className="text-xs font-semibold" style={{ color: 'var(--text-2)' }}>
-                  {rssTopics.length ? `${rssTopics.length} artigos encontrados` : 'Nenhum feed configurado'}
-                </span>
-                <button onClick={() => setShowRssPanel(false)}><X size={14} style={{ color: 'var(--text-3)' }} /></button>
-              </div>
-              <div className="max-h-48 overflow-y-auto">
-                {rssTopics.length === 0 && !isFetchingRss && (
-                  <p className="p-3 text-xs" style={{ color: 'var(--text-3)' }}>Adicione feeds RSS em Configurações →</p>
-                )}
-                {rssTopics.map((t, i) => (
-                  <button key={i} onClick={() => { setTopic(t.title); setSelectedSourceUrl(t.url || undefined); setShowRssPanel(false); }}
-                    className="w-full text-left px-3 py-2.5 text-xs hover:bg-white/5 transition-colors"
-                    style={{ borderBottom: i < rssTopics.length - 1 ? '1px solid var(--border-subtle)' : 'none' }}
-                  >
-                    <div className="flex items-center gap-1.5 mb-0.5">
-                      <span
-                        className="px-1.5 py-0.5 rounded text-[10px] font-semibold"
-                        style={{
-                          background: t.source_type === 'ai' ? '#7C3AED20' : '#0EA5E920',
-                          color: t.source_type === 'ai' ? '#A78BFA' : '#0EA5E9',
-                        }}
-                      >
-                        {t.source_type === 'ai' ? 'IA' : 'RSS'}
-                      </span>
-                      <span style={{ color: 'var(--text-3)', fontSize: 10 }}>{t.source_name}</span>
-                    </div>
-                    <p className="font-medium leading-tight" style={{ color: 'var(--text-1)' }}>{t.title}</p>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="relative mb-1">
-            <span className="absolute left-0 right-0 text-center text-xs" style={{ color: 'var(--text-3)', top: -8 }}>— ou digite —</span>
-          </div>
-          <textarea
-            value={topic}
-            onChange={e => {
-              setTopic(e.target.value);
-              setSelectedSourceUrl(undefined);
-            }}
-            onKeyDown={e => { if (e.ctrlKey && e.key === 'Enter') handleGenerate(); }}
-            placeholder="Sobre o que você quer falar? ↵ Ctrl+Enter para gerar"
-            rows={3}
-            className="w-full px-3 py-3 rounded-xl text-sm resize-none outline-none transition-colors mb-3"
-            style={{
-              background: 'var(--bg-card)',
-              border: '1px solid var(--border)',
-              color: 'var(--text-1)',
-              lineHeight: 1.6,
-            }}
-            onFocus={e => e.target.style.borderColor = 'var(--primary)'}
-            onBlur={e => e.target.style.borderColor = 'var(--border)'}
-          />
-
-          {/* Generate button */}
-          <button
-            onClick={handleGenerate}
-            disabled={isGenerating}
-            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all duration-200 disabled:opacity-60"
-            style={{
-              background: 'var(--primary)',
-              color: 'white',
-              boxShadow: isGenerating ? 'none' : '0 8px 24px rgba(124,58,237,0.3)',
-            }}
-          >
-            {isGenerating ? (
-              <><RefreshCw size={15} className="animate-spin" /><span className="step-active">{genStep}</span></>
-            ) : (
-              <><Wand2 size={15} /> Gerar Conteúdo</>
-            )}
+        {/* Wizard Left Panel Override: Once in step 4, the user can just restart wizard to change topic */}
+        <div className="panel-section mb-0 flex-1">
+          <p className="text-xs font-semibold mb-1" style={{ color: 'var(--text-3)' }}>Em edicao:</p>
+          <p className="text-sm font-bold truncate mb-4" style={{ color: 'var(--text-1)' }}>{topic}</p>
+          
+          <button 
+            onClick={() => { setWizardStep(1); setGenerated(null); setSlides([]); }}
+            className="w-full py-2.5 rounded-xl text-xs font-semibold"
+            style={{ background: 'var(--primary-muted)', color: 'var(--primary)', border: '1px solid var(--primary)' }}>
+            <RefreshCw size={14} className="inline mr-1 mb-0.5" /> Fazer outro Post (Wizard)
           </button>
         </div>
 
@@ -870,6 +940,70 @@ const GeneratorPage = () => {
             ))}
           </div>
         </div>
+
+        {/* -- INSPECTOR PANEL -- */}
+        {selectedNode && (
+          <div className="panel-section" style={{ background: 'var(--primary-muted)', border: '1px solid var(--primary)' }}>
+            <div className="flex justify-between items-center mb-3">
+               <p className="font-bold text-sm" style={{ color: 'var(--primary)' }}>Inspetor (DND)</p>
+               <span className="text-[10px] px-1.5 py-0.5 rounded font-mono uppercase" style={{ background: 'rgba(124,58,237,0.1)', color: 'var(--primary)', border: '1px solid currentColor' }}>{selectedNode.tag}</span>
+            </div>
+            
+            <div className="flex flex-col gap-3">
+               <div>
+                  <p className="text-xs mb-1 font-semibold" style={{ color: 'var(--text-3)' }}>Tamanho e Alinhamento</p>
+                  <div className="flex gap-2">
+                     <input type="number" className="w-16 px-2 py-1.5 rounded-lg text-xs outline-none" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-1)' }} 
+                        value={parseInt(selectedNode.styles.fontSize) || 16} 
+                        onChange={e => handleStyleUpdate({ fontSize: e.target.value + 'px' })} 
+                     />
+                     
+                     <div className="flex gap-1">
+                        <button onClick={() => handleStyleUpdate({ textAlign: 'left' })} className="px-2 py-1.5 rounded-lg transition-colors duration-200 hover:bg-white/10" style={{ background: selectedNode.styles.textAlign === 'left' ? 'var(--primary)' : 'var(--bg-card)', color: selectedNode.styles.textAlign === 'left' ? 'white' : 'var(--text-1)' }}><AlignLeft size={14}/></button>
+                        <button onClick={() => handleStyleUpdate({ textAlign: 'center' })} className="px-2 py-1.5 rounded-lg transition-colors duration-200 hover:bg-white/10" style={{ background: selectedNode.styles.textAlign === 'center' ? 'var(--primary)' : 'var(--bg-card)', color: selectedNode.styles.textAlign === 'center' ? 'white' : 'var(--text-1)' }}><AlignCenter size={14}/></button>
+                        <button onClick={() => handleStyleUpdate({ textAlign: 'right' })} className="px-2 py-1.5 rounded-lg transition-colors duration-200 hover:bg-white/10" style={{ background: selectedNode.styles.textAlign === 'right' ? 'var(--primary)' : 'var(--bg-card)', color: selectedNode.styles.textAlign === 'right' ? 'white' : 'var(--text-1)' }}><AlignRight size={14}/></button>
+                     </div>
+                  </div>
+               </div>
+
+               <div>
+                 <p className="text-xs mb-1.5 font-semibold" style={{ color: 'var(--text-3)' }}>Cores da Marca</p>
+                 <div className="flex flex-wrap gap-2">
+                    {[
+                      { label: 'Primária', val: brand?.color_primary },
+                      { label: 'Secundária', val: brand?.color_secondary },
+                      { label: 'Acento', val: brand?.color_accent },
+                      { label: 'Escura', val: brand?.color_text_dark },
+                      { label: 'Clara', val: brand?.color_text_light },
+                      { label: 'Branco', val: '#ffffff' },
+                      { label: 'Preto', val: '#000000' },
+                    ].map(c => c.val && (
+                      <button key={c.label} onClick={() => handleStyleUpdate({ color: c.val })}
+                         className="w-6 h-6 rounded-full border border-black/10 transition-transform hover:scale-110"
+                         style={{ background: c.val, boxShadow: selectedNode.styles.color === c.val ? '0 0 0 2px var(--bg-surface), 0 0 0 4px var(--primary)' : 'none' }}
+                         title={c.label}
+                      />
+                    ))}
+                 </div>
+               </div>
+               
+               {['H1', 'H2', 'H3', 'P', 'SPAN'].includes(selectedNode.tag.toUpperCase()) && (
+                  <div>
+                    <p className="text-xs mb-1.5 font-semibold" style={{ color: 'var(--text-3)' }}>Peso da Fonte</p>
+                    <div className="flex gap-1.5">
+                      {['400', '600', '800'].map(w => (
+                        <button key={w} onClick={() => handleStyleUpdate({ fontWeight: w })} className="flex-1 py-1 rounded text-xs transition-colors" style={{ background: selectedNode.styles.fontWeight === w ? 'var(--primary)' : 'var(--bg-card)', color: selectedNode.styles.fontWeight === w ? 'white' : 'var(--text-2)' }}>{w === '400' ? 'Rg' : w === '600' ? 'Md' : 'Bd'}</button>
+                      ))}
+                    </div>
+                  </div>
+               )}
+
+               <button onClick={() => handleStyleUpdate({ display: 'none' })} className="mt-2 w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 hover:bg-red-500/20 hover:text-red-500 transition-colors" style={{ color: 'var(--text-3)', border: '1px solid transparent' }}>
+                  <Trash size={12} /> Excluir Elemento da Tela
+               </button>
+            </div>
+          </div>
+        )}
 
         {/* Mini slides */}
         {slides.length > 1 && (
