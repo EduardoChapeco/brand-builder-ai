@@ -93,8 +93,8 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
       setWorkspace(wsRes.data as Workspace);
-      setBrandKit(bkRes.data as BrandKit | null);
-      setBriefing(brRes.data as Briefing | null);
+      setBrandKit(bkRes.data as unknown as BrandKit | null);
+      setBriefing(brRes.data as unknown as Briefing | null);
     } catch {
       toast.error('Erro ao carregar workspace');
     } finally {
