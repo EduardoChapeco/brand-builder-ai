@@ -70,8 +70,8 @@ html, body { width:${w}px; height:${h}px; overflow:hidden; }
   <div class="grain"></div>
   <div class="stamp">Exclusivo</div>
   <div class="date">Relatório · ${new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</div>
-  <div class="headline">${data.headline}</div>
-  ${data.body ? `<div class="body">${data.body}</div>` : ''}
+  <div class="headline" data-postgen-field="headline" data-postgen-editable="true">${data.headline}</div>
+  ${data.body ? `<div class="body" data-postgen-field="body" data-postgen-editable="true">${data.body}</div>` : ''}
   <div class="footer">Fonte: ${brand.watermark_text || 'Análise Interna'}</div>
   <div class="watermark">${brand.watermark_text || ''}</div>
 </div>

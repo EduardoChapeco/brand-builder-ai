@@ -10,7 +10,7 @@ export const dataInsight = (data: SlideData, brand: BrandKit): string => {
     ? items.map((item, i) => `
       <div class="list-item">
         <span class="item-num">${String(i + 1).padStart(2, '0')}</span>
-        <span class="item-text">${item}</span>
+        <span class="item-text" data-postgen-field="body" data-postgen-editable="true">${item}</span>
       </div>`).join('')
     : '';
 
@@ -93,13 +93,13 @@ html, body { width:${w}px; height:${h}px; overflow:hidden; }
   <div class="header">
     <div class="header-bg-circle"></div>
     <div class="header-label">📊 Dados & Insights</div>
-    <div class="headline">${data.headline}</div>
+    <div class="headline" data-postgen-field="headline" data-postgen-editable="true">${data.headline}</div>
   </div>
   <div class="content">
-    ${listHtml || `<div class="list-item"><span class="item-text">${data.body || ''}</span></div>`}
+    ${listHtml || `<div class="list-item"><span class="item-text" data-postgen-field="body" data-postgen-editable="true">${data.body || ''}</span></div>`}
   </div>
   <div class="footer-bar">
-    <span class="footer-text">${data.cta || 'Salve e compartilhe →'}</span>
+    <span class="footer-text" data-postgen-field="cta" data-postgen-editable="true">${data.cta || 'Salve e compartilhe →'}</span>
     <span class="watermark">${brand.watermark_text || ''}</span>
   </div>
 </div>

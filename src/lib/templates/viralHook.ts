@@ -84,8 +84,8 @@ html, body { width:${w}px; height:${h}px; overflow:hidden; }
   <div class="layer-media"></div>
   <div class="layer-overlay"></div>
   <div class="layer-text">
-    <div class="headline">${headline}</div>
-    ${body ? `<div class="body">${body}</div>` : ''}
+    <div class="headline" data-postgen-field="headline" data-postgen-editable="true">${headline}</div>
+    ${body ? `<div class="body" data-postgen-field="body" data-postgen-editable="true">${body}</div>` : ''}
     <div class="accent-line"></div>
   </div>
   ${data.totalSlides && data.totalSlides > 1 ? `<div class="slide-num">${data.slideNumber}/${data.totalSlides}</div>` : ''}

@@ -14,6 +14,13 @@ const MASTER_PROMPTS: Record<string, string> = {
   documentary: "[MASTER STYLE: DOCUMENTARY/JOURNALISTIC] Raw, authentic scene, candid composition, available light, desaturated film look, no staged text elements.",
 };
 
+const FORMAT_ASPECT_RATIO: Record<string, string> = {
+  square: "1:1",
+  portrait: "4:5",
+  story: "9:16",
+  landscape: "16:9",
+};
+
 type ApiKeyRow = {
   id: string;
   provider: "gemini" | "openrouter";
@@ -102,7 +109,11 @@ const generateWithGemini = async (key: ApiKeyRow, prompt: string) => {
   return Uint8Array.from(atob(imagePart.inlineData.data), char => char.charCodeAt(0));
 };
 
-const generateWithOpenRouter = async (key: ApiKeyRow, prompt: string) => {
+const generateWithOpenRouter = async (
+  key: ApiKeyRow,
+  prompt: string,
+  aspectRatio: string,
+) => {
   const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -115,7 +126,7 @@ const generateWithOpenRouter = async (key: ApiKeyRow, prompt: string) => {
       messages: [{ role: "user", content: prompt }],
       modalities: ["image", "text"],
       image_config: {
-        aspect_ratio: "1:1",
+        aspect_ratio: aspectRatio,
         image_size: "1K",
       },
     }),
@@ -146,7 +157,7 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { workspace_id, prompt, visual_mode } = await req.json();
+    const { workspace_id, prompt, visual_mode, format } = await req.json();
     if (!workspace_id || !prompt) {
       throw new Error("workspace_id e prompt sao obrigatorios.");
     }
@@ -175,7 +186,8 @@ Deno.serve(async (req: Request) => {
     }
 
     const masterPrompt = MASTER_PROMPTS[visual_mode] || MASTER_PROMPTS.editorial;
-    const fullPrompt = `${masterPrompt} SUBJECT: ${prompt}. Square format 1:1, fills entire frame, no text in image.`;
+    const aspectRatio = FORMAT_ASPECT_RATIO[format] || FORMAT_ASPECT_RATIO.square;
+    const fullPrompt = `${masterPrompt} SUBJECT: ${prompt}. Frame ratio ${aspectRatio}, fills entire frame, no text in image.`;
 
     for (const key of keys as ApiKeyRow[]) {
       if ((key.calls_today || 0) >= (key.daily_limit || 0)) continue;
@@ -183,7 +195,7 @@ Deno.serve(async (req: Request) => {
       try {
         const imageBytes = key.provider === "gemini"
           ? await generateWithGemini(key, fullPrompt)
-          : await generateWithOpenRouter(key, fullPrompt);
+          : await generateWithOpenRouter(key, fullPrompt, aspectRatio);
 
         const imageUrl = await uploadImageBytes(supabase, workspace_id, imageBytes);
         await incrementKeyUsage(supabase, key);

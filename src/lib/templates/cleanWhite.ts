@@ -68,10 +68,10 @@ html, body { width:${w}px; height:${h}px; overflow:hidden; }
   <div class="body-area">
     <div class="bg-shape"></div>
     <div class="category">✦ Insight</div>
-    <div class="headline">${data.headline}</div>
+    <div class="headline" data-postgen-field="headline" data-postgen-editable="true">${data.headline}</div>
     <div class="divider"></div>
-    ${data.body ? `<div class="body-text">${data.body}</div>` : ''}
-    ${data.cta ? `<div class="cta">→ ${data.cta}</div>` : ''}
+    ${data.body ? `<div class="body-text" data-postgen-field="body" data-postgen-editable="true">${data.body}</div>` : ''}
+    ${data.cta ? `<div class="cta" data-postgen-field="cta" data-postgen-editable="true">→ ${data.cta}</div>` : ''}
     <div class="watermark">${brand.watermark_text || ''}</div>
   </div>
 </div>

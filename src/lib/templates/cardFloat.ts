@@ -85,9 +85,9 @@ html, body { width:${w}px; height:${h}px; overflow:hidden; }
   <div class="blur-orb-2"></div>
   <div class="card">
     <div class="badge">✦ Destaque</div>
-    <div class="headline">${data.headline}</div>
-    ${data.body ? `<div class="body">${data.body}</div>` : ''}
-    ${data.cta ? `<div class="cta">→ ${data.cta}</div>` : ''}
+    <div class="headline" data-postgen-field="headline" data-postgen-editable="true">${data.headline}</div>
+    ${data.body ? `<div class="body" data-postgen-field="body" data-postgen-editable="true">${data.body}</div>` : ''}
+    ${data.cta ? `<div class="cta" data-postgen-field="cta" data-postgen-editable="true">→ ${data.cta}</div>` : ''}
   </div>
   <div class="watermark">${brand.watermark_text || ''}</div>
 </div>

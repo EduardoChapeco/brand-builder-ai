@@ -33,6 +33,11 @@ interface GeneratedContent {
   bg_prompt_hint: string;
 }
 
+interface GeneratedImageResponse {
+  imageUrl?: string;
+  error?: string;
+}
+
 interface StoredGenerationMeta {
   artboard_format?: ArtboardFormat;
   generated_content?: GeneratedContent | null;
@@ -65,6 +70,8 @@ interface RssTopic {
   source_type?: 'rss' | 'ai';
 }
 
+type EditableFieldName = 'headline' | 'body' | 'cta';
+
 const TONES:   Tone[]   = ['Casual', 'Sério', 'Informativo', 'Humor', 'Urgente'];
 const FUNNELS: Funnel[] = ['Awareness', 'Educativo', 'Captar Leads', 'Vendas', 'Engajamento'];
 const VIS_MODES: { id: VisMod; label: string }[] = [
@@ -90,6 +97,48 @@ const getArtboardFormatFromStoredPost = (post: EditablePost): ArtboardFormat => 
   if (post.format === 'landscape') return 'landscape';
   return 'square';
 };
+
+const normalizeEditableFieldValue = (field: EditableFieldName, value: string): string => {
+  const trimmed = value.trim();
+  if (field !== 'cta') return trimmed;
+  return trimmed.replace(/^[\s→]+/, '').replace(/[\s→]+$/, '');
+};
+
+const extractSlideFields = (slideHtml: string): Partial<Record<EditableFieldName, string>> => {
+  if (!slideHtml.trim()) return {};
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(slideHtml, 'text/html');
+  const result: Partial<Record<EditableFieldName, string>> = {};
+
+  (['headline', 'body', 'cta'] as EditableFieldName[]).forEach(field => {
+    const values = Array.from(doc.querySelectorAll<HTMLElement>(`[data-postgen-field="${field}"]`))
+      .map(node => normalizeEditableFieldValue(field, node.innerHTML))
+      .filter(Boolean);
+
+    if (values.length > 0) {
+      result[field] = field === 'body' ? values.join('\n') : values[0];
+    }
+  });
+
+  return result;
+};
+
+const applySlideHtmlToContent = (
+  content: GeneratedContent,
+  slidesHtml: string[],
+): GeneratedContent => ({
+  ...content,
+  slides: content.slides.map((slide, index) => {
+    const editableFields = extractSlideFields(slidesHtml[index] || '');
+    return {
+      ...slide,
+      headline: editableFields.headline || slide.headline,
+      body: editableFields.body || slide.body,
+      cta: editableFields.cta ?? slide.cta,
+    };
+  }),
+});
 
 const GeneratorPage = () => {
   const location = useLocation();
@@ -149,8 +198,8 @@ const GeneratorPage = () => {
   const { width, height } = getArtboardDimensions(format);
 
   // Render slides from generated content
-  const renderSlides = useCallback((content: GeneratedContent, bgUrl?: string) => {
-    const tpl = getTemplate(selectedTpl);
+  const renderSlides = useCallback((content: GeneratedContent, bgUrl?: string, templateId = selectedTpl) => {
+    const tpl = getTemplate(templateId);
     if (!tpl) return;
     const rendered = content.slides.map(s => {
       const slideData: SlideData = {
@@ -188,7 +237,9 @@ const GeneratorPage = () => {
     setBgImageUrl(post.image_urls?.[0] || post.generation_meta?.bg_image_url || undefined);
     setSlides(post.slides_html || []);
     setCurrentSlide(0);
-    setGenerated(post.generation_meta?.generated_content || null);
+    setGenerated(post.generation_meta?.generated_content
+      ? applySlideHtmlToContent(post.generation_meta.generated_content, post.slides_html || [])
+      : null);
     toast.success('Post carregado para edição');
   }, [location.state]);
 
@@ -263,14 +314,7 @@ const GeneratorPage = () => {
   const handleTemplateChange = (id: string) => {
     setSelectedTpl(id);
     if (generated) {
-      const tpl = getTemplate(id);
-      if (!tpl) return;
-      const rendered = generated.slides.map(s => tpl.renderer({
-        headline: s.headline, body: s.body, cta: s.cta,
-        bgImageUrl, bgOpacity: 0.28, format,
-        slideNumber: s.index + 1, totalSlides: generated.slides.length,
-      }, brand));
-      setSlides(rendered);
+      renderSlides(generated, bgImageUrl, id);
     }
   };
 
@@ -296,14 +340,14 @@ const GeneratorPage = () => {
     const reader = new FileReader();
     reader.onload = () => {
       if (typeof reader.result !== 'string') {
-        toast.error('Formato de imagem invÃ¡lido');
+        toast.error('Formato de imagem invalido');
         return;
       }
       setBgImageUrl(reader.result);
       if (generated) renderSlides(generated, reader.result);
       toast.success('Imagem de fundo atualizada');
     };
-    reader.onerror = () => toast.error('NÃ£o foi possÃ­vel carregar a imagem');
+    reader.onerror = () => toast.error('Nao foi possivel carregar a imagem');
     reader.readAsDataURL(file);
   };
 
@@ -317,7 +361,7 @@ const GeneratorPage = () => {
     try {
       const payload = {
         workspace_id: workspace.id,
-        title: postTitle || topic.trim() || 'Post sem tÃ­tulo',
+        title: postTitle || topic.trim() || 'Post sem titulo',
         format: getPersistedPostFormat(format, slides.length),
         slides_html: slides,
         slides_count: slides.length,
@@ -362,7 +406,7 @@ const GeneratorPage = () => {
       if (uploadedUrls.length === slides.length) {
         toast.success(editingPostId ? 'Post atualizado na biblioteca!' : 'Post salvo na biblioteca!');
       } else if (uploadedUrls.length > 0) {
-        toast.success('Post salvo, mas algumas imagens nÃ£o foram enviadas');
+        toast.success('Post salvo, mas algumas imagens nao foram enviadas');
       } else {
         toast.warning('Post salvo sem imagens no storage. Verifique o bucket "postgen".');
       }
@@ -572,14 +616,22 @@ const GeneratorPage = () => {
                 onClick={async () => {
                   setIsGenImg(true);
                   try {
-                    const { data } = await supabase.functions.invoke('generate-background-image', {
-                      body: { workspace_id: workspace?.id, prompt: generated.bg_prompt_hint, visual_mode: visMode },
+                    const { data, error } = await supabase.functions.invoke<GeneratedImageResponse>('generate-background-image', {
+                      body: {
+                        workspace_id: workspace?.id,
+                        prompt: generated.bg_prompt_hint,
+                        visual_mode: visMode,
+                        format,
+                      },
                     });
-                    if (data?.imageUrl) {
-                      setBgImageUrl(data.imageUrl);
-                      renderSlides(generated, data.imageUrl);
-                    }
-                  } catch { toast.error('Erro ao gerar imagem'); }
+                    if (error) throw error;
+                    if (!data?.imageUrl) throw new Error(data?.error || 'Imagem nao retornada');
+                    setBgImageUrl(data.imageUrl);
+                    renderSlides(generated, data.imageUrl);
+                  } catch (error) {
+                    const message = error instanceof Error ? error.message : 'Erro ao gerar imagem';
+                    toast.error(message);
+                  }
                   finally { setIsGenImg(false); }
                 }}
                 className="flex flex-col items-center gap-1 py-2.5 rounded-xl text-xs font-medium transition-all disabled:opacity-60"
@@ -630,6 +682,23 @@ const GeneratorPage = () => {
                 setSlides(currentSlides => currentSlides.map((slide, index) => (
                   index === currentSlide ? nextHtml : slide
                 )));
+                setGenerated(currentGenerated => {
+                  if (!currentGenerated) return currentGenerated;
+                  const editableFields = extractSlideFields(nextHtml);
+                  return {
+                    ...currentGenerated,
+                    slides: currentGenerated.slides.map((slide, index) => (
+                      index === currentSlide
+                        ? {
+                            ...slide,
+                            headline: editableFields.headline || slide.headline,
+                            body: editableFields.body || slide.body,
+                            cta: editableFields.cta ?? slide.cta,
+                          }
+                        : slide
+                    )),
+                  };
+                });
               }}
             />
           ) : (

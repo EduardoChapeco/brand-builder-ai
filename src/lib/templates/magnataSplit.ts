@@ -77,10 +77,10 @@ html, body { width:${w}px; height:${h}px; overflow:hidden; }
   <div class="gold-line-top"></div>
   <div class="gold-line-bottom"></div>
   <div class="eyebrow"><span class="diamond"></span>Premium Insight</div>
-  <div class="headline">${data.headline}</div>
+  <div class="headline" data-postgen-field="headline" data-postgen-editable="true">${data.headline}</div>
   <div class="accent-rule"></div>
-  ${data.body ? `<div class="body">${data.body}</div>` : ''}
-  ${data.cta ? `<div class="cta">→ ${data.cta}</div>` : ''}
+  ${data.body ? `<div class="body" data-postgen-field="body" data-postgen-editable="true">${data.body}</div>` : ''}
+  ${data.cta ? `<div class="cta" data-postgen-field="cta" data-postgen-editable="true">→ ${data.cta}</div>` : ''}
   <div class="watermark">${brand.watermark_text || ''}</div>
 </div>
 </body>

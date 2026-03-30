@@ -8,7 +8,8 @@ interface SlideFrameProps {
   onHtmlChange?: (nextHtml: string) => void;
 }
 
-const EDITABLE_SELECTOR = 'h1,h2,h3,h4,h5,h6,p,span,li,blockquote,strong,em';
+const EXPLICIT_EDITABLE_SELECTOR = '[data-postgen-editable="true"]';
+const FALLBACK_EDITABLE_SELECTOR = 'h1,h2,h3,h4,h5,h6,p,span,li,blockquote,strong,em';
 
 const wrapHtml = (html: string) => (html.toLowerCase().includes('<!doctype') ? html : `<!DOCTYPE html>${html}`);
 
@@ -32,7 +33,12 @@ const SlideFrame = ({ slideHtml, width, height, editable = false, onHtmlChange }
       onHtmlChange?.(wrapHtml(doc.documentElement.outerHTML));
     };
 
-    const editableNodes = Array.from(doc.body.querySelectorAll<HTMLElement>(EDITABLE_SELECTOR))
+    const explicitNodes = Array.from(doc.body.querySelectorAll<HTMLElement>(EXPLICIT_EDITABLE_SELECTOR))
+      .filter(node => node.textContent?.trim());
+
+    const editableNodes = (explicitNodes.length > 0 ? explicitNodes : Array.from(
+      doc.body.querySelectorAll<HTMLElement>(FALLBACK_EDITABLE_SELECTOR),
+    ))
       .filter(node => node.textContent?.trim());
 
     editableNodes.forEach(node => {

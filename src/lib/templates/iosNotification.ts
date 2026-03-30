@@ -98,8 +98,8 @@ html, body { width:${w}px; height:${h}px; overflow:hidden; }
       <span class="app-name">${brand.watermark_text || 'PostGen'}</span>
       <span class="notif-time">agora</span>
     </div>
-    <div class="notif-title">${data.headline}</div>
-    ${data.body ? `<div class="notif-body">${data.body}</div>` : ''}
+    <div class="notif-title" data-postgen-field="headline" data-postgen-editable="true">${data.headline}</div>
+    ${data.body ? `<div class="notif-body" data-postgen-field="body" data-postgen-editable="true">${data.body}</div>` : ''}
   </div>
   <div class="watermark">${brand.watermark_text || ''}</div>
 </div>

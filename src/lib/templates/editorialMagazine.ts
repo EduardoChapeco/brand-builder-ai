@@ -70,8 +70,8 @@ html, body { width:${w}px; height:${h}px; overflow:hidden; }
   <div class="category-badge">📸 Editorial</div>
   <div class="layer-text">
     <div class="accent-rule"></div>
-    <div class="headline">${data.headline}</div>
-    ${data.body ? `<div class="body">${data.body}</div>` : ''}
+    <div class="headline" data-postgen-field="headline" data-postgen-editable="true">${data.headline}</div>
+    ${data.body ? `<div class="body" data-postgen-field="body" data-postgen-editable="true">${data.body}</div>` : ''}
   </div>
   <div class="watermark">${brand.watermark_text || ''}</div>
 </div>

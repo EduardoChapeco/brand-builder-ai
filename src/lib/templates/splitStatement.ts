@@ -82,9 +82,9 @@ html, body { width:${w}px; height:${h}px; overflow:hidden; }
   <div class="right-half">
     <div class="right-bg-pattern"></div>
     <div class="eyebrow">★ Destaque</div>
-    <div class="headline">${data.headline}</div>
-    ${data.body ? `<div class="body">${data.body}</div>` : ''}
-    ${data.cta ? `<div class="cta-btn">→ ${data.cta}</div>` : ''}
+    <div class="headline" data-postgen-field="headline" data-postgen-editable="true">${data.headline}</div>
+    ${data.body ? `<div class="body" data-postgen-field="body" data-postgen-editable="true">${data.body}</div>` : ''}
+    ${data.cta ? `<div class="cta-btn" data-postgen-field="cta" data-postgen-editable="true">→ ${data.cta}</div>` : ''}
     <div class="watermark">${brand.watermark_text || ''}</div>
   </div>
 </div>
