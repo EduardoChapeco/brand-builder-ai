@@ -1,6 +1,6 @@
 import { NavLink, useParams } from 'react-router-dom';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Wand2, Images, Palette, FileText, Settings, Dna } from 'lucide-react';
+import { Wand2, Images, Palette, FileText, Settings, Dna, Key } from 'lucide-react';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 
 const navItems = [
@@ -9,6 +9,7 @@ const navItems = [
   { icon: Dna,      label: 'DNA Cloner',        path: 'brand-dna'  },
   { icon: Palette,  label: 'Brand Kit',         path: 'brand-kit'  },
   { icon: FileText, label: 'Briefing',          path: 'briefing'   },
+  { icon: Key,      label: 'API Keys',          path: 'api-keys'   },
   { icon: Settings, label: 'Config',            path: 'settings'   },
 ];
 

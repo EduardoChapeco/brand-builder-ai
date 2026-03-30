@@ -5,6 +5,7 @@ import {
   Dna, Globe, Loader2, Plus, Search, Sparkles,
   ExternalLink, Eye, Copy, CheckCircle, XCircle, Clock,
   Palette, Type, MessageSquare, LayoutTemplate, Wand2,
+  Terminal, Play, FileIcon, ImageIcon, Activity
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -127,6 +128,15 @@ const BrandDNAPage = () => {
   const [filterStatus, setFilterStatus] = useState<'all' | 'ready' | 'analyzing'>('all');
   const [selectedTemplate, setSelectedTemplate] = useState<BrandTemplate | null>(null);
 
+  // ─ Orchestrator State ─
+  type LogEntry = { id: string; msg: string; status: 'loading' | 'success' | 'error'; time: string };
+  const [squadLogs, setSquadLogs] = useState<LogEntry[]>([]);
+  const [clonedImage, setClonedImage] = useState<string | null>(null);
+
+  const addLog = (msg: string, status: 'loading' | 'success' | 'error') => {
+    setSquadLogs(prev => [...prev.filter(l => l.status !== 'loading'), { id: Math.random().toString(), msg, status, time: new Date().toLocaleTimeString() }]);
+  };
+
   // ─ Fetch templates (public = all workspaces can see them) ─
   const fetchTemplates = useCallback(async () => {
     setIsLoading(true);
@@ -157,33 +167,78 @@ const BrandDNAPage = () => {
     return () => clearInterval(interval);
   }, [templates, fetchTemplates]);
 
-  // ─ Clone DNA ─────────────────────────────────────────────
+  // ─ Orchestrator: DNA Clone Async Flow ────────────────────
   const handleClone = async () => {
     if (!url.trim()) { toast.error('Cole uma URL para analisar'); return; }
     if (!workspace?.id) { toast.error('Workspace não encontrado'); return; }
 
     setIsCloning(true);
+    setSquadLogs([]);
+    setClonedImage(null);
+    let currentImageUrl = '';
+    let finalDna = null;
+
     try {
-      const { data, error } = await supabase.functions.invoke('clone-brand-template', {
-        body: {
-          workspace_id: workspace.id,
-          url: url.trim(),
-          source_name: sourceName.trim() || undefined,
-          source_platform: detectPlatform(url.trim()),
-        },
+      // Step 1: SCRAPER
+      addLog(`🚀 Inicializando esquadrão de extração para ${url}...`, 'success');
+      addLog(`🤖 Agente Scraper: Inicializando ambiente Sandbox Web...`, 'loading');
+      
+      const { data: scraperData, error: scraperError } = await supabase.functions.invoke('agent-scraper', {
+        body: { workspaceId: workspace.id, url: url.trim(), preferSteel: false },
       });
 
-      if (error) throw error;
+      if (scraperError || scraperData?.error) throw new Error(scraperError?.message || scraperData?.error || 'Erro no Scraper');
+      
+      currentImageUrl = scraperData.url;
+      setClonedImage(currentImageUrl);
+      addLog(`📸 Agente Scraper: Print-screen extraído com sucesso!`, 'success');
 
-      toast.success('Análise de DNA iniciada! Aguarde alguns segundos...');
-      setUrl('');
-      setSourceName('');
-      await fetchTemplates();
+      // Step 2: VISION ANALYZER
+      addLog(`👁️ Agente Vision: Inspecionando pixels e abstraindo grids...`, 'loading');
+      
+      const { data: visionData, error: visionError } = await supabase.functions.invoke('agent-vision-analyzer', {
+        body: { workspaceId: workspace.id, screenshotUrl: currentImageUrl, preferGemini: false },
+      });
+
+      if (visionError || visionData?.error) throw new Error(visionError?.message || visionData?.error || 'Erro no Agente Vision');
+      
+      finalDna = visionData.data; // { brand_dna, layout, html_template }
+      addLog(`✨ Agente Vision: DNA Mapeado! Cores e Tipografias identificadas.`, 'success');
+
+      // Step 3: ASSEMBLER & DATABASE SAVER
+      addLog(`✍️ Agente Montador: Consolidando variáveis e finalizando Template...`, 'loading');
+      
+      const insertPayload = {
+        workspace_id: workspace.id,
+        source_url: url.trim(),
+        source_name: sourceName.trim() || detectPlatform(url.trim()).toUpperCase(),
+        source_platform: detectPlatform(url.trim()),
+        status: 'ready',
+        html_template: finalDna.html_template,
+        brand_dna: finalDna.brand_dna,
+        layout_style: finalDna.layout,
+        is_public: true
+      };
+
+      const { data: savedTpl, error: dbError } = await supabase.from('brand_templates').insert(insertPayload).select().single();
+      if (dbError) throw dbError;
+
+      addLog(`✅ Template salvo na biblioteca global com sucesso!`, 'success');
+      toast.success('DNA Clonado com sucesso!');
+      
+      setTimeout(() => {
+        setIsCloning(false);
+        setUrl('');
+        setSourceName('');
+        fetchTemplates();
+        if (savedTpl) setSelectedTemplate(savedTpl as BrandTemplate);
+      }, 2000);
+
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Erro ao iniciar análise';
+      const msg = err instanceof Error ? err.message : 'Erro ao executar esquadrão';
+      addLog(`❌ Falha na Orquestração: ${msg}`, 'error');
       toast.error(msg);
-    } finally {
-      setIsCloning(false);
+      // Mantém a tela de cloning aberta para o usuário ver o erro
     }
   };
 
@@ -274,12 +329,62 @@ const BrandDNAPage = () => {
         </p>
       </div>
 
-      {/* ─ Templates Grid ─ */}
+      {/* ─ Orchestrator & Templates Grid ─ */}
       <div className="flex-1 overflow-y-auto p-6">
-        {isLoading ? (
-          <div className="grid grid-cols-3 gap-4">
+        {isCloning ? (
+          <div className="flex flex-col md:flex-row gap-6 h-full items-stretch justify-center max-w-5xl mx-auto py-8">
+            <div className="flex-1 flex flex-col gap-4 p-6 rounded-2xl border bg-[color:var(--bg-elevated)]" style={{ borderColor: 'var(--border)' }}>
+              <h2 className="font-bold flex items-center gap-2" style={{ color: 'var(--text-1)' }}>
+                <Terminal size={18} style={{ color: 'var(--primary)' }} /> Terminal do Esquadrão
+              </h2>
+              
+              <div className="flex-1 flex flex-col gap-3 font-mono text-[11px] overflow-y-auto p-4 rounded-xl bg-black/5 dark:bg-black/30 text-left min-h-[300px]">
+                {squadLogs.map(log => (
+                  <div key={log.id} className="flex gap-3 items-start animate-in fade-in slide-in-from-bottom-2">
+                    <span className="opacity-40 shrink-0">[{log.time}]</span>
+                    <span style={{ 
+                      color: log.status === 'error' ? '#ef4444' : log.status === 'success' ? '#10b981' : 'var(--text-2)' 
+                    }}>
+                      {log.msg}
+                      {log.status === 'loading' && <span className="animate-pulse ml-1">...</span>}
+                    </span>
+                  </div>
+                ))}
+                {squadLogs.length > 0 && squadLogs[squadLogs.length - 1].status === 'loading' && (
+                  <div className="flex justify-start mt-2 opacity-30"><Loader2 size={14} className="animate-spin" /></div>
+                )}
+              </div>
+              
+              {squadLogs.some(l => l.status === 'error') && (
+                <button 
+                  onClick={() => setIsCloning(false)} 
+                  className="mt-4 py-2 px-4 rounded-xl text-xs font-bold w-full border transition-colors hover:bg-neutral-500/10" 
+                  style={{ borderColor: 'var(--border)', color: 'var(--text-1)' }}>
+                  Fechar Orquestrador
+                </button>
+              )}
+            </div>
+
+            <div className="flex-1 p-6 rounded-2xl border flex flex-col gap-4 items-center justify-center bg-[color:var(--bg-elevated)]" style={{ borderColor: 'var(--border)', borderStyle: 'dashed' }}>
+              {clonedImage ? (
+                <div className="relative w-full h-full rounded-lg overflow-hidden flex items-center justify-center bg-black/10 min-h-[300px]">
+                  <img src={clonedImage} alt="Scraped View" className="max-w-full max-h-full object-contain mix-blend-multiply dark:mix-blend-normal rounded-md" />
+                  <div className="absolute top-2 right-2 px-2 py-1 rounded bg-black/70 backdrop-blur-md text-[9px] text-white font-bold flex items-center gap-1 shadow-xl">
+                    <ImageIcon size={10} /> Visão do Agente
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center opacity-40 flex flex-col items-center gap-3">
+                  <Globe size={32} />
+                  <p className="text-xs font-medium">Aguardando telemetria sandbox...</p>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="rounded-2xl animate-pulse" style={{ background: 'var(--bg-card)', height: 240 }} />
+              <div key={i} className="rounded-2xl animate-pulse" style={{ background: 'var(--bg-card)', height: 320 }} />
             ))}
           </div>
         ) : filteredTemplates.length === 0 ? (

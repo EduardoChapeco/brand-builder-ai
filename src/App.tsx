@@ -13,6 +13,7 @@ import BriefingPage from "@/pages/BriefingPage";
 import SettingsPage from "@/pages/SettingsPage";
 import NotFound from "@/pages/NotFound";
 import BrandDNAPage from "@/pages/BrandDNAPage";
+import ApiKeysPage from "@/pages/ApiKeysPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -43,6 +44,7 @@ const App = () => (
             <Route path="brand-kit" element={<BrandKitPage />} />
             <Route path="briefing" element={<BriefingPage />} />
             <Route path="brand-dna" element={<BrandDNAPage />} />
+            <Route path="api-keys" element={<ApiKeysPage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>
           <Route path="*" element={<NotFound />} />
