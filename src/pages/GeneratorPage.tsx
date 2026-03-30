@@ -220,8 +220,8 @@ const GeneratorPage = () => {
             --color-primary: ${brand.color_primary};
             --color-secondary: ${brand.color_secondary};
             --color-accent: ${brand.color_accent};
-            --color-bg: ${brand.color_bg_dark};
-            --color-text: ${brand.color_text_dark};
+            --color-bg: ${visMode === 'dark' || visMode === 'bold' ? brand.color_bg_dark : brand.color_bg_light};
+            --color-text: ${visMode === 'dark' || visMode === 'bold' ? brand.color_text_dark : brand.color_text_light};
             --font-headline: '${brand.font_headline}', sans-serif;
             --font-body: '${brand.font_body}', sans-serif;
             --radius: ${customDna?.brand_dna?.radius || '12px'};
@@ -275,7 +275,7 @@ const GeneratorPage = () => {
     });
     setSlides(rendered);
     setCurrentSlide(0);
-  }, [selectedTpl, clonedDna, brand, format]);
+  }, [selectedTpl, clonedDna, brand, format, visMode]);
 
   useEffect(() => {
     const state = location.state as { post?: EditablePost; dnaTemplate?: { id: string; html_template: string; source_name: string | null; brand_dna?: Record<string, unknown> } } | null;

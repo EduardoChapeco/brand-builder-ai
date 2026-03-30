@@ -1,12 +1,12 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from 'jsr:@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-serve(async (req) => {
+Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   
   try {
@@ -34,41 +34,44 @@ serve(async (req) => {
     console.log(`📡 Solicitando Visão Computacional para ${provider} na imagem: ${screenshotUrl}`);
 
     const prompt = `
-      Você é um Lead Designer de Produto, Engenheiro Frontend UI/UX e Especialista em Criação de Templates. 
-      Analise o screenshot com extrema precisão visual. Identifique:
-      1. Paleta de cores exata (HEX) e Contrastes.
-      2. Raios de borda (border-radius), espaçamentos (padding/margin), Sombras (box-shadow) e Efeitos Especiais (Blur, Glassmorphism).
-      3. Tipografia: O peso, hierarquia e se usa fontes Serif/Sans-serif modernas.
-      4. Tom de Voz: O estilo de copy (direto, misterioso, luxo, corporativo).
-
-      Sua principal missão é gerar um \`html_template\` de altíssima qualidade (PREMIUM EXTREME) que seja a réplica fiel e expansível do que viu.
+      NOME DO AGENTE: "The Visionary"
+      CURRÍCULO: Diretor de Arte Sênior, Psicanalista de Cores e Engenheiro de Frontend UI/UX.
+      MISSÃO: Analisar o screenshot com extema precisão técnica e conceitual.
       
-      REGRAS CRÍTICAS DE ENGENHARIA DO CSS/HTML:
-      - O container base DEVE ser estritamente: <div class="artboard" style="position:relative; width:100%; height:100%; display:flex; flex-direction:column; background-color: var(--color-bg); overflow: hidden;">
-      - UTILIZE AS VARIÁVEIS CSS ABAIXO obrigatoriamente (NÃO use cores hex hardcoded para as fontes principais ou fundos gerais). O motor da plataforma alimentará:
-        var(--color-primary), var(--color-secondary), var(--color-accent), var(--color-bg), var(--color-text), var(--font-headline), var(--font-body), var(--radius), var(--shadow).
-      - Atribua marcações mágicas às variáveis de texto. As tags que conterão o conteúdo mutável devem ter atributo: data-postgen-field='headline', data-postgen-field='body', data-postgen-field='cta'.
-      - Construa o layout com divs aninhadas, Flexbox complexo e Absolute Positioning para marcações decorativas. Aplique filtros complexos como backdrop-filter: blur(16px) ou mix-blend-mode se detectados.
+      I. ANÁLISE PROFUNDA (PSICOLOGIA & DESIGN)
+      1. Extraia a Paleta de Cores exata (HEX). Deduza o 'color_mood' (ex: "Transmite luxo através de fundos escuros com contraste dourado e tons terrosos minimalistas").
+      2. Raios de borda exatos (px), espaçamentos absolutos (padding/margin), Sombras (box-shadow) e Efeitos Especiais (Blur, Glassmorphism, Noise patterns).
+      3. Tipografia: Identifique a escala ('typographic_scale') e a vibe da fonte (Serif elegante, Sans-serif agressiva/tech).
+      4. Composição ('composition_grid'): Split-screen, card-centered, masonry, text-heavy editorial, image-heavy.
+      5. Tom de Voz da Marca ('tone_of_voice'): Direto, provocativo, educacional compassivo, corporativo luxuoso.
 
-      Retorne APENAS um JSON estrito, sem markdown backticks no início e no fim, neste formato exato:
+      II. ENGENHARIA CSS/HTML (REGRAS DE OURO DA PLATAFORMA)
+      Sua missão técnica é gerar um \`html_template\` (PREMIUM EXTREME) que seja a réplica domada do que você analisou, funcionando nativamente como framework Tailwind/CSS.
+      - CONTAINER BASE EXATO: <div class="artboard" style="position:relative; width:100%; height:100%; display:flex; flex-direction:column; background-color: var(--color-bg); overflow: hidden;">
+      - UTILIZE AS VARIÁVEIS CSS DE TEMA OBRIGATORIAMENTE nas camadas que você estruturar: 
+        var(--color-primary), var(--color-secondary), var(--color-accent), var(--color-bg), var(--color-text), var(--font-headline), var(--font-body), var(--radius), var(--shadow).
+      - PRECISÃO MUTÁVEL (DND Native): Para que os slides gerem conteúdo de texto posteriormente, atribua as marcações injetoras. Exemplo: <h1 data-postgen-field='headline'></h1>, <p data-postgen-field='body'></p>, <div data-postgen-field='cta'></div>.
+      - CONSTRUA O LAYOUT COM MAESTRIA: Divs aninhadas para manter proporções. Aplique Flexbox avançado. Use 'position: absolute' sabiamente para texturas e gradientes de fundo sutis (como radial-gradients de background-blend-mode se detectado).
+
+      Retorne APENAS um objeto JSON estrito (sem backticks markdown explicativos em volta), neste exato formato:
       {
         "brand_dna": {
+          "color_mood": "string analisando a psicanalise das cores vistas",
           "color_palette": ["#...", "#..."],
-          "font_headline": "string",
-          "font_body": "string",
-          "tone_of_voice": "string",
+          "typographic_scale": "string descrevendo proporcao titulo/corpo",
+          "tone_of_voice": "string deduzida",
           "radius": "12px",
           "shadow": "0 8px 32px rgba(0,0,0,0.1)"
         },
         "layout": {
-          "grid_type": "string",
+          "composition_grid": "string descritiva do grid (ex: split-left)",
           "alignment": "center|left|right"
         },
-        "html_template": "<div class='artboard'>...</div>"
+        "html_template": "<div class='artboard'>...código completo aqui...</div>"
       }
     `;
 
-    let finalJson: any;
+    let finalJson: Record<string, unknown> | undefined;
 
     if (provider === 'groq') {
        // Llama-3.2-90b-vision-preview (Groq does not formally support image URLs directly in the completions API sometimes, it requires base64. Let's assume standard OpenAI schema)
@@ -103,9 +106,10 @@ serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Agent Vision Error:", err);
-    return new Response(JSON.stringify({ error: err.message }), {
+    const msg = err instanceof Error ? err.message : String(err);
+    return new Response(JSON.stringify({ error: msg }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

@@ -117,6 +117,7 @@ const BriefingPage = () => {
   const [analyses, setAnalyses] = useState<CompetitorAnalysis[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [analyzingUrl, setAnalyzingUrl] = useState<string | null>(null);
+  const [isExtractingDna, setIsExtractingDna] = useState(false);
 
   useEffect(() => {
     if (!wsBriefing) {
@@ -204,6 +205,62 @@ const BriefingPage = () => {
       toast.error('Erro ao salvar briefing');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleExtractDeepDNA = async () => {
+    if (!workspace?.id) return;
+    if (!form.company_name || !form.segment || !form.target_audience) {
+      toast.warning('Preencha ao menos Nome, Segmento e Publico Alvo para a IA entender a base.');
+      return;
+    }
+    
+    setIsExtractingDna(true);
+    toast.message('Consultor IA analisando seu briefing básico...', {
+       description: 'Isso pode levar alguns segundos.'
+    });
+
+    try {
+      const { data, error } = await supabase.functions.invoke('extract-brand-identity', {
+        body: {
+          workspaceId: workspace.id,
+          rawForm: {
+            name: form.company_name,
+            segment: form.segment,
+            targetAudience: form.target_audience,
+            tone: form.tone_of_voice,
+            differentials: form.main_differentials
+          }
+        }
+      });
+
+      if (error || data?.error) {
+         const errMsg = error ? error.message : data.error;
+         const isMissingKeys = errMsg.toLowerCase().includes('chave') || errMsg.toLowerCase().includes('key') || errMsg.toLowerCase().includes('llm');
+         toast.error(isMissingKeys ? 'Erro: Configure suas APIs (Groq/OpenRouter) em Settings.' : 'Erro ao Extrair DNA Mestre.');
+         return;
+      }
+
+      if (data?.deep_dna) {
+         const dna = data.deep_dna;
+         // Merge deep DNA with existing form (Appended to Tone of voice and Differentials)
+         const appendedTone = `${form.tone_of_voice}\n\n[IA DEEP DNA - TONE EXTENSION]\n${dna.tone_of_voice_expanded}\nEmoji Style: ${dna.emoji_usage}`;
+         const appendedDiff = `${form.main_differentials}\n\n[IA DEEP DNA - STRATEGY]\nArquétipo: ${dna.archetype}\nPilares: ${(dna.content_pillars || []).join(', ')}\nHooks: ${(dna.hook_patterns || []).join(', ')}`;
+
+         setForm(prev => ({
+            ...prev,
+            tone_of_voice: appendedTone,
+            main_differentials: appendedDiff
+         }));
+         
+         toast.success('DNA Profundo Extraído! Salve para registrar no Workspace.', { duration: 5000 });
+      }
+
+    } catch (err: unknown) {
+      toast.error('Ocorreu uma falha na Orquestração do Consultor IA.');
+      console.error(err);
+    } finally {
+      setIsExtractingDna(false);
     }
   };
 
@@ -484,11 +541,20 @@ const BriefingPage = () => {
             </AccordionItem>
           </Accordion>
 
-          <div className="mt-6">
+          <div className="mt-6 flex flex-col md:flex-row gap-3">
+            <button
+              onClick={handleExtractDeepDNA}
+              disabled={isExtractingDna || isSaving}
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all disabled:opacity-60"
+              style={{ background: 'var(--bg-card)', color: 'var(--text-1)', border: '1px solid var(--border)' }}
+            >
+              {isExtractingDna ? <Sparkles size={15} className="animate-spin" /> : <Sparkles size={15} style={{ color: 'var(--primary)' }} />}
+              {isExtractingDna ? 'Engenharia de DNA em andamento...' : 'Consultor de Marca IA (Deep DNA)'}
+            </button>
             <button
               onClick={handleSave}
-              disabled={isSaving}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all disabled:opacity-60"
+              disabled={isSaving || isExtractingDna}
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all disabled:opacity-60"
               style={{ background: 'var(--primary)', color: 'white', boxShadow: '0 8px 24px rgba(124,58,237,0.25)' }}
             >
               <Save size={15} />
