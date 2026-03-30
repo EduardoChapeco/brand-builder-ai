@@ -17,7 +17,9 @@ export type Database = {
       api_keys: {
         Row: {
           alias: string | null
+          calls_today: number | null
           created_at: string
+          daily_limit: number | null
           id: string
           is_active: boolean
           key_value: string
@@ -26,7 +28,9 @@ export type Database = {
         }
         Insert: {
           alias?: string | null
+          calls_today?: number | null
           created_at?: string
+          daily_limit?: number | null
           id?: string
           is_active?: boolean
           key_value: string
@@ -35,7 +39,9 @@ export type Database = {
         }
         Update: {
           alias?: string | null
+          calls_today?: number | null
           created_at?: string
+          daily_limit?: number | null
           id?: string
           is_active?: boolean
           key_value?: string
@@ -449,6 +455,112 @@ export type Database = {
           title?: string | null
         }
         Relationships: []
+      }
+      posts_v2: {
+        Row: {
+          caption: string | null
+          created_at: string
+          format: string | null
+          funnel_type: string | null
+          generation_meta: Json | null
+          hashtags: string | null
+          id: string
+          image_urls: Json | null
+          slides_count: number | null
+          slides_html: Json | null
+          source_topic: string | null
+          source_url: string | null
+          status: string | null
+          template_id: string | null
+          title: string | null
+          visual_mode: string | null
+          workspace_id: string
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          format?: string | null
+          funnel_type?: string | null
+          generation_meta?: Json | null
+          hashtags?: string | null
+          id?: string
+          image_urls?: Json | null
+          slides_count?: number | null
+          slides_html?: Json | null
+          source_topic?: string | null
+          source_url?: string | null
+          status?: string | null
+          template_id?: string | null
+          title?: string | null
+          visual_mode?: string | null
+          workspace_id: string
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          format?: string | null
+          funnel_type?: string | null
+          generation_meta?: Json | null
+          hashtags?: string | null
+          id?: string
+          image_urls?: Json | null
+          slides_count?: number | null
+          slides_html?: Json | null
+          source_topic?: string | null
+          source_url?: string | null
+          status?: string | null
+          template_id?: string | null
+          title?: string | null
+          visual_mode?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "posts_v2_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rss_feeds: {
+        Row: {
+          category: string | null
+          created_at: string
+          id: string
+          is_active: boolean | null
+          name: string | null
+          url: string
+          workspace_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string | null
+          url: string
+          workspace_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string | null
+          url?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rss_feeds_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       templates: {
         Row: {
