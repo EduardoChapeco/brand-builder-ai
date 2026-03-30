@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Dna, Globe, Loader2, Plus, Search, Sparkles,
   ExternalLink, Eye, Copy, CheckCircle, XCircle, Clock,
-  Palette, Type, MessageSquare, LayoutTemplate,
+  Palette, Type, MessageSquare, LayoutTemplate, Wand2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -117,6 +118,7 @@ const platformLabel: Record<string, string> = {
 
 const BrandDNAPage = () => {
   const { workspace } = useWorkspace();
+  const navigate = useNavigate();
   const [templates, setTemplates] = useState<BrandTemplate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCloning, setIsCloning] = useState(false);
@@ -435,6 +437,15 @@ const BrandDNAPage = () => {
                     className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold"
                     style={{ background: 'var(--primary)', color: 'white' }}>
                     <Copy size={14} /> Copiar HTML do Template
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (!workspace?.id || !selectedTemplate) return;
+                      navigate(`/workspace/${workspace.id}/generator`, { state: { dnaTemplate: selectedTemplate } });
+                    }}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold"
+                    style={{ border: '1px solid var(--primary)', color: 'var(--primary)' }}>
+                    <Wand2 size={14} /> Usar Template no Gerador
                   </button>
 
                   {/* Color palette */}

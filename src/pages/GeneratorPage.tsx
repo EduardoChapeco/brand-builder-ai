@@ -173,6 +173,7 @@ const GeneratorPage = () => {
   const [postTitle,    setPostTitle]    = useState('');
   const [selectedSourceUrl, setSelectedSourceUrl] = useState<string | undefined>();
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
+  const [clonedDna, setClonedDna] = useState<{ id: string; html: string; name: string } | null>(null);
 
   // Generation state
   const [isGenerating, setIsGenerating] = useState(false);
@@ -198,28 +199,94 @@ const GeneratorPage = () => {
   const { width, height } = getArtboardDimensions(format);
 
   // Render slides from generated content
-  const renderSlides = useCallback((content: GeneratedContent, bgUrl?: string, templateId = selectedTpl) => {
-    const tpl = getTemplate(templateId);
-    if (!tpl) return;
+  const renderSlides = useCallback((content: GeneratedContent, bgUrl?: string, templateId = selectedTpl, customDna = clonedDna) => {
+    const renderSlideData = (data: SlideData) => {
+      // 1. Dna Clone dynamic renderer
+      if (templateId === 'dna-clone' && customDna) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(customDna.html, 'text/html');
+
+        // Inject brand kit as CSS variables
+        const styleEl = doc.createElement('style');
+        styleEl.innerHTML = `
+          :root {
+            --color-primary: ${brand.color_primary};
+            --color-secondary: ${brand.color_secondary};
+            --color-accent: ${brand.color_accent};
+            --color-bg: ${brand.color_bg_dark};
+            --color-text: ${brand.color_text_dark};
+            --font-headline: '${brand.font_headline}', sans-serif;
+            --font-body: '${brand.font_body}', sans-serif;
+          }
+        `;
+        doc.head.appendChild(styleEl);
+
+        // Fill generic fields defined in the prompt
+        const h = doc.querySelector('[data-postgen-field="headline"]');
+        if (h) h.innerHTML = data.headline;
+        
+        const b = doc.querySelector('[data-postgen-field="body"]');
+        if (b) b.innerHTML = (data.body || '').replace(/\n/g, '<br>');
+        
+        const c = doc.querySelector('[data-postgen-field="cta"]');
+        if (c) {
+          if (data.cta) { c.innerHTML = data.cta; } else { c.remove(); }
+        }
+
+        // Try to place the bg image on the generic .artboard wrapper
+        if (data.bgImageUrl) {
+          const art = doc.querySelector('.artboard') as HTMLElement;
+          if (art) {
+            art.style.backgroundImage = `linear-gradient(rgba(0,0,0,${data.bgOpacity || 0.4}), rgba(0,0,0,${data.bgOpacity || 0.4})), url('${data.bgImageUrl}')`;
+            art.style.backgroundSize = 'cover';
+            art.style.backgroundPosition = 'center';
+          }
+        }
+        return '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
+      }
+      
+      // 2. Standard template renderer
+      const tpl = getTemplate(templateId);
+      if (!tpl) return '';
+      return tpl.renderer(data, brand);
+    };
+
     const rendered = content.slides.map(s => {
       const slideData: SlideData = {
         headline:    s.headline,
         body:        s.body,
         cta:         s.cta,
         bgImageUrl:  bgUrl,
-        bgOpacity:   0.28,
+        bgOpacity:   0.40,
         slideNumber: s.index + 1,
         totalSlides: content.slides.length,
         format,
       };
-      return tpl.renderer(slideData, brand);
+      return renderSlideData(slideData);
     });
     setSlides(rendered);
     setCurrentSlide(0);
-  }, [selectedTpl, brand, format]);
+  }, [selectedTpl, clonedDna, brand, format]);
 
   useEffect(() => {
-    const state = location.state as { post?: EditablePost } | null;
+    const state = location.state as { post?: EditablePost; dnaTemplate?: { id: string; html_template: string; source_name: string | null } } | null;
+    
+    // Load incoming DNA cloned template
+    if (state?.dnaTemplate) {
+      if (state.dnaTemplate.id !== clonedDna?.id) {
+        setClonedDna({
+          id: state.dnaTemplate.id,
+          html: state.dnaTemplate.html_template,
+          name: state.dnaTemplate.source_name || 'Template Clonado',
+        });
+        setSelectedTpl('dna-clone');
+        // Clean history so we don't trigger again on refresh
+        window.history.replaceState({}, document.title);
+      }
+      return;
+    }
+
+    // Load post to edit
     const post = state?.post;
     if (!post || hydratedPostIdRef.current === post.id) return;
 
@@ -241,7 +308,7 @@ const GeneratorPage = () => {
       ? applySlideHtmlToContent(post.generation_meta.generated_content, post.slides_html || [])
       : null);
     toast.success('Post carregado para edição');
-  }, [location.state]);
+  }, [location.state, clonedDna?.id]);
 
   // Generate content
   const handleGenerate = async () => {
@@ -381,7 +448,9 @@ const GeneratorPage = () => {
       };
 
       const saveQuery = editingPostId
+        // @ts-expect-error generation_meta JSON type mismatch
         ? supabase.from('posts_v2').update(payload).eq('id', editingPostId).select().single()
+        // @ts-expect-error generation_meta JSON type mismatch
         : supabase.from('posts_v2').insert(payload).select().single();
 
       const { data: savedPost, error } = await saveQuery;
@@ -760,6 +829,23 @@ const GeneratorPage = () => {
           {/* Template grid */}
           <p className="text-xs mb-2" style={{ color: 'var(--text-3)' }}>Template</p>
           <div className="grid grid-cols-2 gap-2">
+            {clonedDna && (
+              <button
+                onClick={() => handleTemplateChange('dna-clone')}
+                title={clonedDna.name}
+                className={`template-thumbnail ${selectedTpl === 'dna-clone' ? 'active' : ''}`}
+                style={{ height: 64, border: selectedTpl === 'dna-clone' ? '2px solid var(--primary)' : '2px dashed var(--border)' }}
+              >
+                <div className="w-full h-full flex flex-col items-center justify-center p-2" style={{ background: 'var(--bg-card)' }}>
+                  <span className="text-[9px] font-bold text-center leading-tight mb-1" style={{ color: 'var(--text-1)' }}>
+                    ✨ DNA CLONADO
+                  </span>
+                  <span className="text-[8px] truncate tracking-wide w-full text-center" style={{ color: 'var(--primary)' }}>
+                    {clonedDna.name.toUpperCase()}
+                  </span>
+                </div>
+              </button>
+            )}
             {TEMPLATE_REGISTRY.map(tpl => (
               <button
                 key={tpl.id}
