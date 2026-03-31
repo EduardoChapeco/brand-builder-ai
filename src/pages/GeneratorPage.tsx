@@ -1,10 +1,9 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Wand2, Search, Upload, RefreshCw, Download, Copy, ChevronLeft, ChevronRight, X, Save, Trash, AlignLeft, AlignCenter, AlignRight, FileImage, LayoutTemplate, Type, Settings2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
-import ArtboardStage from '@/components/canvas/ArtboardStage';
 import SlideFrame from '@/components/canvas/SlideFrame';
 import {
   ArtboardDimension, ArtboardFormat, BrandKit, DEFAULT_BRAND_KIT, SlideData,
@@ -12,6 +11,9 @@ import {
 } from '@/lib/canvasEngine';
 import { TEMPLATE_REGISTRY, getTemplate } from '@/lib/templateRegistry';
 import { exportSlide, exportAllSlides, uploadSlideToStorage, exportSlidesPDF, exportSlidesHTML } from '@/lib/exportPost';
+
+// Performance Audit: Implement Lazy Loading
+const ArtboardStage = lazy(() => import('@/components/canvas/ArtboardStage'));
 
 type Tone    = 'Casual' | 'Sério' | 'Informativo' | 'Humor' | 'Urgente';
 type Funnel  = 'Awareness' | 'Educativo' | 'Captar Leads' | 'Vendas' | 'Engajamento';
@@ -711,25 +713,27 @@ const GeneratorPage = () => {
             </div>
          </div>
 
-         <ArtboardStage format={format} className="flex-1">
-             {activeSlide?.html ? (
-                 <SlideFrame 
-                    slideHtml={activeSlide.html} width={width} height={height} editable={true}
-                    onHtmlChange={(nx) => {
-                       const nextCfgs = [...slideConfigs];
-                       nextCfgs[activeSlideIdx].html = nx;
-                       // Extract text changes to keep state synced for right panel
-                       const fields = extractSlideFields(nx);
-                       if (fields.headline) nextCfgs[activeSlideIdx].headline = fields.headline;
-                       if (fields.body !== undefined) nextCfgs[activeSlideIdx].body = fields.body;
-                       if (fields.cta !== undefined) nextCfgs[activeSlideIdx].cta = fields.cta;
-                       setSlideConfigs(nextCfgs);
-                    }}
-                 />
-             ) : (
-                <div className="w-full h-full flex items-center justify-center opacity-20"><Wand2 size={48} /></div>
-             )}
-         </ArtboardStage>
+         <Suspense fallback={<div className="flex-1 flex flex-col items-center justify-center animate-pulse"><Wand2 size={40} className="opacity-20 mb-4"/><p className="text-sm opacity-50">Carregando Visual Engine...</p></div>}>
+           <ArtboardStage format={format} className="flex-1">
+               {activeSlide?.html ? (
+                   <SlideFrame 
+                      slideHtml={activeSlide.html} width={width} height={height} editable={true}
+                      onHtmlChange={(nx) => {
+                         const nextCfgs = [...slideConfigs];
+                         nextCfgs[activeSlideIdx].html = nx;
+                         // Extract text changes to keep state synced for right panel
+                         const fields = extractSlideFields(nx);
+                         if (fields.headline) nextCfgs[activeSlideIdx].headline = fields.headline;
+                         if (fields.body !== undefined) nextCfgs[activeSlideIdx].body = fields.body;
+                         if (fields.cta !== undefined) nextCfgs[activeSlideIdx].cta = fields.cta;
+                         setSlideConfigs(nextCfgs);
+                      }}
+                   />
+               ) : (
+                  <div className="w-full h-full flex items-center justify-center opacity-20"><Wand2 size={48} /></div>
+               )}
+           </ArtboardStage>
+         </Suspense>
 
          {/* Bottom nav for presentation mode fallback or easy switching */}
          <div className="h-14 border-t border-white/5 bg-black/40 flex items-center justify-center gap-4">

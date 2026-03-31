@@ -13,8 +13,20 @@ import { iosNotification }    from './templates/iosNotification';
 import { newsG1 }             from './templates/newsG1';
 import { tweetSocial }        from './templates/tweetSocial';
 import { appleMinimal }       from './templates/appleMinimal';
+import { glassNeon }          from './templates/glassNeon';
 
 export const TEMPLATE_REGISTRY: TemplateMetadata[] = [
+  {
+    id: 'glass-neon',
+    name: 'Glass & Neon',
+    category: 'bold',
+    previewGradient: 'linear-gradient(135deg, #111 0%, #333 100%)',
+    previewAccent: '#00ffcc',
+    renderer: glassNeon,
+    supportedFormats: ['square', 'portrait', 'landscape'],
+    imageSuggested: true,
+    description: 'Painel flutuante ultra-premium com bordas neon suaves. Ideal para leitura Z-Pattern.',
+  },
   {
     id: 'news-g1',
     name: 'G1 Notícia',

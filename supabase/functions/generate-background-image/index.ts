@@ -9,11 +9,11 @@ const corsHeaders = {
 const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
 const MASTER_PROMPTS: Record<string, string> = {
-  editorial: "[MASTER STYLE: EDITORIAL MAGAZINE PHOTOGRAPHY] Professional editorial photography, magazine cover aesthetic. Dramatic lighting, negative space for text, no text in image, no logos, film grain.",
-  bold: "[MASTER STYLE: BOLD IMPACT VISUAL] High contrast, dramatic visual, dark background, strong subject, cinematic lighting, deep shadows, no text or watermark.",
-  minimal: "[MASTER STYLE: MINIMALIST CLEAN] Clean composition, subtle gradient or light background, generous negative space, neutral palette, no clutter, no text.",
-  dark: "[MASTER STYLE: DARK LUXURY PREMIUM] Sophisticated dark aesthetic, moody black tones, premium materials, subtle metallic accents, no text, no bright colors.",
-  documentary: "[MASTER STYLE: DOCUMENTARY/JOURNALISTIC] Raw, authentic scene, candid composition, available light, desaturated film look, no staged text elements.",
+  editorial: "— estilo: editorial ultra‑realista, foto 8K, ultra renderizada — formato de captura: RAW 50MP, balanço de branco neutro, perfil AdobeRGB, profundidade de cor 14‑bit — câmera: Canon EOS R5, lente 85mm f/1.4, DOF rasa (bokeh suave) — texturas: pele com poros visíveis e microgranulado de filme, tecidos e elementos super definidos — iluminação: Key light 5600K 45° direita, Fill light 3200K (30%), Backlight quente 3000K, Refletor prata abaixo — composição: regra dos terços — NÃO ADICIONE TEXTO NA IMAGEM.",
+  bold: "— estilo: dramático de alto contraste, foto 8K ultra realista — formato: RAW 50MP, perfil AdobeRGB — câmera: Canon EOS R5, lente 85mm f/1.4 — iluminação: Key light forte 5600K, Sombras profundas (contraste 4:1), projeta reflexos intensos e cores de marca — elementos abstratos: cortes geométricos, luzes volumétricas transversais — NÃO ADICIONE TEXTO NA IMAGEM.",
+  minimal: "— estilo: minimalista hiper-clean, fundo neutro ou degradê muito suave — câmera: Canon EOS R5, lente 50mm f/1.2 — iluminação: iluminação global super difusa e suave sem sombras duras — composição: enorme espaço negativo para texto — NÃO ADICIONE TEXTO NA IMAGEM.",
+  dark: "— estilo: dark luxury, tons escuros sofisticados, materiais premium (couro, vidro fosco, metal) — câmera: formato médio, textura incrivel — iluminação: low-key lighting, detalhes destacados por backlights sutis em cores profundas — NÃO ADICIONE TEXTO NA IMAGEM.",
+  documentary: "— estilo: jornalístico, momento real autêntico, desaturated film look (leve granulado Kodak) — iluminação: luz natural do ambiente, cru e dramático sem cara de estúdio — NÃO ADICIONE TEXTO NA IMAGEM.",
 };
 
 serve(async (req: Request) => {
@@ -40,7 +40,7 @@ serve(async (req: Request) => {
     if (format === 'story' || format === 'portrait') { aspectRatioHint = "Vertical 9:16 smartphone ratio"; ratioConfig = "9:16"; }
     else if (format === 'landscape') { aspectRatioHint = "Horizontal 16:9 widescreen ratio"; ratioConfig = "16:9"; }
 
-    const fullPrompt = `${masterPrompt} SUBJECT: ${prompt}. ${aspectRatioHint}, fills entire frame, no text in image.`;
+    const fullPrompt = `ASSUNTO / DESCRIÇÃO CENTRAL: [${prompt}]. DIRETRIZES TÉCNICAS MANDATÓRIAS: ${masterPrompt}. Formato Exigido: ${aspectRatioHint}. Nunca inclua letras, palavras, watermarks ou texto legível na imagem.`;
 
     // Use Lovable AI image generation model
     const res = await fetch(AI_GATEWAY, {
