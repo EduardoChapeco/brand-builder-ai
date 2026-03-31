@@ -290,7 +290,7 @@ const BriefingPage = () => {
 
     setAnalyzingUrl(competitor.url);
     try {
-      const { error } = await supabase.functions.invoke('analyze-url', {
+      const { data, error } = await supabase.functions.invoke('analyze-url', {
         body: {
           workspace_id: workspace.id,
           url: competitor.url,
@@ -300,10 +300,12 @@ const BriefingPage = () => {
       });
 
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
       await Promise.all([fetchAnalyses(), refreshBriefing()]);
       toast.success('Concorrente analisado');
-      const errMessage = error instanceof Error ? error.message : String(error);
+    } catch (err: unknown) {
+      const errMessage = err instanceof Error ? err.message : String(err);
       const isMissingKeys = errMessage.toLowerCase().includes('chave') || errMessage.toLowerCase().includes('key');
       toast.error(isMissingKeys ? 'Erro: Configure suas APIs (Firecrawl / LLM) em Settings.' : 'Erro ao analisar concorrente.');
     } finally {

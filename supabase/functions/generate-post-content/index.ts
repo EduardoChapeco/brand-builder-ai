@@ -1,18 +1,12 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "jsr:@supabase/supabase-js@2";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-type ApiKeyRow = {
-  id: string;
-  provider: string;
-  key_value: string;
-  calls_today: number | null;
-  daily_limit: number | null;
-};
+const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
 type ArticleContext = {
   markdown: string;
@@ -91,101 +85,13 @@ const normalizeGeneratedPost = (
   };
 };
 
-const markKeyError = async (
-  supabase: ReturnType<typeof createClient>,
-  keyId: string,
-  error: string,
-  exhausted = false,
-) => {
-  await supabase
-    .from("api_keys")
-    .update({
-      calls_today: exhausted ? 99999 : undefined,
-      last_error: error.slice(0, 500),
-    })
-    .eq("id", keyId);
-};
+function extractJson<T>(text: string): T {
+  const codeBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  const jsonStr = codeBlockMatch ? codeBlockMatch[1].trim() : text.trim();
+  return JSON.parse(jsonStr) as T;
+}
 
-const incrementKeyUsage = async (
-  supabase: ReturnType<typeof createClient>,
-  key: ApiKeyRow,
-) => {
-  await supabase
-    .from("api_keys")
-    .update({
-      calls_today: (key.calls_today || 0) + 1,
-      last_used_at: new Date().toISOString(),
-      last_error: null,
-    })
-    .eq("id", key.id);
-};
-
-const fetchArticleContext = async (
-  supabase: ReturnType<typeof createClient>,
-  workspaceId: string,
-  sourceUrl?: string,
-): Promise<ArticleContext | null> => {
-  if (!sourceUrl) return null;
-
-  const { data: firecrawlKeys } = await supabase
-    .from("api_keys")
-    .select("*")
-    .eq("workspace_id", workspaceId)
-    .eq("provider", "firecrawl")
-    .eq("is_active", true)
-    .order("calls_today", { ascending: true })
-    .limit(3);
-
-  if (!firecrawlKeys?.length) return null;
-
-  for (const key of firecrawlKeys as ApiKeyRow[]) {
-    if ((key.calls_today || 0) >= (key.daily_limit || 0)) continue;
-
-    try {
-      const response = await fetch("https://api.firecrawl.dev/v1/scrape", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${key.key_value}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          url: sourceUrl,
-          formats: ["markdown"],
-          onlyMainContent: true,
-          maxAge: 0,
-        }),
-      });
-
-      if (response.status === 429) {
-        await markKeyError(supabase, key.id, "429 Rate Limited", true);
-        continue;
-      }
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Firecrawl ${response.status}: ${errorText}`);
-      }
-
-      const payload = await response.json();
-      const markdown = payload?.data?.markdown;
-
-      await incrementKeyUsage(supabase, key);
-
-      if (typeof markdown === "string" && markdown.trim()) {
-        return {
-          markdown: markdown.slice(0, 12000),
-          title: payload?.data?.metadata?.title || null,
-        };
-      }
-    } catch (error) {
-      await markKeyError(supabase, key.id, String(error));
-    }
-  }
-
-  return null;
-};
-
-Deno.serve(async (req: Request) => {
+serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -201,6 +107,7 @@ Deno.serve(async (req: Request) => {
       source_url,
     } = await req.json();
 
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
@@ -208,7 +115,7 @@ Deno.serve(async (req: Request) => {
 
     const slideCount = Math.max(1, Math.min(Number(slides_count) || 1, 10));
 
-    const [{ data: briefing }, { data: brandKit }, articleContext] = await Promise.all([
+    const [{ data: briefing }, { data: brandKit }] = await Promise.all([
       supabase
         .from("briefings")
         .select("*")
@@ -219,23 +126,7 @@ Deno.serve(async (req: Request) => {
         .select("*")
         .eq("workspace_id", workspace_id)
         .maybeSingle(),
-      fetchArticleContext(supabase, workspace_id, source_url),
     ]);
-
-    const { data: keys } = await supabase
-      .from("api_keys")
-      .select("*")
-      .eq("workspace_id", workspace_id)
-      .eq("is_active", true)
-      .in("provider", ["groq", "openrouter", "gemini"])
-      .order("calls_today", { ascending: true })
-      .limit(6);
-
-    if (!keys?.length) {
-      return new Response(JSON.stringify(createDemoResponse(topic, slideCount)), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
 
     const systemPrompt = `NOME DO AGENTE: "The Copywriter"
 MISSÃO: Você é o CMO e o Especialista Supremo em Copywriting Persuasivo (Social Media) de uma agência de luxo.
@@ -270,104 +161,59 @@ Formato de saída (JSON ESTRITO - sem crases):
   "bg_prompt_hint": "string (Ideia mística/visual para fundo Midjourney)"
 }`;
 
-    const articleSection = articleContext?.markdown
-      ? `\n\nArtigo de referencia (${articleContext.title || source_url}):\n${articleContext.markdown}`
-      : "";
-
     const userPrompt = `Topico: ${topic}
 URL de origem: ${source_url || "nao informada"}
-${articleContext ? "Use o artigo como base principal do conteudo." : "Use apenas o briefing e o topico informado."}${articleSection}`;
+Use o briefing e o topico informado para criar conteudo.`;
 
-    let result: GeneratedPost | null = null;
-
-    for (const key of keys as ApiKeyRow[]) {
-      if ((key.calls_today || 0) >= (key.daily_limit || 0)) continue;
-
+    // Primary: Lovable AI Gateway
+    if (LOVABLE_API_KEY) {
       try {
-        let response: Response;
+        const res = await fetch(AI_GATEWAY, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "google/gemini-3-flash-preview",
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userPrompt },
+            ],
+          }),
+        });
 
-        if (key.provider === "groq") {
-          response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-            method: "POST",
-            headers: {
-              "Authorization": `Bearer ${key.key_value}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              model: "llama-3.3-70b-versatile",
-              messages: [
-                { role: "system", content: systemPrompt },
-                { role: "user", content: userPrompt },
-              ],
-              response_format: { type: "json_object" },
-              temperature: 0.7,
-              max_tokens: 2000,
-            }),
+        if (res.status === 429) {
+          return new Response(JSON.stringify({ error: "Rate limit excedido. Tente novamente em alguns segundos." }), {
+            status: 429,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
-        } else if (key.provider === "openrouter") {
-          response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-            method: "POST",
-            headers: {
-              "Authorization": `Bearer ${key.key_value}`,
-              "Content-Type": "application/json",
-              "HTTP-Referer": "https://postgen.app",
-            },
-            body: JSON.stringify({
-              model: "meta-llama/llama-3.3-70b-instruct:free",
-              messages: [
-                { role: "system", content: systemPrompt },
-                { role: "user", content: userPrompt },
-              ],
-              response_format: { type: "json_object" },
-              temperature: 0.7,
-            }),
+        }
+        if (res.status === 402) {
+          return new Response(JSON.stringify({ error: "Créditos de IA esgotados. Adicione créditos em Settings > Workspace > Usage." }), {
+            status: 402,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
-        } else {
-          response = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${key.key_value}`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                contents: [{ parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }],
-                generationConfig: {
-                  responseMimeType: "application/json",
-                  temperature: 0.7,
-                  maxOutputTokens: 2000,
-                },
-              }),
-            },
-          );
         }
 
-        if (response.status === 429) {
-          await markKeyError(supabase, key.id, "429 Rate Limited", true);
-          continue;
+        if (res.ok) {
+          const payload = await res.json();
+          const responseText = payload?.choices?.[0]?.message?.content || "{}";
+          const result = normalizeGeneratedPost(extractJson(responseText), topic, slideCount);
+
+          return new Response(JSON.stringify(result), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
         }
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`${key.provider} ${response.status}: ${errorText}`);
-        }
-
-        const payload = await response.json();
-        const responseText = key.provider === "gemini"
-          ? payload?.candidates?.[0]?.content?.parts?.[0]?.text || "{}"
-          : payload?.choices?.[0]?.message?.content || "{}";
-
-        result = normalizeGeneratedPost(JSON.parse(responseText), topic, slideCount);
-        await incrementKeyUsage(supabase, key);
-        break;
-      } catch (error) {
-        await markKeyError(supabase, key.id, String(error));
+        console.error("Lovable AI Gateway error:", res.status, await res.text());
+      } catch (e) {
+        console.error("Lovable AI Gateway call failed:", e);
       }
     }
 
-    if (!result) {
-      throw new Error("Todas as chaves falharam ou estao esgotadas.");
-    }
-
-    return new Response(JSON.stringify(result), {
+    // Fallback: demo response
+    return new Response(JSON.stringify(createDemoResponse(topic, slideCount)), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {

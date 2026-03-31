@@ -1,37 +1,30 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "jsr:@supabase/supabase-js@2";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-Deno.serve(async (req: Request) => {
+const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
+
+function extractJson<T>(text: string): T {
+  const codeBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  const jsonStr = codeBlockMatch ? codeBlockMatch[1].trim() : text.trim();
+  return JSON.parse(jsonStr) as T;
+}
+
+serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    const { workspaceId, rawForm } = await req.json();
+    const { rawForm } = await req.json();
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Get an active LLM key from the workspace (Prefer Groq or OpenRouter or Gemini)
-    const { data: keys } = await supabase
-      .from("api_keys")
-      .select("*")
-      .eq("workspace_id", workspaceId)
-      .eq("is_active", true)
-      .in("provider", ["groq", "openrouter", "gemini"])
-      .order("calls_today", { ascending: true })
-      .limit(1);
-
-    if (!keys || keys.length === 0) {
-      throw new Error("Nenhuma chave LLM configurada para o Agente de Identidade.");
+    if (!LOVABLE_API_KEY) {
+      throw new Error("LOVABLE_API_KEY não configurada.");
     }
-    const key = keys[0];
 
     const systemPrompt = `
       NOME DO AGENTE: "The Identity Engineer"
@@ -57,59 +50,36 @@ Deno.serve(async (req: Request) => {
       }
     `;
 
-    let finalJson: Record<string, unknown> | undefined;
+    const res = await fetch(AI_GATEWAY, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [{ role: "system", content: systemPrompt }],
+      }),
+    });
 
-    if (key.provider === "groq") {
-      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${key.key_value}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "llama-3.3-70b-versatile",
-          messages: [{ role: "system", content: systemPrompt }],
-          response_format: { type: "json_object" },
-          temperature: 0.7
-        })
+    if (res.status === 429) {
+      return new Response(JSON.stringify({ error: "Rate limit excedido. Tente novamente." }), {
+        status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
-      const data = await response.json();
-      finalJson = JSON.parse(data.choices[0].message.content);
-
-    } else if (key.provider === "openrouter") {
-      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${key.key_value}`, "Content-Type": "application/json", "HTTP-Referer": "https://brandbuilder.ai" },
-        body: JSON.stringify({
-          model: "meta-llama/llama-3.3-70b-instruct:free",
-          messages: [{ role: "system", content: systemPrompt }],
-          response_format: { type: "json_object" },
-          temperature: 0.7
-        })
+    }
+    if (res.status === 402) {
+      return new Response(JSON.stringify({ error: "Créditos de IA esgotados." }), {
+        status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
-      const data = await response.json();
-      finalJson = JSON.parse(data.choices[0].message.content);
-
-    } else {
-      // Gemini
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${key.key_value}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: systemPrompt }] }],
-            generationConfig: { responseMimeType: "application/json", temperature: 0.7 }
-          })
-        }
-      );
-      const data = await response.json();
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
-      finalJson = JSON.parse(text);
+    }
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`AI Gateway error [${res.status}]: ${errText}`);
     }
 
-    // Registrar sucesso da chave
-    await supabase.from("api_keys").update({
-      calls_today: (key.calls_today || 0) + 1,
-      last_used_at: new Date().toISOString()
-    }).eq("id", key.id);
+    const data = await res.json();
+    const content = data.choices?.[0]?.message?.content || "{}";
+    const finalJson = extractJson(content);
 
     return new Response(JSON.stringify({ success: true, deep_dna: finalJson }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" }

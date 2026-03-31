@@ -1,10 +1,12 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "jsr:@supabase/supabase-js@2";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
 type ApiKeyRow = {
   id: string;
@@ -63,7 +65,7 @@ const scrapeUrl = async (
     .limit(3);
 
   if (!keys?.length) {
-    throw new Error("Nenhuma chave Firecrawl configurada.");
+    throw new Error("Nenhuma chave Firecrawl configurada. Adicione em Integrações & APIs.");
   }
 
   for (const key of keys as ApiKeyRow[]) {
@@ -120,32 +122,12 @@ const scrapeUrl = async (
 };
 
 const analyzeCommunicationDna = async (
-  supabase: ReturnType<typeof createClient>,
-  workspaceId: string,
+  lovableApiKey: string,
   url: string,
   rawMarkdown: string,
   competitorName?: string | null,
   notes?: string | null,
 ): Promise<string> => {
-  const { data: keys } = await supabase
-    .from("api_keys")
-    .select("*")
-    .eq("workspace_id", workspaceId)
-    .eq("is_active", true)
-    .in("provider", ["groq", "openrouter", "gemini"])
-    .order("calls_today", { ascending: true })
-    .limit(4);
-
-  const fallback = [
-    `Empresa analisada: ${competitorName || url}`,
-    `URL: ${url}`,
-    "Leitura automatica disponivel, mas sem chave ativa de LLM para sintetizar o DNA.",
-    "Trecho bruto:",
-    rawMarkdown.slice(0, 1200),
-  ].join("\n\n");
-
-  if (!keys?.length) return fallback;
-
   const systemPrompt = `Voce analisa o DNA de comunicacao de marcas.
 Responda em Portugues BR com markdown curto e estruturado.
 Formato obrigatorio:
@@ -164,97 +146,37 @@ Notas do usuario: ${notes || "Nenhuma"}
 Conteudo raspado:
 ${rawMarkdown}`;
 
-  for (const key of keys as ApiKeyRow[]) {
-    if ((key.calls_today || 0) >= (key.daily_limit || 0)) continue;
+  try {
+    const res = await fetch(AI_GATEWAY, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${lovableApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+      }),
+    });
 
-    try {
-      let response: Response;
-
-      if (key.provider === "groq") {
-        response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${key.key_value}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "llama-3.3-70b-versatile",
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: userPrompt },
-            ],
-            temperature: 0.4,
-            max_tokens: 1600,
-          }),
-        });
-      } else if (key.provider === "openrouter") {
-        response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${key.key_value}`,
-            "Content-Type": "application/json",
-            "HTTP-Referer": "https://postgen.app",
-          },
-          body: JSON.stringify({
-            model: "meta-llama/llama-3.3-70b-instruct:free",
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: userPrompt },
-            ],
-            temperature: 0.4,
-          }),
-        });
-      } else {
-        response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${key.key_value}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }],
-              generationConfig: {
-                temperature: 0.4,
-                maxOutputTokens: 1600,
-              },
-            }),
-          },
-        );
-      }
-
-      if (response.status === 429) {
-        await markKeyError(supabase, key.id, "429 Rate Limited", true);
-        continue;
-      }
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`${key.provider} ${response.status}: ${errorText}`);
-      }
-
-      const payload = await response.json();
-      const text = key.provider === "gemini"
-        ? payload?.candidates?.[0]?.content?.parts?.[0]?.text || ""
-        : payload?.choices?.[0]?.message?.content || "";
-
-      if (!text.trim()) {
-        throw new Error("LLM retornou analise vazia.");
-      }
-
-      await incrementKeyUsage(supabase, key);
-      return text.trim();
-    } catch (error) {
-      await markKeyError(
-        supabase,
-        key.id,
-        error instanceof Error ? error.message : String(error),
-      );
+    if (!res.ok) {
+      console.error("AI Gateway error:", res.status);
+      return `Análise automática indisponível. Trecho bruto:\n\n${rawMarkdown.slice(0, 1200)}`;
     }
-  }
 
-  return fallback;
+    const payload = await res.json();
+    const text = payload?.choices?.[0]?.message?.content || "";
+    return text.trim() || `Análise vazia. Trecho bruto:\n\n${rawMarkdown.slice(0, 1200)}`;
+  } catch (e) {
+    console.error("DNA analysis error:", e);
+    return `Falha na análise. Trecho bruto:\n\n${rawMarkdown.slice(0, 1200)}`;
+  }
 };
 
-Deno.serve(async (req: Request) => {
+serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -265,6 +187,11 @@ Deno.serve(async (req: Request) => {
       throw new Error("workspace_id e url sao obrigatorios.");
     }
 
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) {
+      throw new Error("LOVABLE_API_KEY não configurada.");
+    }
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
@@ -272,8 +199,7 @@ Deno.serve(async (req: Request) => {
 
     const scraped = await scrapeUrl(supabase, workspace_id, url);
     const dnaText = await analyzeCommunicationDna(
-      supabase,
-      workspace_id,
+      LOVABLE_API_KEY,
       url,
       scraped.markdown,
       name || scraped.title,
