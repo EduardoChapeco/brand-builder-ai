@@ -1,53 +1,50 @@
-# 🧠 Plano de Arquitetura: FASE 3 (Multi-Agent Expert System & Performance)
+# PRD Fase 4 (Integração do "PostGen V2" ao BrandBuilder AI)
 
-Você trouxe o nível para o "God Mode". O que você forneceu não são apenas _prompts_, é o manual completo de direção de arte e fotografia de luxo. Entendi perfeitamente a visão: o sistema não pode ser apenas um "fazedor de posts de IA", ele precisa atuar como um esquadrão de especialistas seniores (Diretor de Arte, Fotógrafo de Moda, Copywriter PhD e Estrategista).
+Analisei profundamente o PRD fornecido. O BrandBuilder atual já possui um motor de renderização robusto (HTML2Canvas), geração via LLM e o *Vision Agent* (Edge Functions). Para incorporar esta nova fase estrutural **sem gerar duplicação de responsabilidades**, a estratégia será modularizar as novas IAs em módulos satélites ao redor do motor central.
 
-Aqui está o plano detalhado de como vou injetar essa inteligência e otimizar toda a plataforma.
-
----
-
-## 📸 1. O Novo "Vision Agent" (Engenharia de Fotografia)
-
-_Alvo: `supabase/functions/generate-background-image/index.ts`_
-
-Vou substituir o gerador de prompt simplório atual por um construtor de **Fotografia Ultra-Realista**:
-
-- **Injeção de Hardware Virtual:** A IA vai compor prompts sempre incluindo `Canon EOS R5, lente 85mm f/1.4, RAW 50MP, DOF rasa`.
-- **Iluminação 3-Point Studio:** Regras matemáticas exatas de luz (Key light 5600K 45°, Fill light 3200K 30%, Backlight 3000K).
-- **Texturização Extrema:** Inserção obrigatória de `pele com poros visíveis`, `fios de cabelo individuais`, `trama do tecido nítida` para matar a estética amarelada/borrachuda comum da IA.
-- **Micro-Decisões (Modo Clean vs Bold):** O Agente vai injetar reflexos da paleta de cores institucional dentro da foto e elementos abstratos (linhas flutuantes, glitch) apenas no modo Bold/Editorial.
-
-## ✍️ 2. O Esquadrão Copywriter (Personas Especialistas)
-
-_Alvo: `supabase/functions/generate-post-content/index.ts`_
-
-A inteligência de texto deixará de ser genérica. O sistema passará a usar **Agentes de Função**:
-
-- **Frameworks Científicos:** A IA será instruída a projetar o conteúdo respeitando padrões de leitura (Padrão F e Z) e alocação de texto.
-- **Teoria das Cores (60-30-10):** A IA definirá exatamente as variações CSS que usam 60% cor primária, 30% neutra e 10% accent (para CA/Botão).
-- **Personas Dinâmicas:** Dependendo do funil escolhido, o prompt evocará o perfil: "Estrategista Sênior de Marketing", "Ph.D em Neuromarketing" ou "Advogado Especialista" para garantir profundidade máxima e não respostas rasas.
-
-## ⚡ 3. Auditoria de Alta Performance e Código Limpo (Frontend)
-
-_Alvo: `React Frontend` & `Hooks`_
-
-Para garantir que a performance seja absurdamente alta e sem bugs ou memory leaks (travamentos):
-
-- **Implementação de Lazy Loading (`React.lazy`):** O `ArtboardStage`, Modais e os motores pesados de PDF/HTML export serão carregados apenas quando o usuário precisar (Code Splitting).
-- **Remoção de Duplicações:** Revisão profunda em estados redundantes (`useState`) que causam re-renderizações desnecessárias. Removendo qualquer conflito entre os painéis laterais.
-- **Cache Management:** Limpeza de sessões e storages pesados após exportações.
-
-## 🎨 4. Coleção Expandida de Templates
-
-_Alvo: `src/lib/templateRegistry.ts`_
-
-Além da regra de contraste (já resolvida), você mencionou o cuidado com sombras, blurs e neons sem que o texto se perca numa área vazia do fundo:
-
-- Nós injetaremos templates baseados em "Glassmorphism Dinâmico", onde uma caixa fosca (`backdrop-filter: blur()`) acompanha e se molda ao tamanho do texto gerado exatamente atrás dele, garantindo contraste perfeito em frente a qualquer imagem foto-realista, seja um rosto humano, seja um escritório luxuoso.
+## Estado Atual vs. Novos Requisitos
+1. **Gerador Atual (`/generator`)**: Hoje atua como um construtor de carrossel linear pre-configurado de 1 à N partes. O PRD o evolui para um construtor narrativo profundo e introduz estúdios de sub-tarefas autônomos.
+2. **Novos Requisitos Principais**:
+   - 5 Novas Rotas com Sub-Sistemas: `/viral-analyzer`, `/image-prompts`, `/carousel-builder`, `/product-shots`, `/brand-character`.
+   - 4 Novas Tabelas Core no Supabase para dados.
+   - Migrações em `workspaces`, `briefings` e `posts_v2`.
+   - +25 Novos Templates focados em performance e nicho (Jurídico, Saúde, Educacional, Viral).
 
 ---
 
-### 👉 Requisito de Aprovação
+## Estratégia de Implementação: Arquitetura em Módulos
 
-Como essa é uma reestruturação profunda da arquitetura Prompt/Orquestração e da performance do React Front-end:
-**Está tudo alinhado com a sua visão de plataforma de elite? Posso disparar a implementação deste plano agora?**
+> [!IMPORTANT]
+> **Como evitaremos duplicar componentes:**
+> - O **Carousel Builder 2.0** fará o pipeline "Ideação -> Storyboard -> Engine Canvas". O Engine de Renderização será unificado: Extrairemos o `<ArtboardStage>` e `<SlideFrame>` para componentes independentes injetáveis. O Workflow "Fase 3" de lá, reusará a mesma engine atual do gerador, mas com states controlados diferentes.
+> - O **Prompt Studio** e o **Product Shots** não disputarão espaço de render visual do Carrossel. São IAs que trabalharão em *Isolamento* e exportarão as fotos geradas ou Prompts para a Biblioteca Master do Usuário.
+
+### Fase de Dados (Supabase Migration & SDK)
+- `execute_sql` das novas entidades: `brand_characters`, `image_prompt_templates`, `viral_analyses`, `carousel_storyboards`.
+- Alterações em `posts_v2` e `briefings` para associar o character_id e histórico de scrapes.
+
+### Fase do Edge Functions & Integração (Back-End IA)
+- **`analyze-viral-patterns`**: Integrar Firecrawl + LLM via OpenRouter. Retorna JSON padronizado com as teses de viralização.
+- **`generate-character-seed`**: Monta o master-prompt descritivo técnico mantendo consistência da persona visual (Canon, Setup de Luz, Traços de Identidade Físca).
+- **`suggest-carousel-arc`**: Recebe o gancho principal e propõe Arquétipos Narrativos (Lista Tópicos, Prova Hierárquica, Problema/Solução).
+
+### Fase de UI & Routing Modules (Front-end)
+1. **Sidebar Navigation**: Ajustar Navbar lateral para dispor o Expand icon dos 5 novos módulos (Módulos Inteligentes / Ferramentas Específicas).
+2. **Carousel Builder 2.0 (Drag & Drop)**: Interface de DND (requer pacote extra) e Storyboard com os arcos pré-formados (`@dnd-kit/core`).
+3. **Prompt Studio & Library**: UI estática robusta, formulários para manipulação de string templates, importando cores nativamente do BrandKit.
+4. **Product Shots**: Implementar o ColorThief e FileUploader integrado com Canvas Drop.
+5. **Brand Character**: Gerenciador CRUD simples de persona e seu Seed-Prompt com Galeria (usando masonry ou grids).
+6. **Novos Templates Dinâmicos**: Injetaremos templates focados em "Listicle", Mockup Phones, Progress Bars, Jurídico e Editorial no `src/lib/templateRegistry.ts`.
+
+## Open Questions (Aguardando Retorno)
+
+> [!WARNING]  
+> 1. Posso instalar e usar frameworks nativos de Drag & Drop (`@dnd-kit/core`) e Extração de Cores (`colorthief`, `react-color`), mandando os comandos pelo Terminal, conforme o PRD solicita na seção 11?
+> 2. **Chave do FireCrawl**: A Edge Function `analyze-viral-patterns` usará a infra FireCrawl para o Web Scrub. Você tem o token `FIRECRAWL_API_KEY` cadastrado como secret lá no seu dashboard Edge Functions no Supabase? (Sem ela, teremos de usar proxies web scrapings básicos do Node, o que reduz qualidade do scrape).
+> 3. Quanto ao **Carousel Builder vs Generator**: Prefere que as duas rotas existam `/generator` (um "Quick Post") e `/carousel-builder` ("Modo Storyboard Avançado"), ou que o `/carousel-builder` do novo PRD simplesmente acople e mate o gerador antigo de UI, migrando para ser uma ferramenta suprema e unificada?
+
+## Verification Plan
+1. Atualizações no DB: Verificar Schema do Supabase pelo dashboard (`brand_characters`, `image_prompt_templates`, etc.).
+2. Funções Edge no Ar: Executar cURLs ou chamadas Client-Side via `supabase.functions.invoke`.
+3. Telas acessíveis a partir do Workspace: Clicar nos links de Módulos (Ex: Prompt Studio / Storyboard), todos resolvendo.
+4. Storyboard Flow Testing: Testar a transição "Escolher Arco -> Validar Storyboard -> Mandar para o Canvas de Design".

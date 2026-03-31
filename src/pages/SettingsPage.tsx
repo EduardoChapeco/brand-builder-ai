@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Eye, EyeOff, Key, Plus, Rss, Settings, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useSearchParams } from 'react-router-dom';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -109,6 +110,7 @@ const createPreferenceKey = (workspaceId?: string) =>
 
 const SettingsPage = () => {
   const { workspace } = useWorkspace();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [apiKeys, setApiKeys] = useState<ApiKeyRecord[]>([]);
   const [rssFeeds, setRssFeeds] = useState<RssFeedRecord[]>([]);
@@ -129,6 +131,11 @@ const SettingsPage = () => {
   });
 
   const preferenceStorageKey = createPreferenceKey(workspace?.id);
+  const activeTab = searchParams.get('tab') === 'rss'
+    ? 'rss'
+    : searchParams.get('tab') === 'preferences'
+      ? 'preferences'
+      : 'keys';
 
   const inputClass = 'w-full px-3 py-2 rounded-xl text-sm outline-none transition-colors';
   const inputStyle = {
@@ -318,7 +325,10 @@ const SettingsPage = () => {
 
       <div className="flex-1 overflow-y-auto p-6">
         <div className="max-w-4xl mx-auto">
-          <Tabs defaultValue="keys">
+          <Tabs
+            value={activeTab}
+            onValueChange={(value) => setSearchParams(value === 'keys' ? {} : { tab: value })}
+          >
             <TabsList
               className="mb-6"
               style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}

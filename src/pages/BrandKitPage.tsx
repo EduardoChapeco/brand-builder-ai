@@ -3,6 +3,7 @@ import { Palette, Plus, Save, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
 import { DEFAULT_BRAND_KIT } from '@/lib/canvasEngine';
 import { minimalDark } from '@/lib/templates/minimalDark';
 
@@ -159,7 +160,11 @@ const BrandKitPage = () => {
       if (wsBrandKit) {
         await supabase.from('brand_kits').update(payload).eq('workspace_id', workspace.id);
       } else {
-        await supabase.from('brand_kits').insert({ ...payload, workspace_id: workspace.id } as any);
+        await supabase.from('brand_kits').insert({
+          ...payload,
+          workspace_id: workspace.id,
+          custom_colors: payload.custom_colors as Json,
+        });
       }
 
       await refreshBrandKit();

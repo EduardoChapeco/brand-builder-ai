@@ -15,7 +15,15 @@ CREATE TABLE IF NOT EXISTS presentations_v2 (
 
 ALTER TABLE presentations_v2 ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "workspace_member_access" ON presentations_v2
-  USING (workspace_id IN (
-    SELECT id FROM workspaces WHERE user_id = auth.uid()
-  ));
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE tablename = 'presentations_v2' AND policyname = 'Allow all for presentations_v2'
+  ) THEN
+    CREATE POLICY "Allow all for presentations_v2"
+      ON presentations_v2
+      FOR ALL
+      USING (true)
+      WITH CHECK (true);
+  END IF;
+END $$;

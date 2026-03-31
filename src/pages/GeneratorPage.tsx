@@ -11,6 +11,7 @@ import {
 } from '@/lib/canvasEngine';
 import { TEMPLATE_REGISTRY, getTemplate } from '@/lib/templateRegistry';
 import { exportSlide, exportAllSlides, uploadSlideToStorage, exportSlidesPDF, exportSlidesHTML } from '@/lib/exportPost';
+import { BrandCharacterRecord, CAROUSEL_ARCS, MediaAssetRecord } from '@/lib/postgenPhase2';
 
 // Performance Audit: Implement Lazy Loading
 const ArtboardStage = lazy(() => import('@/components/canvas/ArtboardStage'));
@@ -45,6 +46,9 @@ interface StoredGenerationMeta {
   generated_content?: GeneratedContent | null;
   bg_image_url?: string | null;
   slide_configs?: SlideConfig[];
+  recommended_template_id?: string | null;
+  storyboard_arc?: string | null;
+  media_asset_id?: string | null;
 }
 
 interface EditablePost {
@@ -62,6 +66,32 @@ interface EditablePost {
   generation_meta?: StoredGenerationMeta | null;
   source_topic?: string | null;
   source_url?: string | null;
+  storyboard_id?: string | null;
+  character_id?: string | null;
+  prompt_used?: string | null;
+}
+
+interface StoryboardSlidePlan {
+  role?: string;
+  headline_draft?: string;
+  notes?: string;
+  template_suggestion?: string;
+}
+
+interface GeneratorLocationState {
+  post?: EditablePost;
+  dnaTemplate?: { id: string; html_template: string; source_name: string | null; brand_dna?: Record<string, unknown> };
+  topic?: string;
+  recommendedTemplate?: string;
+  funnel?: Funnel;
+  character?: BrandCharacterRecord | null;
+  mediaAsset?: MediaAssetRecord | null;
+  storyboard?: {
+    id: string;
+    arc_type?: string | null;
+    slides_plan?: StoryboardSlidePlan[];
+  } | null;
+  arcType?: string;
 }
 
 interface RssTopic {
@@ -71,6 +101,8 @@ interface RssTopic {
   source_name: string;
   published_at: string;
   source_type?: 'rss' | 'ai';
+  trend_score?: number;
+  hook_suggestions?: string[];
 }
 
 type EditableFieldName = 'headline' | 'body' | 'cta';
@@ -120,6 +152,7 @@ const GeneratorPage = () => {
   const { workspace, brandKit: wsBrandKit } = useWorkspace();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const hydratedPostIdRef = useRef<string | null>(null);
+  const consumedPreloadRef = useRef<string | null>(null);
   const brand: BrandKit = useMemo(() => (
     wsBrandKit ? { ...DEFAULT_BRAND_KIT, ...wsBrandKit } : DEFAULT_BRAND_KIT
   ), [wsBrandKit]);
@@ -134,6 +167,14 @@ const GeneratorPage = () => {
   const [selectedSourceUrl, setSelectedSourceUrl] = useState<string | undefined>();
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
   const [clonedDna, setClonedDna] = useState<{ id: string; html: string; name: string; brand_dna?: Record<string, unknown> } | null>(null);
+  const [recommendedTemplateId, setRecommendedTemplateId] = useState<string | null>(null);
+  const [activeStoryboardId, setActiveStoryboardId] = useState<string | null>(null);
+  const [activeStoryboardArc, setActiveStoryboardArc] = useState<string | null>(null);
+  const [preloadedMediaAsset, setPreloadedMediaAsset] = useState<MediaAssetRecord | null>(null);
+  const [promptUsed, setPromptUsed] = useState<string | null>(null);
+  const [availableCharacters, setAvailableCharacters] = useState<BrandCharacterRecord[]>([]);
+  const [preloadedCharacter, setPreloadedCharacter] = useState<BrandCharacterRecord | null>(null);
+  const [selectedCharacterId, setSelectedCharacterId] = useState<string>('none');
 
   // Wizard / Config State
   const [wizardStep, setWizardStep] = useState<1 | 2 | 3 | 4>(1);
@@ -169,6 +210,14 @@ const GeneratorPage = () => {
   const [isGenImg, setIsGenImg] = useState(false);
 
   const { width, height } = getArtboardDimensions(format);
+  const selectedCharacter = useMemo(
+    () => availableCharacters.find(character => character.id === selectedCharacterId) || preloadedCharacter,
+    [availableCharacters, preloadedCharacter, selectedCharacterId],
+  );
+  const activeArcLabel = useMemo(
+    () => CAROUSEL_ARCS.find(arc => arc.id === activeStoryboardArc)?.name || activeStoryboardArc,
+    [activeStoryboardArc],
+  );
 
   // Render slides from config
   const renderSlideConfig = useCallback((cfg: SlideConfig, index: number, total: number) => {
@@ -230,6 +279,26 @@ const GeneratorPage = () => {
     return tpl.renderer(slideData, brand);
   }, [brand, format, clonedDna]);
 
+  useEffect(() => {
+    if (!workspace?.id) return;
+
+    let isMounted = true;
+    const loadCharacters = async () => {
+      const { data } = await supabase
+        .from('brand_characters')
+        .select('*')
+        .eq('workspace_id', workspace.id)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+      if (!isMounted) return;
+      setAvailableCharacters((data || []) as BrandCharacterRecord[]);
+    };
+
+    loadCharacters();
+    return () => { isMounted = false; };
+  }, [workspace?.id]);
+
   // Update a single slide configuration
   const updateSlideConfig = useCallback((index: number, updates: Partial<SlideConfig>) => {
     setSlideConfigs(prev => {
@@ -243,7 +312,7 @@ const GeneratorPage = () => {
 
   // Hydration Effect
   useEffect(() => {
-    const state = location.state as { post?: EditablePost; dnaTemplate?: { id: string; html_template: string; source_name: string | null; brand_dna?: Record<string, unknown> } } | null;
+    const state = location.state as GeneratorLocationState | null;
     
     if (state?.dnaTemplate) {
       if (state.dnaTemplate.id !== clonedDna?.id) {
@@ -269,10 +338,18 @@ const GeneratorPage = () => {
     setSelectedSourceUrl(post.source_url || undefined);
     setCaption(post.caption || '');
     setHashtags((post.hashtags || '').split(/\s+/).filter(tag => tag.startsWith('#')));
+    setRecommendedTemplateId(post.generation_meta?.recommended_template_id || null);
+    setActiveStoryboardId(post.storyboard_id || null);
+    setActiveStoryboardArc(post.generation_meta?.storyboard_arc || null);
+    setSelectedCharacterId(post.character_id || 'none');
+    setPromptUsed(post.prompt_used || null);
     
     // Hydrating configs vs fallback old approach
     if (post.generation_meta?.slide_configs) {
-      setSlideConfigs(post.generation_meta.slide_configs.map(cfg => ({...cfg, html: renderSlideConfig(cfg, slideConfigs.indexOf(cfg), post.generation_meta!.slide_configs!.length)})));
+      setSlideConfigs(post.generation_meta.slide_configs.map((cfg, index, all) => ({
+        ...cfg,
+        html: renderSlideConfig(cfg, index, all.length),
+      })));
       setActiveSlideIdx(0);
     } else {
       // Legacy hydration
@@ -287,7 +364,7 @@ const GeneratorPage = () => {
           body: fields.body || '',
           cta: fields.cta || ''
         });
-        cfg.html = html; // keep the raw html initially
+        cfg.html = html;
         return cfg;
       });
       setSlideConfigs(configs);
@@ -296,6 +373,86 @@ const GeneratorPage = () => {
     
     toast.success('Post carregado para edição');
   }, [location.state, clonedDna?.id, renderSlideConfig]);
+
+  useEffect(() => {
+    const state = location.state as GeneratorLocationState | null;
+    if (!state || state.post || state.dnaTemplate) return;
+
+    const signature = JSON.stringify({
+      topic: state.topic || '',
+      recommendedTemplate: state.recommendedTemplate || '',
+      funnel: state.funnel || '',
+      storyboardId: state.storyboard?.id || '',
+      characterId: state.character?.id || '',
+      mediaAssetId: state.mediaAsset?.id || '',
+      arcType: state.arcType || '',
+    });
+
+    if (consumedPreloadRef.current === signature) return;
+    consumedPreloadRef.current = signature;
+
+    if (state.topic) {
+      setTopic(state.topic);
+      setPostTitle(current => current || state.topic || '');
+    }
+
+    if (state.recommendedTemplate) {
+      setRecommendedTemplateId(state.recommendedTemplate);
+      setGlobalTemplate(state.recommendedTemplate);
+    }
+
+    if (state.funnel) {
+      setFunnel(state.funnel);
+    }
+
+    if (state.character) {
+      setPreloadedCharacter(state.character);
+      setSelectedCharacterId(state.character.id);
+    }
+
+    if (state.mediaAsset) {
+      setPreloadedMediaAsset(state.mediaAsset);
+      setGlobalImageMethod('upload');
+      setPromptUsed(
+        typeof state.mediaAsset.metadata === 'object' && state.mediaAsset.metadata && 'prompt' in state.mediaAsset.metadata
+          ? String((state.mediaAsset.metadata as Record<string, unknown>).prompt || '')
+          : null,
+      );
+    }
+
+    if (state.storyboard?.id) {
+      setActiveStoryboardId(state.storyboard.id);
+      setActiveStoryboardArc(state.storyboard.arc_type || state.arcType || null);
+    } else if (state.arcType) {
+      setActiveStoryboardArc(state.arcType);
+    }
+
+    if (Array.isArray(state.storyboard?.slides_plan) && state.storyboard?.slides_plan.length) {
+      const nextConfigs = state.storyboard.slides_plan.map((slide, index, all) => {
+        const cfg = createSlideConfig({
+          templateId: slide.template_suggestion || state.recommendedTemplate || 'data-insight',
+          bgImageUrl: state.mediaAsset?.public_url || undefined,
+          bgSource: state.mediaAsset?.public_url ? 'upload' : 'none',
+          visualMode: 'dark',
+          headline: slide.headline_draft || slide.role || `Slide ${index + 1}`,
+          body: slide.notes || '',
+          cta: /cta|summary|guarantee/i.test(slide.role || '') ? 'Continuar' : undefined,
+          bgPromptHint: slide.notes || state.topic || '',
+        });
+        cfg.html = renderSlideConfig(cfg, index, all.length);
+        return cfg;
+      });
+
+      setSlideConfigs(nextConfigs);
+      setSlideCount(nextConfigs.length);
+      setFormat('square');
+      setActiveSlideIdx(0);
+      setWizardStep(4);
+      toast.success('Storyboard carregado no motor de design');
+    }
+
+    window.history.replaceState({}, document.title);
+  }, [location.state, renderSlideConfig]);
 
   // Inspector Selection Events
   useEffect(() => {
@@ -355,6 +512,9 @@ const GeneratorPage = () => {
 
       setGenStep('✅ Processando slides...');
       setBgPromptHint(data.slides?.[0]?.bg_prompt_hint || data.bg_prompt_hint || topic);
+      if (!preloadedMediaAsset?.public_url) {
+        setPromptUsed(data.bg_prompt_hint || data.slides?.[0]?.bg_prompt_hint || topic);
+      }
       setPostTitle(data.post_title || topic);
       setCaption(data.caption || '');
       setHashtags((data.hashtags || '').split(/[\s,]+/).filter((h: string) => h.startsWith('#')));
@@ -369,8 +529,16 @@ const GeneratorPage = () => {
         bgPromptHint: s.bg_prompt_hint || data.bg_prompt_hint || `${topic} slide ${idx+1}`
       }));
 
+      if (preloadedMediaAsset?.public_url) {
+        configs = configs.map(cfg => ({
+          ...cfg,
+          bgImageUrl: preloadedMediaAsset.public_url,
+          bgSource: 'upload',
+        }));
+      }
+
       // Generate Background if selected AI method globally
-      if (globalImageMethod === 'ai' && !editingPostId) {
+      if (globalImageMethod === 'ai' && !editingPostId && !preloadedMediaAsset?.public_url) {
         setGenStep('✨ Multi-Agente Visualizando (Imagens)...');
         for (let i = 0; i < configs.length; i++) {
           setGenStep(`🖌️ Desenhando slide ${i + 1}/${configs.length}...`);
@@ -396,15 +564,17 @@ const GeneratorPage = () => {
       setActiveSlideIdx(0);
       
       await new Promise(r => setTimeout(r, 400));
-    } catch (e: any) {
-      toast.warning('Erro (Modo Demo Ativo): ' + (e.message || 'Erro na IA'));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Erro na IA';
+      toast.warning('Erro (Modo Demo Ativo): ' + message);
       
       const configs = Array.from({length: slideCount}).map((_, i) => createSlideConfig({
          templateId: globalTemplate,
          headline: i === 0 ? topic.slice(0, 40) : `Ponto ${i}: ${topic.slice(0, 25)}`,
          body: i === 0 ? 'Configure suas chaves de IA em Configurações para gerar textos compeltos.' : 'Cada slide terá um conteúdo diferente.',
          cta: i === (slideCount - 1) ? 'Siga para mais' : undefined,
-         bgSource: globalImageMethod,
+         bgSource: preloadedMediaAsset?.public_url ? 'upload' : globalImageMethod,
+         bgImageUrl: preloadedMediaAsset?.public_url || undefined,
          bgPromptHint: `${topic} parte ${i+1}`
       }));
       const rendered = configs.map((c, i) => ({ ...c, html: renderSlideConfig(c, i, configs.length) }));
@@ -433,8 +603,9 @@ const GeneratorPage = () => {
         toast.success(`Foram encontradas ${fetchedTopics.length} sugestões (Feeds + IA Scout).`);
       }
       setRssTopics(fetchedTopics);
-    } catch (err: any) {
-      toast.error('Erro ao buscar News: ' + err.message);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Falha ao buscar noticias';
+      toast.error('Erro ao buscar News: ' + message);
       setRssTopics([]);
     } finally {
       setIsFetchingRss(false);
@@ -455,8 +626,14 @@ const GeneratorPage = () => {
         },
       });
       if (error) throw error;
-      if (data?.imageUrl) updateSlideConfig(activeSlideIdx, { bgImageUrl: data.imageUrl, bgSource: 'ai' });
-    } catch(e: any) { toast.error('Erro: ' + e.message); } 
+      if (data?.imageUrl) {
+        updateSlideConfig(activeSlideIdx, { bgImageUrl: data.imageUrl, bgSource: 'ai' });
+        setPromptUsed(bgPromptHint || topic);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Falha ao gerar imagem';
+      toast.error('Erro: ' + message);
+    } 
     finally { setIsGenImg(false); }
   };
 
@@ -487,9 +664,15 @@ const GeneratorPage = () => {
         funnel_type: funnel,
         source_topic: topic.trim() || null,
         source_url: selectedSourceUrl || null,
+        storyboard_id: activeStoryboardId || null,
+        character_id: selectedCharacterId !== 'none' ? selectedCharacterId : null,
+        prompt_used: promptUsed || null,
         generation_meta: {
           artboard_format: format,
           slide_configs: slideConfigs,
+          recommended_template_id: recommendedTemplateId,
+          storyboard_arc: activeStoryboardArc,
+          media_asset_id: preloadedMediaAsset?.id || null,
         },
         status: 'ready',
       };
@@ -516,6 +699,10 @@ const GeneratorPage = () => {
 
       if (uploadedUrls.length > 0) {
         await supabase.from('posts_v2').update({ image_urls: uploadedUrls }).eq('id', savedPost.id);
+      }
+
+      if (activeStoryboardId) {
+        await supabase.from('carousel_storyboards').update({ post_id: savedPost.id }).eq('id', activeStoryboardId);
       }
 
       setEditingPostId(savedPost.id);
@@ -559,7 +746,19 @@ const GeneratorPage = () => {
                          className="w-full text-left px-4 py-3 hover:bg-white/5 transition-colors"
                          style={{ borderBottom: i < rssTopics.length - 1 ? '1px solid var(--border-subtle)' : 'none' }}>
                          <p className="font-semibold text-sm mb-1" style={{ color: 'var(--text-1)' }}>{t.title}</p>
-                         <p className="text-xs" style={{ color: 'var(--text-3)' }}>{t.source_name}</p>
+                         <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-3)' }}>
+                           <span>{t.source_name}</span>
+                           {t.source_type && (
+                             <span className="px-1.5 py-0.5 rounded-full" style={{ background: t.source_type === 'ai' ? 'var(--primary-muted)' : 'rgba(6,182,212,0.14)', color: t.source_type === 'ai' ? 'var(--primary)' : '#06B6D4' }}>
+                               {t.source_type.toUpperCase()}
+                             </span>
+                           )}
+                           {typeof t.trend_score === 'number' && (
+                             <span className="px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(245,158,11,0.14)', color: '#F59E0B' }}>
+                               Trend {t.trend_score}
+                             </span>
+                           )}
+                         </div>
                        </button>
                      ))}
                    </div>
@@ -623,7 +822,38 @@ const GeneratorPage = () => {
                       {clonedDna && <option value="dna-clone">✨ DNA CLONADO ({clonedDna.name})</option>}
                       {TEMPLATE_REGISTRY.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                    </select>
+                   {recommendedTemplateId && (
+                     <p className="text-[11px] mt-2" style={{ color: 'var(--text-3)' }}>
+                       Template recomendado: <span style={{ color: 'var(--primary)' }}>{getTemplate(recommendedTemplateId)?.name || recommendedTemplateId}</span>
+                     </p>
+                   )}
                 </div>
+
+                <div>
+                   <p className="text-sm font-semibold mb-2">Brand Character (Opcional)</p>
+                   <select value={selectedCharacterId} onChange={e => setSelectedCharacterId(e.target.value)} className="w-full p-2.5 rounded-lg border text-sm outline-none" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+                      <option value="none">Nenhum personagem</option>
+                      {availableCharacters.map(character => <option key={character.id} value={character.id}>{character.name}</option>)}
+                   </select>
+                   {selectedCharacter && (
+                     <p className="text-[11px] mt-2" style={{ color: 'var(--text-3)' }}>
+                       Persona ativa: <span style={{ color: 'var(--primary)' }}>{selectedCharacter.name}</span>
+                     </p>
+                   )}
+                </div>
+
+                {preloadedMediaAsset && (
+                  <div className="p-4 rounded-xl border border-white/10 bg-black/10">
+                    <p className="text-sm font-semibold mb-2">Asset conectado</p>
+                    <div className="flex items-center gap-3">
+                      <img src={preloadedMediaAsset.public_url} alt="Media asset" className="w-14 h-14 rounded-xl object-cover" />
+                      <div>
+                        <p className="text-sm" style={{ color: 'var(--text-1)' }}>{preloadedMediaAsset.module}</p>
+                        <p className="text-[11px]" style={{ color: 'var(--text-3)' }}>Este asset sera usado como base visual do post.</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex gap-3 mt-2">
                    <button onClick={()=>setWizardStep(1)} className="px-6 py-3 rounded-xl border text-sm font-bold opacity-70 hover:opacity-100" style={{ borderColor: 'var(--border)' }}>Voltar</button>
@@ -706,6 +936,16 @@ const GeneratorPage = () => {
          <div className="flex items-center justify-between px-5 py-3 shrink-0 bg-black/40 border-b border-white/5">
             <div className="flex items-center gap-3">
                <span className="text-sm font-medium" style={{ color: 'var(--text-1)' }} title={postTitle}>{postTitle.length > 50 ? postTitle.slice(0, 50) + '...' : postTitle}</span>
+               {activeArcLabel && (
+                 <span className="px-2.5 py-1 rounded-full text-[10px] font-bold" style={{ background: 'var(--primary-muted)', color: 'var(--primary)' }}>
+                   {activeArcLabel}
+                 </span>
+               )}
+               {selectedCharacter && (
+                 <span className="px-2.5 py-1 rounded-full text-[10px] font-bold" style={{ background: 'rgba(6,182,212,0.14)', color: '#06B6D4' }}>
+                   {selectedCharacter.name}
+                 </span>
+               )}
             </div>
             <div className="flex gap-4 items-center">
                <span className="text-xs opacity-50 font-mono tracking-widest">{width} × {height}</span>
@@ -802,6 +1042,29 @@ const GeneratorPage = () => {
               {/* ABA VISUAL */}
               {activeTab === 'visual' && activeSlide && (
                  <>
+                   {(recommendedTemplateId || selectedCharacter) && (
+                     <div className="flex flex-wrap gap-2">
+                       {recommendedTemplateId && (
+                         <span className="px-3 py-1 rounded-full text-[11px] font-semibold" style={{ background: 'var(--primary-muted)', color: 'var(--primary)' }}>
+                           Recomendado: {getTemplate(recommendedTemplateId)?.name || recommendedTemplateId}
+                         </span>
+                       )}
+                       {selectedCharacter && (
+                         <span className="px-3 py-1 rounded-full text-[11px] font-semibold" style={{ background: 'rgba(6,182,212,0.14)', color: '#06B6D4' }}>
+                           Character: {selectedCharacter.name}
+                         </span>
+                       )}
+                     </div>
+                   )}
+                   {availableCharacters.length > 0 && (
+                     <div>
+                        <p className="text-[11px] font-bold uppercase tracking-wide opacity-50 mb-3">Brand Character</p>
+                        <select value={selectedCharacterId} onChange={e => setSelectedCharacterId(e.target.value)} className="w-full p-2.5 rounded-lg border text-sm outline-none" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+                           <option value="none">Nenhum personagem</option>
+                           {availableCharacters.map(character => <option key={character.id} value={character.id}>{character.name}</option>)}
+                        </select>
+                     </div>
+                   )}
                    <div>
                       <p className="text-[11px] font-bold uppercase tracking-wide opacity-50 mb-3">Modo Visual (Slide Atual)</p>
                       <div className="flex flex-wrap gap-1.5">

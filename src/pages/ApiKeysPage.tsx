@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { Key, Plus, Trash2, CheckCircle, AlertCircle, Eye, EyeOff } from 'lucide-react';
@@ -20,8 +20,12 @@ const PROVIDERS = [
   { id: 'steel', name: 'Steel.dev (Browser Sandbox)', icon: '🛡️' },
 ];
 
+const getErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : 'Erro inesperado';
+
 export default function ApiKeysPage() {
   const { workspace } = useWorkspace();
+  const workspaceId = workspace?.id;
   const [keys, setKeys] = useState<ApiKeyRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
@@ -30,29 +34,29 @@ export default function ApiKeysPage() {
   const [newAlias, setNewAlias] = useState('');
   const [showKey, setShowKey] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (workspace?.id) {
-      loadKeys();
-    }
-  }, [workspace?.id]);
-
-  const loadKeys = async () => {
+  const loadKeys = useCallback(async () => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase
         .from('api_keys')
         .select('*')
-        .eq('workspace_id', workspace!.id)
+        .eq('workspace_id', workspaceId!)
         .order('provider', { ascending: true });
         
       if (error) throw error;
       setKeys(data || []);
-    } catch (err: any) {
-      toast.error('Erro ao carregar chaves: ' + err.message);
+    } catch (error) {
+      toast.error('Erro ao carregar chaves: ' + getErrorMessage(error));
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [workspaceId]);
+
+  useEffect(() => {
+    if (workspaceId) {
+      loadKeys();
+    }
+  }, [workspaceId, loadKeys]);
 
   const handleAddKey = async () => {
     if (!newKeyValue.trim()) {
@@ -62,7 +66,7 @@ export default function ApiKeysPage() {
     
     try {
       const { error } = await supabase.from('api_keys').insert({
-        workspace_id: workspace!.id,
+        workspace_id: workspaceId!,
         provider: newProvider,
         key_value: newKeyValue.trim(),
         alias: newAlias.trim() || null,
@@ -75,8 +79,8 @@ export default function ApiKeysPage() {
       setNewKeyValue('');
       setNewAlias('');
       loadKeys();
-    } catch (err: any) {
-      toast.error('Erro ao adicionar chave: ' + err.message);
+    } catch (error) {
+      toast.error('Erro ao adicionar chave: ' + getErrorMessage(error));
     }
   };
 
@@ -86,8 +90,8 @@ export default function ApiKeysPage() {
       if (error) throw error;
       toast.success('Chave removida');
       loadKeys();
-    } catch (err: any) {
-      toast.error('Erro ao remover chave: ' + err.message);
+    } catch (error) {
+      toast.error('Erro ao remover chave: ' + getErrorMessage(error));
     }
   };
 

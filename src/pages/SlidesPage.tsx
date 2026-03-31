@@ -16,6 +16,15 @@ const FORMATS: { id: PresentationFormat; label: string; aspect: string }[] = [
   { id: 'vertical', label: 'Mobile', aspect: '9:16' }
 ];
 
+interface PresentationGenerationResponse {
+  bg_prompt_hint?: string;
+  slides: Array<{
+    headline: string;
+    body?: string;
+    cta?: string;
+  }>;
+}
+
 const SlidesPage = () => {
   const { workspace, brandKit: wsBrandKit } = useWorkspace();
   const brand: BrandKit = useMemo(() => (wsBrandKit ? { ...DEFAULT_BRAND_KIT, ...wsBrandKit } : DEFAULT_BRAND_KIT), [wsBrandKit]);
@@ -66,7 +75,7 @@ const SlidesPage = () => {
 
     try {
       // 1. Gera conteúdo usando a mesma API base ajustada para apresentações (ou mockamos em demo caso falhe)
-      const { data, error } = await supabase.functions.invoke('generate-post-content', {
+      const { data, error } = await supabase.functions.invoke<PresentationGenerationResponse>('generate-post-content', {
         body: { topic, funnel_type: 'Informativo', format: 'story', slides_count: slideCount, tone: 'Sério' } // we reuse logic
       });
       if (error) throw error;
@@ -74,7 +83,7 @@ const SlidesPage = () => {
       setBgPromptHint(data.bg_prompt_hint || topic);
       
       // Map to presentation templates
-      const startSlides = data.slides.map((s: any, i: number) => {
+      const startSlides = data.slides.map((s, i: number) => {
          let layoutId = 'content-bullets';
          if (i === 0) layoutId = 'title-hero';
          else if (i === 1) layoutId = 'agenda';

@@ -47,6 +47,16 @@ export interface Briefing {
   instagram_handle: string | null;
   linkedin_handle: string | null;
   brand_dna: string | null;
+  viral_patterns_cache: {
+    recent_patterns?: Array<{
+      hook_formula?: string;
+      visual_style?: string;
+      content_type?: string;
+      emotional_trigger?: string;
+    }>;
+    latest_analysis?: Record<string, unknown>;
+  } | null;
+  last_competitor_analysis: string | null;
 }
 
 interface WorkspaceContextValue {

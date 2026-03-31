@@ -15,6 +15,8 @@ type TopicItem = {
   source_name: string;
   published_at: string;
   source_type: "rss" | "ai";
+  trend_score?: number;
+  hook_suggestions?: string[];
 };
 
 const parseRssXml = (xml: string, sourceName: string): TopicItem[] => {
@@ -62,6 +64,7 @@ const generateAiTopics = async (
   audience?: string | null,
   tone?: string | null,
   funnelType?: string | null,
+  viralPatterns?: Array<{ hook_formula?: string; content_type?: string }>,
 ): Promise<TopicItem[]> => {
   const systemPrompt = `Voce sugere topicos de social media em Portugues BR.
 Responda apenas com JSON valido no formato:
@@ -80,6 +83,7 @@ Regras:
 Publico: ${audience || "nao informado"}
 Tom: ${tone || "informativo"}
 Objetivo de funil: ${funnelType || "Awareness"}
+Padroes virais recentes: ${JSON.stringify(viralPatterns || [])}
 Liste 5 topicos relevantes para posts e carrosseis.`;
 
   try {
@@ -125,6 +129,26 @@ Liste 5 topicos relevantes para posts e carrosseis.`;
   }
 };
 
+const computeTrendScore = (
+  topic: Pick<TopicItem, "title" | "description" | "published_at" | "source_type">,
+  segment?: string | null,
+): number => {
+  const now = Date.now();
+  const publishedAt = topic.published_at ? new Date(topic.published_at).getTime() : now;
+  const ageHours = Math.max(0, (now - publishedAt) / 36e5);
+  const freshnessScore = Math.max(10, 60 - Math.min(48, ageHours));
+  const relevanceNeedle = `${topic.title} ${topic.description}`.toLowerCase();
+  const segmentBoost = segment && relevanceNeedle.includes(segment.toLowerCase()) ? 20 : 0;
+  const aiBoost = topic.source_type === "ai" ? 8 : 0;
+  return Math.max(0, Math.min(100, Math.round(freshnessScore + segmentBoost + aiBoost)));
+};
+
+const buildHookSuggestions = (title: string): string[] => ([
+  `O que ninguem te conta sobre ${title}`,
+  `Voce ainda ignora isso em ${title}?`,
+  `A prova inesperada por tras de ${title}`,
+]);
+
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -139,7 +163,7 @@ serve(async (req: Request) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    const [{ data: feeds }, { data: briefing }] = await Promise.all([
+    const [{ data: feeds }, { data: briefing }, { data: recentPosts }] = await Promise.all([
       supabase
         .from("rss_feeds")
         .select("*")
@@ -147,13 +171,22 @@ serve(async (req: Request) => {
         .eq("is_active", true),
       supabase
         .from("briefings")
-        .select("segment,target_audience")
+        .select("segment,target_audience,viral_patterns_cache")
         .eq("workspace_id", workspace_id)
         .maybeSingle(),
+      supabase
+        .from("posts_v2")
+        .select("caption")
+        .eq("workspace_id", workspace_id)
+        .order("created_at", { ascending: false })
+        .limit(5),
     ]);
 
     // AI Topics via Lovable AI Gateway
     let aiTopics: TopicItem[] = [];
+    const recentPatterns = Array.isArray((briefing?.viral_patterns_cache as { recent_patterns?: unknown[] } | null)?.recent_patterns)
+      ? (briefing?.viral_patterns_cache as { recent_patterns: Array<{ hook_formula?: string; content_type?: string }> }).recent_patterns
+      : [];
     if (LOVABLE_API_KEY) {
       aiTopics = await generateAiTopics(
         LOVABLE_API_KEY,
@@ -161,11 +194,12 @@ serve(async (req: Request) => {
         briefing?.target_audience || null,
         tone || null,
         funnel_type || null,
+        recentPatterns,
       );
     }
 
     // RSS Topics
-    let rssTopics: TopicItem[] = [];
+    const rssTopics: TopicItem[] = [];
     if (feeds?.length) {
       const rssResults = await Promise.allSettled(
         feeds.map(async (feed) => {
@@ -191,7 +225,19 @@ serve(async (req: Request) => {
       return rightDate - leftDate;
     });
 
-    const combinedTopics = [...aiTopics, ...rssTopics].slice(0, 20);
+    const captionContext = (recentPosts || [])
+      .map((post) => post.caption)
+      .filter(Boolean)
+      .join(" ");
+
+    const combinedTopics = [...aiTopics, ...rssTopics]
+      .map((topic) => ({
+        ...topic,
+        trend_score: computeTrendScore(topic, briefing?.segment || captionContext || null),
+        hook_suggestions: buildHookSuggestions(topic.title),
+      }))
+      .sort((left, right) => (right.trend_score || 0) - (left.trend_score || 0))
+      .slice(0, 20);
 
     return new Response(JSON.stringify({
       topics: combinedTopics,

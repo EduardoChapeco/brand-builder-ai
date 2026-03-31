@@ -74,13 +74,16 @@ export type TemplateRenderer = (data: SlideData, brand: BrandKit) => string;
 export interface TemplateMetadata {
   id:               string;
   name:             string;
-  category:         'bold' | 'editorial' | 'minimal' | 'social';
+  category:         'bold' | 'editorial' | 'minimal' | 'social' | 'niche' | 'carousel';
   previewGradient:  string;
   previewAccent:    string;
   renderer:         TemplateRenderer;
   supportedFormats: ArtboardFormat[];
   imageSuggested:   boolean;
   description:      string;
+  niche?:           string;
+  idealFor?:        string;
+  supportsAnimation?: boolean;
 }
 
 // ─── Per-Slide Config (new per-slide state model) ───────────────────────────

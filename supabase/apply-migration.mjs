@@ -10,11 +10,11 @@ if (!supabaseKey) {
 }
 
 const supabase = createClient(supabaseUrl, supabaseKey);
-const sql = readFileSync('./supabase/migrations/20260330000000_postgen_multi_tenant.sql', 'utf8');
+const sql = readFileSync('./supabase/migrations/20260331_fase2_prd_schema.sql', 'utf8');
 
 const { error } = await supabase.rpc('exec_sql', { query: sql }).catch(() => ({ error: 'rpc_not_available' }));
 if (error) {
-  console.log('RPC not available, migration SQL ready at:', './supabase/migrations/20260330000000_postgen_multi_tenant.sql');
+  console.log('RPC not available, migration SQL ready at:', './supabase/migrations/20260331_fase2_prd_schema.sql');
   console.log('Apply it manually via Supabase Dashboard → SQL Editor');
 } else {
   console.log('Migration applied successfully');

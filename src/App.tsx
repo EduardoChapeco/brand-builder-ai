@@ -13,8 +13,15 @@ import BriefingPage from "@/pages/BriefingPage";
 import SettingsPage from "@/pages/SettingsPage";
 import NotFound from "@/pages/NotFound";
 import BrandDNAPage from "@/pages/BrandDNAPage";
-import ApiKeysPage from "@/pages/ApiKeysPage";
 import SlidesPage from "@/pages/SlidesPage";
+import DashboardPage from "@/pages/DashboardPage";
+
+// Phase 4 New Modules
+import ViralAnalyzer from "@/pages/ViralAnalyzer";
+import PromptStudio from "@/pages/PromptStudio";
+import CarouselBuilder from "@/pages/CarouselBuilder";
+import ProductShots from "@/pages/ProductShots";
+import BrandCharacter from "@/pages/BrandCharacter";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -39,14 +46,22 @@ const App = () => (
               </WorkspaceProvider>
             }
           >
-            <Route index element={<Navigate to="generator" replace />} />
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<DashboardPage />} />
             <Route path="generator" element={<GeneratorPage />} />
+            
+            <Route path="carousel-builder" element={<CarouselBuilder />} />
+            <Route path="image-prompts" element={<PromptStudio />} />
+            <Route path="product-shots" element={<ProductShots />} />
+            <Route path="viral-analyzer" element={<ViralAnalyzer />} />
+            <Route path="brand-character" element={<BrandCharacter />} />
+            
             <Route path="slides" element={<SlidesPage />} />
             <Route path="library" element={<LibraryPage />} />
             <Route path="brand-kit" element={<BrandKitPage />} />
             <Route path="briefing" element={<BriefingPage />} />
             <Route path="brand-dna" element={<BrandDNAPage />} />
-            <Route path="api-keys" element={<ApiKeysPage />} />
+            <Route path="api-keys" element={<Navigate to="../settings?tab=keys" replace />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>
           <Route path="*" element={<NotFound />} />

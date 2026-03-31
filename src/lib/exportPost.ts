@@ -201,7 +201,7 @@ export function exportSlidesHTML(
       if (e.key === 'ArrowLeft') changeSlide(-1);
       if (e.key === 'f' || e.key === 'F') document.documentElement.requestFullscreen?.();
     });
-  <\/script>
+  </script>
 </body>
 </html>`;
 
