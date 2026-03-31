@@ -168,8 +168,11 @@ const BrandDNAPage = () => {
   }, [templates, fetchTemplates]);
 
   // ─ Orchestrator: DNA Clone – uses canonical clone-brand-template function ──
-  const handleClone = async () => {
-    if (!url.trim()) { toast.error('Cole uma URL para analisar'); return; }
+  const handleClone = async (retryUrl?: string, retryName?: string) => {
+    const targetUrl = (retryUrl || url).trim();
+    const targetName = retryName !== undefined ? retryName.trim() : sourceName.trim();
+
+    if (!targetUrl) { toast.error('Cole uma URL para analisar'); return; }
     if (!workspace?.id) { toast.error('Workspace não encontrado'); return; }
 
     setIsCloning(true);
@@ -177,15 +180,15 @@ const BrandDNAPage = () => {
     setClonedImage(null);
 
     try {
-      addLog(`🚀 Inicializando esquadrão de extração para ${url}...`, 'success');
+      addLog(`🚀 Inicializando esquadrão de extração para ${targetUrl}...`, 'success');
       addLog(`🤖 Agente Scraper: Capturando página e screenshot...`, 'loading');
 
       const { data, error } = await supabase.functions.invoke('clone-brand-template', {
         body: {
           workspace_id: workspace.id,
-          url: url.trim(),
-          source_name: sourceName.trim() || undefined,
-          source_platform: detectPlatform(url.trim()),
+          url: targetUrl,
+          source_name: targetName || undefined,
+          source_platform: detectPlatform(targetUrl),
         },
       });
 
@@ -293,7 +296,7 @@ const BrandDNAPage = () => {
             />
           </div>
           <button
-            onClick={handleClone}
+            onClick={() => handleClone()}
             disabled={isCloning || !url.trim()}
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-50"
             style={{ background: 'var(--primary)', color: 'white', boxShadow: '0 4px 16px rgba(124,58,237,0.3)', whiteSpace: 'nowrap' }}>
@@ -449,7 +452,14 @@ const BrandDNAPage = () => {
                        )}
                        {tpl.status === 'failed' && (
                           <>
-                            <button onClick={(e) => { e.stopPropagation(); setUrl(tpl.source_url); setSourceName(tpl.source_name || ''); window.scrollTo(0,0); }} 
+                            <button onClick={async (e) => { 
+                                e.stopPropagation(); 
+                                setUrl(tpl.source_url); 
+                                setSourceName(tpl.source_name || ''); 
+                                window.scrollTo(0,0); 
+                                await supabase.from('brand_templates').delete().eq('id', tpl.id);
+                                handleClone(tpl.source_url, tpl.source_name || '');
+                              }} 
                               className="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 hover:bg-white/20 transition-colors"
                               style={{ background: 'rgba(255,255,255,0.1)', color: 'white' }}>
                               <Play size={12} /> Tentar
