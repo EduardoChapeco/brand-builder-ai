@@ -504,6 +504,12 @@ const GeneratorPage = () => {
           format,
           slides_count: slideCount,
           source_url: selectedSourceUrl,
+          arc_type: activeStoryboardArc,
+          storyboard_plan: slideConfigs.length > 0 && activeStoryboardId ? slideConfigs.map(c => ({
+             role: c.headline,
+             notes: c.body,
+             template_suggestion: c.templateId
+          })) : undefined
         },
       });
 

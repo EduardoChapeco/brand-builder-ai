@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { closestCenter, DndContext, DragEndEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -209,6 +209,20 @@ const CarouselBuilder = () => {
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const generateCarousel = () => {
+    if (!workspace?.id) return;
+    toast.success('Storyboard enviado para o Orquestrador IA!');
+    
+    navigate(`/workspace/${workspace.id}/generator`, {
+      state: {
+        storyboardPayload: {
+          arc_type: selectedArc,
+          storyboard_plan: slidesPlan
+        }
+      }
+    });
   };
 
   const updateSlide = (id: string, field: keyof StoryboardSlide, value: string) => {

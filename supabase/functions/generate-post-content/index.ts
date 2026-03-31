@@ -158,6 +158,8 @@ serve(async (req: Request) => {
       format,
       slides_count,
       source_url,
+      arc_type,
+      storyboard_plan
     } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -166,7 +168,7 @@ serve(async (req: Request) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    const slideCount = Math.max(1, Math.min(Number(slides_count) || 1, 10));
+    const slideCount = storyboard_plan ? storyboard_plan.length : Math.max(1, Math.min(Number(slides_count) || 1, 10));
 
     const [{ data: briefing }, { data: brandKit }, { data: recentPosts }] = await Promise.all([
       supabase
@@ -189,7 +191,7 @@ serve(async (req: Request) => {
 
     const articleContext = await fetchArticleContext(supabase, workspace_id, source_url);
     const recentCaptions = (recentPosts || [])
-      .map((post) => post.caption)
+      .map((post: any) => post.caption)
       .filter(Boolean)
       .join("\n---\n");
     const recentPatterns = Array.isArray((briefing?.viral_patterns_cache as { recent_patterns?: unknown[] } | null)?.recent_patterns)
@@ -215,19 +217,18 @@ Paleta de Marca: ${[brandKit?.color_primary, brandKit?.color_secondary, brandKit
 Padroes virais recentes do workspace: ${JSON.stringify(recentPatterns)}
 Ultimas captions do workspace: ${recentCaptions || "sem historico"}
 
-REGRAS:
+REGRAS ESTRUTURAIS:
 - Escreva em Portugues BR.
-- Slide 1 precisa ser hook forte com headline de no maximo 6 palavras.
 - Headlines: maximo 6 palavras.
 - Body: maximo 3-4 linhas curtas.
 - CTA final coerente com o funil ${funnel_type}.
 - Nao invente fatos; se houver artigo de referencia, use-o como base factual.
-- Gere um bg_prompt_hint por slide, focado em fotografia/editorial, sem texto na imagem.
+- Gere um bg_prompt_hint por slide focado em fotografia realista.
 
 Formato de saida (JSON estrito):
 {
   "post_title": "string",
-  "slides": [{"index":0,"type":"hook","headline":"string","body":"string","cta":"string|null","bg_prompt_hint":"string"}],
+  "slides": [{"index":0,"type":"hook","headline":"string","body":"string","cta":"string|null","bg_prompt_hint":"string","template_suggestion":"string|null"}],
   "caption": "string",
   "hashtags": "string"
 }`;
@@ -236,8 +237,17 @@ Formato de saida (JSON estrito):
 URL de origem: ${source_url || "nao informada"}
 ${articleContext?.title ? `Titulo do artigo: ${articleContext.title}` : ""}
 ${articleContext?.markdown ? `Artigo de referencia (markdown):\n${articleContext.markdown.slice(0, 12000)}` : ""}
+
+${storyboard_plan ? `
+--- ATENCAO: MODO STORYBOARD ATIVADO ---
+O usuario pre-definiu perfeitamente a estrutura de slides que ele quer neste Post de ${slideCount} slides (Arco Narrativo: ${arc_type}).
+Voce DEVE OBRIGATORIAMENTE seguir esta exata quantidade de slides, nesta exata ordem, usando os direcionamentos e templates solicitados:
+PLANILHA DO STORYBOARD:
+${JSON.stringify(storyboard_plan, null, 2)}
+` : ""}
+
 Use o briefing, os padroes virais do workspace e o topico informado para criar conteudo.
-Se houver artigo, use-o como contexto factual prioritario.`;
+Se houver arquivo de storyboard, use-o. Siga as instrucoes.`;
 
     if (LOVABLE_API_KEY) {
       try {
