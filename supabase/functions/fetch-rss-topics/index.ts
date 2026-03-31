@@ -1,10 +1,12 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "jsr:@supabase/supabase-js@2";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
 type TopicItem = {
   title: string;
@@ -13,14 +15,6 @@ type TopicItem = {
   source_name: string;
   published_at: string;
   source_type: "rss" | "ai";
-};
-
-type ApiKeyRow = {
-  id: string;
-  provider: "groq" | "openrouter" | "gemini";
-  key_value: string;
-  calls_today: number | null;
-  daily_limit: number | null;
 };
 
 const parseRssXml = (xml: string, sourceName: string): TopicItem[] => {
@@ -56,54 +50,19 @@ const parseRssXml = (xml: string, sourceName: string): TopicItem[] => {
   return items;
 };
 
-const incrementKeyUsage = async (
-  supabase: ReturnType<typeof createClient>,
-  key: ApiKeyRow,
-) => {
-  await supabase
-    .from("api_keys")
-    .update({
-      calls_today: (key.calls_today || 0) + 1,
-      last_used_at: new Date().toISOString(),
-      last_error: null,
-    })
-    .eq("id", key.id);
-};
-
-const markKeyError = async (
-  supabase: ReturnType<typeof createClient>,
-  keyId: string,
-  message: string,
-  exhausted = false,
-) => {
-  await supabase
-    .from("api_keys")
-    .update({
-      calls_today: exhausted ? 99999 : undefined,
-      last_error: message.slice(0, 500),
-    })
-    .eq("id", keyId);
-};
+function extractJson<T>(text: string): T {
+  const codeBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  const jsonStr = codeBlockMatch ? codeBlockMatch[1].trim() : text.trim();
+  return JSON.parse(jsonStr) as T;
+}
 
 const generateAiTopics = async (
-  supabase: ReturnType<typeof createClient>,
-  workspaceId: string,
+  apiKey: string,
   segment?: string | null,
   audience?: string | null,
   tone?: string | null,
   funnelType?: string | null,
 ): Promise<TopicItem[]> => {
-  const { data: keys } = await supabase
-    .from("api_keys")
-    .select("*")
-    .eq("workspace_id", workspaceId)
-    .eq("is_active", true)
-    .in("provider", ["groq", "openrouter", "gemini"])
-    .order("calls_today", { ascending: true })
-    .limit(4);
-
-  if (!keys?.length) return [];
-
   const systemPrompt = `Voce sugere topicos de social media em Portugues BR.
 Responda apenas com JSON valido no formato:
 {
@@ -123,170 +82,50 @@ Tom: ${tone || "informativo"}
 Objetivo de funil: ${funnelType || "Awareness"}
 Liste 5 topicos relevantes para posts e carrosseis.`;
 
-  for (const key of keys as ApiKeyRow[]) {
-    if ((key.calls_today || 0) >= (key.daily_limit || 0)) continue;
-
-    try {
-      let response: Response;
-
-      if (key.provider === "groq") {
-        response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${key.key_value}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "llama-3.3-70b-versatile",
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: userPrompt },
-            ],
-            response_format: { type: "json_object" },
-            temperature: 0.7,
-            max_tokens: 1000,
-          }),
-        });
-      } else if (key.provider === "openrouter") {
-        response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${key.key_value}`,
-            "Content-Type": "application/json",
-            "HTTP-Referer": "https://postgen.app",
-          },
-          body: JSON.stringify({
-            model: "meta-llama/llama-3.3-70b-instruct:free",
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: userPrompt },
-            ],
-            response_format: { type: "json_object" },
-            temperature: 0.7,
-          }),
-        });
-      } else {
-        response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${key.key_value}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }],
-              generationConfig: {
-                responseMimeType: "application/json",
-                temperature: 0.7,
-                maxOutputTokens: 1000,
-              },
-            }),
-          },
-        );
-      }
-
-      if (response.status === 429) {
-        await markKeyError(supabase, key.id, "429 Rate Limited", true);
-        continue;
-      }
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`${key.provider} ${response.status}: ${errorText}`);
-      }
-
-      const payload = await response.json();
-      const responseText = key.provider === "gemini"
-        ? payload?.candidates?.[0]?.content?.parts?.[0]?.text || "{}"
-        : payload?.choices?.[0]?.message?.content || "{}";
-
-      const parsed = JSON.parse(responseText) as { topics?: Array<{ title?: string; description?: string }> };
-      const topics = Array.isArray(parsed.topics) ? parsed.topics : [];
-
-      await incrementKeyUsage(supabase, key);
-
-      return topics
-        .filter(topic => typeof topic.title === "string" && topic.title.trim())
-        .slice(0, 5)
-        .map(topic => ({
-          title: topic.title!.trim(),
-          description: typeof topic.description === "string" ? topic.description.trim() : "",
-          url: "",
-          source_name: "Sugestao IA",
-          published_at: new Date().toISOString(),
-          source_type: "ai" as const,
-        }));
-    } catch (error) {
-      await markKeyError(
-        supabase,
-        key.id,
-        error instanceof Error ? error.message : String(error),
-      );
-    }
-  }
-
-  return [];
-};
-
-const searchNewsViaFirecrawl = async (
-  supabase: ReturnType<typeof createClient>,
-  workspaceId: string,
-  segment: string,
-): Promise<TopicItem[]> => {
-  if (!segment || segment.trim() === "geral") return [];
-
-  const { data: keys } = await supabase
-    .from("api_keys")
-    .select("*")
-    .eq("workspace_id", workspaceId)
-    .eq("provider", "firecrawl")
-    .eq("is_active", true)
-    .order("calls_today", { ascending: true })
-    .limit(1);
-
-  if (!keys?.length) return [];
-  const key = keys[0];
-  if ((key.calls_today || 0) >= (key.daily_limit || 0)) return [];
-
   try {
-    const query = `últimas notícias tendências blogs ${segment}`;
-    const response = await fetch("https://api.firecrawl.dev/v1/search", {
+    const res = await fetch(AI_GATEWAY, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${key.key_value}`,
+        Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        query,
-        pageOptions: { fetchPageContent: false },
-        searchOptions: { limit: 6 }
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
       }),
     });
 
-    if (!response.ok) {
-      if (response.status === 429) await markKeyError(supabase, key.id, "429 Rate Limited", true);
-      else await markKeyError(supabase, key.id, `Firecrawl Error ${response.status}`);
+    if (!res.ok) {
+      console.error("AI Gateway error for topics:", res.status);
       return [];
     }
 
-    const payload = await response.json();
-    await incrementKeyUsage(supabase, key);
+    const payload = await res.json();
+    const responseText = payload?.choices?.[0]?.message?.content || "{}";
+    const parsed = extractJson<{ topics?: Array<{ title?: string; description?: string }> }>(responseText);
+    const topics = Array.isArray(parsed.topics) ? parsed.topics : [];
 
-    if (!payload.success || !Array.isArray(payload.data)) return [];
-
-    return payload.data.slice(0, 6).map((item: { title?: string; description?: string; snippet?: string; url?: string }) => ({
-      title: item.title || "Notícia Recente",
-      description: (item.description || item.snippet || "").slice(0, 200),
-      url: item.url || "",
-      source_name: "Firecrawl Scout",
-      published_at: new Date().toISOString(),
-      source_type: "ai" as const,
-    }));
+    return topics
+      .filter(topic => typeof topic.title === "string" && topic.title.trim())
+      .slice(0, 5)
+      .map(topic => ({
+        title: topic.title!.trim(),
+        description: typeof topic.description === "string" ? topic.description.trim() : "",
+        url: "",
+        source_name: "Sugestao IA",
+        published_at: new Date().toISOString(),
+        source_type: "ai" as const,
+      }));
   } catch (error) {
-    await markKeyError(supabase, key.id, error instanceof Error ? error.message : String(error));
+    console.error("AI topic generation failed:", error);
     return [];
   }
 };
 
-Deno.serve(async (req: Request) => {
+serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -294,6 +133,7 @@ Deno.serve(async (req: Request) => {
   try {
     const { workspace_id, funnel_type, tone } = await req.json();
 
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
@@ -312,33 +152,28 @@ Deno.serve(async (req: Request) => {
         .maybeSingle(),
     ]);
 
-    const aiTopicsPromise = generateAiTopics(
-      supabase,
-      workspace_id,
-      briefing?.segment || null,
-      briefing?.target_audience || null,
-      tone || null,
-      funnel_type || null,
-    );
+    // AI Topics via Lovable AI Gateway
+    let aiTopics: TopicItem[] = [];
+    if (LOVABLE_API_KEY) {
+      aiTopics = await generateAiTopics(
+        LOVABLE_API_KEY,
+        briefing?.segment || null,
+        briefing?.target_audience || null,
+        tone || null,
+        funnel_type || null,
+      );
+    }
 
+    // RSS Topics
     let rssTopics: TopicItem[] = [];
-
     if (feeds?.length) {
       const rssResults = await Promise.allSettled(
         feeds.map(async (feed) => {
           const response = await fetch(feed.url, {
             headers: { "User-Agent": "PostGen/1.0 RSS Reader" },
           });
-
           if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
           const xml = await response.text();
-
-          await supabase
-            .from("rss_feeds")
-            .update({ last_fetched_at: new Date().toISOString() })
-            .eq("id", feed.id);
-
           return parseRssXml(xml, feed.name || feed.url);
         }),
       );
@@ -348,12 +183,7 @@ Deno.serve(async (req: Request) => {
           rssTopics.push(...result.value);
         }
       }
-    } else if (briefing?.segment) {
-      // Automatic RSS Search (AI Scout) if no explicit feeds
-      rssTopics = await searchNewsViaFirecrawl(supabase, workspace_id, briefing.segment);
     }
-
-
 
     rssTopics.sort((left, right) => {
       const leftDate = left.published_at ? new Date(left.published_at).getTime() : 0;
@@ -361,12 +191,11 @@ Deno.serve(async (req: Request) => {
       return rightDate - leftDate;
     });
 
-    const aiTopics = await aiTopicsPromise;
     const combinedTopics = [...aiTopics, ...rssTopics].slice(0, 20);
 
     return new Response(JSON.stringify({
       topics: combinedTopics,
-      message: combinedTopics.length ? null : "Nenhum feed RSS ou chave de IA configurados.",
+      message: combinedTopics.length ? null : "Nenhum feed RSS configurado e IA indisponível.",
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
