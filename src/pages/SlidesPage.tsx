@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Wand2, Download, RefreshCw, X, Save, FileImage, LayoutTemplate, Type, Settings2, Trash } from 'lucide-react';
+import { Wand2, Download, RefreshCw, X, Save, FileImage, LayoutTemplate, Type, Settings2, Trash, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
@@ -22,7 +22,7 @@ const SlidesPage = () => {
   
   // Wizards & Topic
   const [topic, setTopic] = useState('');
-  const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1);
+  const [wizardStep, setWizardStep] = useState<1 | 2 | 3 | 4>(1);
   const [format, setFormat] = useState<PresentationFormat>('16:9');
   const [slideCount, setSlideCount] = useState(8);
   const [bgPromptHint, setBgPromptHint] = useState('');
