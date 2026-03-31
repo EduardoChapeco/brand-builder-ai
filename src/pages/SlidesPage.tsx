@@ -22,7 +22,7 @@ const SlidesPage = () => {
   
   // Wizards & Topic
   const [topic, setTopic] = useState('');
-  const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1);
+  const [wizardStep, setWizardStep] = useState<1 | 2 | 3 | 4>(1);
   const [format, setFormat] = useState<PresentationFormat>('16:9');
   const [slideCount, setSlideCount] = useState(8);
   const [bgPromptHint, setBgPromptHint] = useState('');
