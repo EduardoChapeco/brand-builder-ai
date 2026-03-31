@@ -17,7 +17,14 @@ html, body { width:${w}px; height:${h}px; overflow:hidden; }
   background:#FFFFFF;
   display:flex; flex-direction:column;
 }
-.top-accent { width:100%; height:5px; background:${brand.color_primary}; flex-shrink:0; }
+${data.bgImageUrl ? `
+.bg-layer {
+  position:absolute; top:0; left:0; width:100%; height:100%;
+  background-image: linear-gradient(rgba(255,255,255,${data.bgOpacity || 0.85}), rgba(255,255,255,${data.bgOpacity || 0.85})), url('${data.bgImageUrl}');
+  background-size: cover; background-position: center; z-index: 0;
+}
+` : ''}
+.top-accent { width:100%; height:5px; background:${brand.color_primary}; flex-shrink:0; position:relative; z-index:1; }
 .body-area {
   flex:1; display:flex; flex-direction:column;
   justify-content:center; padding:40px 44px;
@@ -64,6 +71,7 @@ html, body { width:${w}px; height:${h}px; overflow:hidden; }
 </head>
 <body>
 <div class="artboard">
+  ${data.bgImageUrl ? '<div class="bg-layer"></div>' : ''}
   <div class="top-accent"></div>
   <div class="body-area">
     <div class="bg-shape"></div>
@@ -72,7 +80,7 @@ html, body { width:${w}px; height:${h}px; overflow:hidden; }
     <div class="divider"></div>
     ${data.body ? `<div class="body-text" data-postgen-field="body" data-postgen-editable="true">${data.body}</div>` : ''}
     ${data.cta ? `<div class="cta" data-postgen-field="cta" data-postgen-editable="true">→ ${data.cta}</div>` : ''}
-    <div class="watermark">${brand.watermark_text || ''}</div>
+    <div class="watermark">${brand.watermark_text || 'Sua Marca'}</div>
   </div>
 </div>
 </body>

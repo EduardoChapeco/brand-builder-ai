@@ -18,6 +18,13 @@ html, body { width:${w}px; height:${h}px; overflow:hidden; }
   display:flex; flex-direction:column; justify-content:center;
   padding:56px 52px;
 }
+${data.bgImageUrl ? `
+.bg-layer {
+  position:absolute; top:0; left:0; width:100%; height:100%;
+  background-image: linear-gradient(rgba(13,13,13,${data.bgOpacity || 0.85}), rgba(13,13,13,${data.bgOpacity || 0.85})), url('${data.bgImageUrl}');
+  background-size: cover; background-position: center; z-index: 0;
+}
+` : ''}
 .noise {
   position:absolute; inset:0; z-index:0;
   background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.035'/%3E%3C/svg%3E");
@@ -73,6 +80,7 @@ html, body { width:${w}px; height:${h}px; overflow:hidden; }
 </head>
 <body>
 <div class="artboard">
+  ${data.bgImageUrl ? '<div class="bg-layer"></div>' : ''}
   <div class="noise"></div>
   <div class="gold-line-top"></div>
   <div class="gold-line-bottom"></div>
@@ -81,7 +89,7 @@ html, body { width:${w}px; height:${h}px; overflow:hidden; }
   <div class="accent-rule"></div>
   ${data.body ? `<div class="body" data-postgen-field="body" data-postgen-editable="true">${data.body}</div>` : ''}
   ${data.cta ? `<div class="cta" data-postgen-field="cta" data-postgen-editable="true">→ ${data.cta}</div>` : ''}
-  <div class="watermark">${brand.watermark_text || ''}</div>
+  <div class="watermark">${brand.watermark_text || 'Sua Marca'}</div>
 </div>
 </body>
 </html>`;

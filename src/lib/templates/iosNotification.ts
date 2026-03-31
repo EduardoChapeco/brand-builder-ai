@@ -93,9 +93,9 @@ html, body { width:${w}px; height:${h}px; overflow:hidden; }
   <div class="notification-card">
     <div class="notif-header">
       <div class="app-icon">
-        <span class="app-icon-text">P</span>
+        <span class="app-icon-text">${(brand.watermark_text || 'M')[0].toUpperCase()}</span>
       </div>
-      <span class="app-name">${brand.watermark_text || 'PostGen'}</span>
+      <span class="app-name">${brand.watermark_text || 'Sua Marca'}</span>
       <span class="notif-time">agora</span>
     </div>
     <div class="notif-title" data-postgen-field="headline" data-postgen-editable="true">${data.headline}</div>

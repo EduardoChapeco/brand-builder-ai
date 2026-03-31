@@ -18,7 +18,8 @@ html, body { width:${w}px; height:${h}px; overflow:hidden; }
 }
 .bg {
   position:absolute; inset:0;
-  background:linear-gradient(135deg, ${brand.color_primary} 0%, ${brand.color_secondary} 60%, ${brand.color_accent}66 100%);
+  background:${data.bgImageUrl ? `linear-gradient(135deg, ${brand.color_primary}cc 0%, ${brand.color_secondary}cc 60%, ${brand.color_accent}99 100%), url('${data.bgImageUrl}')` : `linear-gradient(135deg, ${brand.color_primary} 0%, ${brand.color_secondary} 60%, ${brand.color_accent}66 100%)`};
+  background-size:cover; background-position:center;
 }
 .blur-orb-1 {
   position:absolute; top:-60px; left:-60px;
@@ -89,7 +90,7 @@ html, body { width:${w}px; height:${h}px; overflow:hidden; }
     ${data.body ? `<div class="body" data-postgen-field="body" data-postgen-editable="true">${data.body}</div>` : ''}
     ${data.cta ? `<div class="cta" data-postgen-field="cta" data-postgen-editable="true">→ ${data.cta}</div>` : ''}
   </div>
-  <div class="watermark">${brand.watermark_text || ''}</div>
+  <div class="watermark">${brand.watermark_text || 'Sua Marca'}</div>
 </div>
 </body>
 </html>`;

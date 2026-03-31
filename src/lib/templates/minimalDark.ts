@@ -18,6 +18,13 @@ html, body { width:${w}px; height:${h}px; overflow:hidden; }
   display:flex; flex-direction:column; justify-content:center;
   padding:50px 48px;
 }
+${data.bgImageUrl ? `
+.bg-layer {
+  position:absolute; top:0; left:0; width:100%; height:100%;
+  background-image: linear-gradient(rgba(0,0,0,${data.bgOpacity || 0.4}), rgba(0,0,0,${data.bgOpacity || 0.4})), url('${data.bgImageUrl}');
+  background-size: cover; background-position: center; z-index: 0;
+}
+` : ''}
 .bg-orb {
   position:absolute; top:-100px; right:-80px;
   width:360px; height:360px; border-radius:50%;
@@ -74,14 +81,15 @@ html, body { width:${w}px; height:${h}px; overflow:hidden; }
 </head>
 <body>
 <div class="artboard">
-  <div class="bg-orb"></div>
-  <div class="bg-orb-2"></div>
-  <div class="eyebrow">✦ PostGen</div>
-  <div class="headline" data-postgen-field="headline" data-postgen-editable="true">${data.headline}</div>
-  <div class="accent-line"></div>
-  ${data.body ? `<div class="body" data-postgen-field="body" data-postgen-editable="true">${data.body}</div>` : ''}
-  ${data.cta ? `<div class="cta" data-postgen-field="cta" data-postgen-editable="true">→ ${data.cta}</div>` : ''}
-  <div class="watermark">${brand.watermark_text || ''}</div>
+  ${data.bgImageUrl ? '<div class="bg-layer"></div>' : ''}
+  <div class="bg-orb" style="z-index: 1;"></div>
+  <div class="bg-orb-2" style="z-index: 1;"></div>
+  <div class="eyebrow" style="z-index: 2;">✦ ${brand.watermark_text || 'Sua Marca'}</div>
+  <div class="headline" data-postgen-field="headline" data-postgen-editable="true" style="z-index: 2;">${data.headline}</div>
+  <div class="accent-line" style="z-index: 2;"></div>
+  ${data.body ? `<div class="body" data-postgen-field="body" data-postgen-editable="true" style="z-index: 2;">${data.body}</div>` : ''}
+  ${data.cta ? `<div class="cta" data-postgen-field="cta" data-postgen-editable="true" style="z-index: 2;">→ ${data.cta}</div>` : ''}
+  <div class="watermark" style="z-index: 2;">${brand.watermark_text || 'Sua Marca'}</div>
 </div>
 </body>
 </html>`;

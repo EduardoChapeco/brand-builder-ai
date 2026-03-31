@@ -340,7 +340,7 @@ const GeneratorPage = () => {
           funnel_type: funnel,
           tone,
           format,
-          slides_count: format === 'square' ? slideCount : 1,
+          slides_count: slideCount,
           source_url: selectedSourceUrl,
         },
       });
@@ -359,7 +359,7 @@ const GeneratorPage = () => {
       // Fallback: demo render with the topic text directly
       const demoContent: GeneratedContent = {
         post_title: topic,
-        slides: Array.from({ length: format === 'square' ? slideCount : 1 }, (_, i) => ({
+        slides: Array.from({ length: slideCount }, (_, i) => ({
           index: i, type: i === 0 ? 'hook' : 'content',
           headline: i === 0 ? topic.slice(0, 40) : `Ponto ${i}: ${topic.slice(0, 25)}`,
           body: i === 0

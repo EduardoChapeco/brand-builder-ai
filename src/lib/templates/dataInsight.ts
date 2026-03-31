@@ -27,6 +27,13 @@ html, body { width:${w}px; height:${h}px; overflow:hidden; }
   background:#FFFFFF;
   display:flex; flex-direction:column;
 }
+${data.bgImageUrl ? `
+.bg-layer {
+  position:absolute; top:0; left:0; width:100%; height:100%;
+  background-image: linear-gradient(rgba(255,255,255,${data.bgOpacity || 0.85}), rgba(255,255,255,${data.bgOpacity || 0.85})), url('${data.bgImageUrl}');
+  background-size: cover; background-position: center; z-index: 0;
+}
+` : ''}
 .header {
   background:${brand.color_primary};
   padding:28px 32px 24px;
@@ -90,6 +97,7 @@ html, body { width:${w}px; height:${h}px; overflow:hidden; }
 </head>
 <body>
 <div class="artboard">
+  ${data.bgImageUrl ? '<div class="bg-layer"></div>' : ''}
   <div class="header">
     <div class="header-bg-circle"></div>
     <div class="header-label">📊 Dados & Insights</div>
@@ -100,7 +108,7 @@ html, body { width:${w}px; height:${h}px; overflow:hidden; }
   </div>
   <div class="footer-bar">
     <span class="footer-text" data-postgen-field="cta" data-postgen-editable="true">${data.cta || 'Salve e compartilhe →'}</span>
-    <span class="watermark">${brand.watermark_text || ''}</span>
+    <span class="watermark">${brand.watermark_text || 'Sua Marca'}</span>
   </div>
 </div>
 </body>
