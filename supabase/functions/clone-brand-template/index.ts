@@ -8,104 +8,54 @@ const corsHeaders = {
 
 const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
-type ApiKeyRow = {
-  id: string;
-  provider: string;
-  key_value: string;
-  calls_today: number | null;
-  daily_limit: number | null;
-};
-
-const incrementKey = async (
-  supabase: ReturnType<typeof createClient>,
-  keyId: string,
-  currentCalls: number,
-) => {
-  await supabase.from("api_keys").update({
-    calls_today: currentCalls + 1,
-    last_used_at: new Date().toISOString(),
-    last_error: null,
-  }).eq("id", keyId);
-};
-
-const markKeyError = async (
-  supabase: ReturnType<typeof createClient>,
-  keyId: string,
-  message: string,
-) => {
-  await supabase.from("api_keys").update({
-    last_error: message.slice(0, 500),
-  }).eq("id", keyId);
-};
-
-// Scrape URL via Firecrawl
-async function scrapeWithScreenshot(
-  supabase: ReturnType<typeof createClient>,
-  workspaceId: string,
-  url: string,
-): Promise<{ markdown: string; screenshotUrl: string | null; title: string | null }> {
-  const { data: keys } = await supabase
-    .from("api_keys")
-    .select("*")
-    .eq("workspace_id", workspaceId)
-    .eq("provider", "firecrawl")
-    .eq("is_active", true)
-    .order("calls_today", { ascending: true })
-    .limit(3);
-
-  if (!keys?.length) throw new Error("Nenhuma chave Firecrawl configurada.");
-
-  for (const key of keys as ApiKeyRow[]) {
-    if ((key.calls_today || 0) >= (key.daily_limit || 999)) continue;
-    try {
-      const res = await fetch("https://api.firecrawl.dev/v1/scrape", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${key.key_value}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          url,
-          formats: ["markdown", "screenshot"],
-          onlyMainContent: false,
-          waitFor: 2000,
-        }),
-      });
-
-      if (!res.ok) {
-        const err = await res.text();
-        await markKeyError(supabase, key.id, `${res.status}: ${err}`);
-        continue;
-      }
-
-      const payload = await res.json();
-      await incrementKey(supabase, key.id, key.calls_today || 0);
-      return {
-        markdown: (payload?.data?.markdown || "").slice(0, 16000),
-        screenshotUrl: payload?.data?.screenshot || null,
-        title: payload?.data?.metadata?.title || null,
-      };
-    } catch (e) {
-      await markKeyError(supabase, key.id, e instanceof Error ? e.message : String(e));
-    }
-  }
-  throw new Error("Não foi possível raspar a URL. Verifique sua chave Firecrawl.");
-}
-
 function extractJson<T>(text: string): T {
   const codeBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
   const jsonStr = codeBlockMatch ? codeBlockMatch[1].trim() : text.trim();
   return JSON.parse(jsonStr) as T;
 }
 
-// DNA Analysis via Lovable AI
-const DNA_SYSTEM_PROMPT = `Você é um especialista em análise de identidade visual e comunicação de marcas para redes sociais.
-Analise o conteúdo fornecido e retorne um JSON estruturado com 3 dimensões de DNA:
-1. layout_dna: estrutura visual e grid
-2. brand_dna: identidade visual (cores, tipografia, estética)
-3. copy_dna: linguagem, metodologia de copywriting e comunicação
-Responda APENAS com JSON válido, sem markdown, sem explicações fora do JSON.`;
+// Scrape URL using Lovable AI Gateway (fetch + summarize) - NO external API keys needed
+async function scrapeUrl(
+  lovableApiKey: string,
+  url: string,
+): Promise<{ markdown: string; title: string | null }> {
+  // Simple fetch of the URL to get raw HTML
+  try {
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; PostGenBot/1.0)",
+        "Accept": "text/html,application/xhtml+xml",
+      },
+    });
 
+    if (!response.ok) {
+      console.warn(`Failed to fetch URL ${url}: ${response.status}`);
+      return { markdown: "", title: null };
+    }
+
+    const html = await response.text();
+    
+    // Extract title from HTML
+    const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+    const title = titleMatch ? titleMatch[1].trim() : null;
+
+    // Strip HTML tags for a rough text extraction, limit to 12000 chars
+    const textContent = html
+      .replace(/<script[\s\S]*?<\/script>/gi, "")
+      .replace(/<style[\s\S]*?<\/style>/gi, "")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 12000);
+
+    return { markdown: textContent, title };
+  } catch (e) {
+    console.warn("Direct fetch failed:", e);
+    return { markdown: "", title: null };
+  }
+}
+
+// DNA Analysis via Lovable AI
 async function analyzeDnaWithLLM(
   lovableApiKey: string,
   url: string,
@@ -120,10 +70,17 @@ async function analyzeDnaWithLLM(
     category: "social",
   };
 
+  const systemPrompt = `Você é um especialista em análise de identidade visual e comunicação de marcas para redes sociais.
+Analise o conteúdo fornecido e retorne um JSON estruturado com 3 dimensões de DNA:
+1. layout_dna: estrutura visual e grid
+2. brand_dna: identidade visual (cores, tipografia, estética)
+3. copy_dna: linguagem, metodologia de copywriting e comunicação
+Responda APENAS com JSON válido, sem markdown, sem explicações fora do JSON.`;
+
   const userPrompt = `URL analisada: ${url}
 Nome da marca: ${sourceName}
 Conteúdo coletado:
-${markdown}
+${markdown.slice(0, 8000)}
 
 Retorne JSON com layout_dna, brand_dna, copy_dna, style_tags e category.`;
 
@@ -135,9 +92,9 @@ Retorne JSON com layout_dna, brand_dna, copy_dna, style_tags e category.`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: DNA_SYSTEM_PROMPT },
+          { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
       }),
@@ -160,16 +117,6 @@ Retorne JSON com layout_dna, brand_dna, copy_dna, style_tags e category.`;
 }
 
 // Generate HTML Template via Lovable AI
-const TEMPLATE_SYSTEM_PROMPT = `Você é um desenvolvedor HTML/CSS especialista em criar posts para redes sociais.
-Gere um template HTML completo que reproduz o DNA visual identificado.
-O template deve:
-- Ter dimensões fixas de 540x540px
-- Usar APENAS HTML inline e CSS interno
-- Usar variáveis CSS: var(--color-primary), var(--color-secondary), var(--color-accent), var(--color-bg), var(--color-text), var(--font-headline), var(--font-body)
-- Ter elementos marcados com data-postgen-field="headline", data-postgen-field="body", data-postgen-field="cta"
-- NÃO usar imagens externas
-Responda APENAS com o HTML completo, sem markdown.`;
-
 async function generateHtmlTemplate(
   lovableApiKey: string,
   layoutDna: unknown,
@@ -178,6 +125,16 @@ async function generateHtmlTemplate(
   sourceName: string,
 ): Promise<string> {
   const fallbackHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>*{margin:0;padding:0;box-sizing:border-box}html,body{width:540px;height:540px;overflow:hidden}.artboard{width:540px;height:540px;background:var(--color-bg,#09090F);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px;position:relative}.headline{font-family:var(--font-headline,'DM Sans'),sans-serif;font-size:48px;font-weight:800;line-height:1.1;color:var(--color-text,#F8FAFC);text-align:center;margin-bottom:20px}.body{font-family:var(--font-body,'DM Sans'),sans-serif;font-size:16px;color:rgba(248,250,252,0.65);text-align:center;line-height:1.6}</style></head><body><div class="artboard"><div class="headline" data-postgen-field="headline">Headline Aqui</div><div class="body" data-postgen-field="body">DNA de ${sourceName}</div></div></body></html>`;
+
+  const systemPrompt = `Você é um desenvolvedor HTML/CSS especialista em criar posts para redes sociais.
+Gere um template HTML completo que reproduz o DNA visual identificado.
+O template deve:
+- Ter dimensões fixas de 540x540px
+- Usar APENAS HTML inline e CSS interno
+- Usar variáveis CSS: var(--color-primary), var(--color-secondary), var(--color-accent), var(--color-bg), var(--color-text), var(--font-headline), var(--font-body)
+- Ter elementos marcados com data-postgen-field="headline", data-postgen-field="body", data-postgen-field="cta"
+- NÃO usar imagens externas
+Responda APENAS com o HTML completo, sem markdown.`;
 
   const userPrompt = `Crie um template HTML de 540x540px baseado neste DNA:
 FONTE: ${sourceName}
@@ -193,9 +150,9 @@ COPY: ${JSON.stringify(copyDna)}`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: TEMPLATE_SYSTEM_PROMPT },
+          { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
       }),
@@ -225,13 +182,13 @@ serve(async (req: Request) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY não configurada.");
 
-    const supabase = createClient(
+    const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
     // Create pending record
-    const { data: pendingRecord, error: insertErr } = await supabase
+    const { data: pendingRecord, error: insertErr } = await supabaseClient
       .from("brand_templates")
       .insert({
         workspace_id,
@@ -247,30 +204,23 @@ serve(async (req: Request) => {
     const recordId = pendingRecord.id;
 
     try {
-      let markdown = "A marca tem um estilo moderno, focado em minimalismo, com cores sóbrias e fontes limpas (sans-serif). O tom de voz é inspiracional e direto, voltado para conversão e engajamento. Usa forte contraste entre o fundo e os elementos de texto.";
-      let screenshotUrl: string | null = "https://images.unsplash.com/photo-1611162617474-5b21e879e113?auto=format&fit=crop&q=80&w=600";
-      let title: string | null = source_name || "Perfil ou Site";
-
-      try {
-        const result = await scrapeWithScreenshot(supabase, workspace_id, url);
-        markdown = result.markdown || markdown;
-        screenshotUrl = result.screenshotUrl || screenshotUrl;
-        title = result.title || title;
-      } catch (e) {
-        console.warn("Firecrawl failed or missing API Key, using fallback mock data.", e);
-      }
-
+      // Scrape URL directly (no external API key needed)
+      const scraped = await scrapeUrl(LOVABLE_API_KEY, url);
+      const markdown = scraped.markdown || "Marca com estilo moderno e minimalista.";
+      const title = scraped.title || source_name || "Perfil ou Site";
       const resolvedName = source_name || title || url;
 
+      // Analyze DNA with AI
       const { layout_dna, brand_dna, copy_dna, style_tags, category } = await analyzeDnaWithLLM(
         LOVABLE_API_KEY, url, resolvedName, markdown,
       );
 
+      // Generate HTML template with AI
       const html_template = await generateHtmlTemplate(
         LOVABLE_API_KEY, layout_dna, brand_dna, copy_dna, resolvedName,
       );
 
-      const { data: finalRecord, error: updateErr } = await supabase
+      const { data: finalRecord, error: updateErr } = await supabaseClient
         .from("brand_templates")
         .update({
           source_name: resolvedName,
@@ -278,7 +228,7 @@ serve(async (req: Request) => {
           brand_dna,
           copy_dna,
           html_template,
-          screenshot_url: screenshotUrl,
+          screenshot_url: null,
           style_tags,
           category,
           status: "ready",
@@ -295,7 +245,7 @@ serve(async (req: Request) => {
       });
     } catch (processError) {
       const errMsg = processError instanceof Error ? processError.message : String(processError);
-      await supabase.from("brand_templates").update({
+      await supabaseClient.from("brand_templates").update({
         status: "failed",
         error_message: errMsg.slice(0, 500),
       }).eq("id", recordId);

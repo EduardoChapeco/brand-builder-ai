@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Wand2, Download, RefreshCw, X, Save, FileImage, LayoutTemplate, Type, Settings2, Trash } from 'lucide-react';
+import { Wand2, Download, RefreshCw, X, Save, FileImage, LayoutTemplate, Type, Settings2, Trash, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useWorkspace } from '@/contexts/WorkspaceContext';

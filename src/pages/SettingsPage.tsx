@@ -125,6 +125,7 @@ const SettingsPage = () => {
     openrouter: createDraft('openrouter'),
     gemini: createDraft('gemini'),
     firecrawl: createDraft('firecrawl'),
+    steel: createDraft('steel'),
   });
 
   const preferenceStorageKey = createPreferenceKey(workspace?.id);
