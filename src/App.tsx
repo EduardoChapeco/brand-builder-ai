@@ -14,6 +14,7 @@ import SettingsPage from "@/pages/SettingsPage";
 import NotFound from "@/pages/NotFound";
 import BrandDNAPage from "@/pages/BrandDNAPage";
 import ApiKeysPage from "@/pages/ApiKeysPage";
+import SlidesPage from "@/pages/SlidesPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -40,6 +41,7 @@ const App = () => (
           >
             <Route index element={<Navigate to="generator" replace />} />
             <Route path="generator" element={<GeneratorPage />} />
+            <Route path="slides" element={<SlidesPage />} />
             <Route path="library" element={<LibraryPage />} />
             <Route path="brand-kit" element={<BrandKitPage />} />
             <Route path="briefing" element={<BriefingPage />} />
