@@ -22,7 +22,7 @@ function extractJson<T>(text: string): T {
 }
 
 const fetchArticleContext = async (
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   workspaceId: string,
   sourceUrl?: string | null,
 ): Promise<ArticleContext | null> => {
