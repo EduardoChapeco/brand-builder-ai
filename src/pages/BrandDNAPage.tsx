@@ -5,7 +5,7 @@ import {
   Dna, Globe, Loader2, Plus, Search, Sparkles,
   ExternalLink, Eye, Copy, CheckCircle, XCircle, Clock,
   Palette, Type, MessageSquare, LayoutTemplate, Wand2,
-  Terminal, Play, FileIcon, ImageIcon, Activity
+  Terminal, Play, FileIcon, ImageIcon, Activity, Trash
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -438,17 +438,36 @@ const BrandDNAPage = () => {
                   )}
 
                   {/* Hover overlay */}
-                  {tpl.status === 'ready' && (
-                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                      style={{ background: 'rgba(0,0,0,0.6)' }}>
-                      <div className="flex gap-2">
-                        <div className="px-3 py-1.5 rounded-lg text-xs font-semibold"
-                          style={{ background: 'var(--primary)', color: 'white' }}>
-                          <Eye size={12} className="inline mr-1" />Ver DNA
-                        </div>
-                      </div>
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    style={{ background: 'rgba(0,0,0,0.6)' }}>
+                    <div className="flex gap-2">
+                       {tpl.status === 'ready' && (
+                          <div className="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1"
+                            style={{ background: 'var(--primary)', color: 'white' }}>
+                            <Eye size={12} /> Ver DNA
+                          </div>
+                       )}
+                       {tpl.status === 'failed' && (
+                          <>
+                            <button onClick={(e) => { e.stopPropagation(); setUrl(tpl.source_url); setSourceName(tpl.source_name || ''); window.scrollTo(0,0); }} 
+                              className="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 hover:bg-white/20 transition-colors"
+                              style={{ background: 'rgba(255,255,255,0.1)', color: 'white' }}>
+                              <Play size={12} /> Tentar
+                            </button>
+                            <button onClick={async (e) => {
+                                e.stopPropagation();
+                                if(!confirm('Excluir de vez?')) return;
+                                await supabase.from('brand_templates').delete().eq('id', tpl.id);
+                                fetchTemplates();
+                              }} 
+                              className="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 hover:bg-red-500 transition-colors"
+                              style={{ background: 'rgba(239, 68, 68, 0.2)', color: 'white' }}>
+                              <Trash size={12} /> Excluir
+                            </button>
+                          </>
+                       )}
                     </div>
-                  )}
+                  </div>
 
                   {/* Platform badge */}
                   <div className="absolute top-2 left-2">
