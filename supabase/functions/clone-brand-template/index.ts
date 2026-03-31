@@ -70,16 +70,15 @@ async function analyzeDnaWithLLM(
     category: "social",
   };
 
-  const systemPrompt = `Você é um especialista em análise de identidade visual e comunicação de marcas para redes sociais.
-Analise o conteúdo fornecido e retorne um JSON estruturado com 3 dimensões de DNA:
-1. layout_dna: estrutura visual e grid
-2. brand_dna: identidade visual (cores, tipografia, estética)
-3. copy_dna: linguagem, metodologia de copywriting e comunicação
-Responda APENAS com JSON válido, sem markdown, sem explicações fora do JSON.`;
+  const systemPrompt = `Você é um especialista em análise de identidade visual nivel mundial (Pentagram, Apple).
+Analise o conteúdo e retorne um JSON estruturado com:
+1. layout_dna: estrutura visual moderna (margins, borders, radius, text-align)
+2. brand_dna: identidade visual com cores exatas HEX. IMPORTANTE: Garanta CONSTANTE ALTO CONTRASTE (ex: Se bg_dark for #111, text_dark deve ser #FFF). Inclua fontes válidas do Google Fonts (Inter, Outfit, Playfair Display).
+3. copy_dna: linguagem e estilo.
+Responda APENAS com JSON válido (sem crases).`;
 
-  const userPrompt = `URL analisada: ${url}
-Nome da marca: ${sourceName}
-Conteúdo coletado:
+  const userPrompt = `URL: ${url} / Marca: ${sourceName}
+Conteúdo via Texto:
 ${markdown.slice(0, 8000)}
 
 Retorne JSON com layout_dna, brand_dna, copy_dna, style_tags e category.`;
@@ -124,22 +123,23 @@ async function generateHtmlTemplate(
   copyDna: unknown,
   sourceName: string,
 ): Promise<string> {
-  const fallbackHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>*{margin:0;padding:0;box-sizing:border-box}html,body{width:540px;height:540px;overflow:hidden}.artboard{width:540px;height:540px;background:var(--color-bg,#09090F);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px;position:relative}.headline{font-family:var(--font-headline,'DM Sans'),sans-serif;font-size:48px;font-weight:800;line-height:1.1;color:var(--color-text,#F8FAFC);text-align:center;margin-bottom:20px}.body{font-family:var(--font-body,'DM Sans'),sans-serif;font-size:16px;color:rgba(248,250,252,0.65);text-align:center;line-height:1.6}</style></head><body><div class="artboard"><div class="headline" data-postgen-field="headline">Headline Aqui</div><div class="body" data-postgen-field="body">DNA de ${sourceName}</div></div></body></html>`;
+  const fallbackHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>*{margin:0;padding:0;box-sizing:border-box}html,body{width:540px;height:540px;overflow:hidden}.artboard{width:540px;height:540px;background:var(--color-bg,#1A1A24);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px;position:relative}.headline{font-family:var(--font-headline,'DM Sans'),sans-serif;font-size:48px;font-weight:800;line-height:1.1;color:var(--color-text,#FFFFFF);text-align:center;margin-bottom:20px}.body{font-family:var(--font-body,'DM Sans'),sans-serif;font-size:16px;color:rgba(255,255,255,0.7);text-align:center;line-height:1.6}</style></head><body><div class="artboard"><div class="headline" data-postgen-field="headline">DNA ${sourceName} Extraído</div><div class="body" data-postgen-field="body">Edite as informações na guia e experimente novos Prompts.</div></div></body></html>`;
 
-  const systemPrompt = `Você é um desenvolvedor HTML/CSS especialista em criar posts para redes sociais.
-Gere um template HTML completo que reproduz o DNA visual identificado.
-O template deve:
-- Ter dimensões fixas de 540x540px
-- Usar APENAS HTML inline e CSS interno
-- Usar variáveis CSS: var(--color-primary), var(--color-secondary), var(--color-accent), var(--color-bg), var(--color-text), var(--font-headline), var(--font-body)
-- Ter elementos marcados com data-postgen-field="headline", data-postgen-field="body", data-postgen-field="cta"
-- NÃO usar imagens externas
-Responda APENAS com o HTML completo, sem markdown.`;
+  const systemPrompt = `Você é um desenvolvedor Frontend de Elite (nível Stripe/Apple) criando layouts virais estonteantes HTML CSS para carrosséis de redes sociais.
+Gere um template modernista. Use Glassmorphism inteligente, sombras elegantes, divs modulares, texturas de padding profissionais.
+DESTRUA A MEDIOCRIDADE DE FUNDO PRETO TEXTO BRANCO SECO. FAÇA UMA OBRA PRIMA.
+REGRAS TÉCNICAS RÍGIDAS:
+- A DIV raiz (class="artboard") deve ter 540x540px e position:relative
+- Usar a regra ABSOLUTA de contraste (Ex: texto claro em fundo escuro e vice versa).
+- Mapeie dados via: data-postgen-field="headline", data-postgen-field="body", data-postgen-field="cta"
+- Variáveis CSS (você DEVE criar o estilo para herda-las do host, NUNCA HARCODAR as cores hex do estilo final no css inline, MAS voce pode formatar as divs baseadas nas instrucoes de design recebidas). As variaveis fornecidas serao: var(--color-primary), var(--color-secondary), var(--color-accent), var(--color-bg), var(--color-text), var(--font-headline), var(--font-body)
+- NÃO usar imagens via <img src>
+- RESPONDER APENAS NO FORMATO <!DOCTYPE html><html>...</html> (NUNCA RETORNE MARKDOWN, SEM \`\`\`html).`;
 
-  const userPrompt = `Crie um template HTML de 540x540px baseado neste DNA:
+  const userPrompt = `Crie o Template HTML de luxo reproduzindo este manual visual 540x540px:
 FONTE: ${sourceName}
 LAYOUT: ${JSON.stringify(layoutDna)}
-BRAND: ${JSON.stringify(brandDna)}
+BRANDING: ${JSON.stringify(brandDna)}
 COPY: ${JSON.stringify(copyDna)}`;
 
   try {
