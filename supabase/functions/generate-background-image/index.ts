@@ -22,7 +22,7 @@ serve(async (req: Request) => {
   }
 
   try {
-    const { workspace_id, prompt, visual_mode } = await req.json();
+    const { workspace_id, prompt, visual_mode, format } = await req.json();
     if (!workspace_id || !prompt) {
       throw new Error("workspace_id e prompt sao obrigatorios.");
     }
@@ -35,7 +35,12 @@ serve(async (req: Request) => {
     }
 
     const masterPrompt = MASTER_PROMPTS[visual_mode] || MASTER_PROMPTS.editorial;
-    const fullPrompt = `${masterPrompt} SUBJECT: ${prompt}. Square 1:1 ratio, fills entire frame, no text in image.`;
+    let aspectRatioHint = "Square 1:1 ratio";
+    let ratioConfig = "1:1";
+    if (format === 'story' || format === 'portrait') { aspectRatioHint = "Vertical 9:16 smartphone ratio"; ratioConfig = "9:16"; }
+    else if (format === 'landscape') { aspectRatioHint = "Horizontal 16:9 widescreen ratio"; ratioConfig = "16:9"; }
+
+    const fullPrompt = `${masterPrompt} SUBJECT: ${prompt}. ${aspectRatioHint}, fills entire frame, no text in image.`;
 
     // Use Lovable AI image generation model
     const res = await fetch(AI_GATEWAY, {
@@ -46,6 +51,7 @@ serve(async (req: Request) => {
       },
       body: JSON.stringify({
         model: "google/gemini-3.1-flash-image-preview",
+        aspectRatio: ratioConfig,
         messages: [{ role: "user", content: fullPrompt }],
       }),
     });

@@ -19,6 +19,7 @@ type GeneratedSlide = {
   headline: string;
   body: string;
   cta?: string | null;
+  bg_prompt_hint: string;
 };
 
 type GeneratedPost = {
@@ -26,7 +27,6 @@ type GeneratedPost = {
   slides: GeneratedSlide[];
   caption: string;
   hashtags: string;
-  bg_prompt_hint: string;
 };
 
 const createDemoResponse = (topic: string, slideCount: number): GeneratedPost => ({
@@ -37,10 +37,10 @@ const createDemoResponse = (topic: string, slideCount: number): GeneratedPost =>
     headline: index === 0 ? topic.slice(0, 40) : `Ponto ${index + 1}`,
     body: "Configure suas chaves de IA em Configuracoes.",
     cta: index === slideCount - 1 ? "Siga para mais" : null,
+    bg_prompt_hint: `Uma cena muito realista e cinemática sobre ${topic}, parte ${index + 1}.`,
   })),
   caption: `${topic}\n\nComente sua opiniao abaixo!`,
   hashtags: "#ia #marketing #socialmedia #conteudo",
-  bg_prompt_hint: topic,
 });
 
 const normalizeGeneratedPost = (
@@ -65,6 +65,9 @@ const normalizeGeneratedPost = (
             : fallback.slides[index]?.headline || `Slide ${index + 1}`,
           body: typeof slide?.body === "string" ? slide.body.trim() : "",
           cta: typeof slide?.cta === "string" ? slide.cta.trim() : null,
+          bg_prompt_hint: typeof slide?.bg_prompt_hint === "string" && slide.bg_prompt_hint.trim()
+            ? slide.bg_prompt_hint.trim()
+            : fallback.slides[index]?.bg_prompt_hint || topic,
         }))
     : fallback.slides;
 
@@ -79,9 +82,6 @@ const normalizeGeneratedPost = (
     hashtags: typeof candidate.hashtags === "string" && candidate.hashtags.trim()
       ? candidate.hashtags.trim()
       : fallback.hashtags,
-    bg_prompt_hint: typeof candidate.bg_prompt_hint === "string" && candidate.bg_prompt_hint.trim()
-      ? candidate.bg_prompt_hint.trim()
-      : fallback.bg_prompt_hint,
   };
 };
 
@@ -155,10 +155,9 @@ II. REGRAS CRÍTICAS DE TEXTO:
 Formato de saída (JSON ESTRITO - sem crases):
 {
   "post_title": "string (Gatilho da Ideia Central)",
-  "slides": [{"index":0,"type":"hook","headline":"string","body":"string","cta":"string|null (Apenas no último)"}],
+  "slides": [{"index":0,"type":"hook","headline":"string","body":"string","cta":"string|null (Apenas no último)","bg_prompt_hint":"string (Ideia mística/visual detalhada para imagem de fundo DESTE SLIDE apenas)"}],
   "caption": "string (Legenda profunda, instigante, que complementa e não repete o post)",
-  "hashtags": "string (Até 5 hashtags estratégicas)",
-  "bg_prompt_hint": "string (Ideia mística/visual para fundo Midjourney)"
+  "hashtags": "string (Até 5 hashtags estratégicas)"
 }`;
 
     const userPrompt = `Topico: ${topic}

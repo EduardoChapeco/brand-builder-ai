@@ -10,7 +10,44 @@ import { analistaCraft }      from './templates/analistaCraft';
 import { splitStatement }     from './templates/splitStatement';
 import { iosNotification }    from './templates/iosNotification';
 
+import { newsG1 }             from './templates/newsG1';
+import { tweetSocial }        from './templates/tweetSocial';
+import { appleMinimal }       from './templates/appleMinimal';
+
 export const TEMPLATE_REGISTRY: TemplateMetadata[] = [
+  {
+    id: 'news-g1',
+    name: 'G1 Notícia',
+    category: 'editorial',
+    previewGradient: 'linear-gradient(135deg, #CC0000 0%, #aa0000 100%)',
+    previewAccent: '#fff',
+    renderer: newsG1,
+    supportedFormats: ['square', 'portrait', 'story'],
+    imageSuggested: true,
+    description: 'Estilo plantão de portal de notícias.',
+  },
+  {
+    id: 'tweet-social',
+    name: 'X (Tweet)',
+    category: 'social',
+    previewGradient: 'linear-gradient(135deg, #1DA1F2 0%, #0d8bd9 100%)',
+    previewAccent: '#fff',
+    renderer: tweetSocial,
+    supportedFormats: ['square', 'portrait'],
+    imageSuggested: true,
+    description: 'Simula um post viral no X (antigo Twitter).',
+  },
+  {
+    id: 'apple-minimal',
+    name: 'Minimal',
+    category: 'minimal',
+    previewGradient: 'linear-gradient(135deg, #fbfbfd 0%, #e0e0e0 100%)',
+    previewAccent: '#1d1d1f',
+    renderer: appleMinimal,
+    supportedFormats: ['square', 'portrait', 'story'],
+    imageSuggested: true,
+    description: 'Ultra minimalista e hiper-premium. Menos é mais.',
+  },
   {
     id: 'viral-hook',
     name: 'Viral Hook',

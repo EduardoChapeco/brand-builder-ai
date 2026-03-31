@@ -92,6 +92,7 @@ export interface SlideConfig {
   templateId:   string;
   bgImageUrl?:  string;
   bgSource:     BgSource;
+  bgPromptHint?: string;
   visualMode:   VisMod;
   headline:     string;
   body?:        string;
@@ -106,6 +107,7 @@ export function createSlideConfig(overrides: Partial<SlideConfig> = {}): SlideCo
     bgSource:    'none',
     visualMode:  'dark',
     headline:    '',
+    bgPromptHint: '',
     ...overrides,
   };
 }

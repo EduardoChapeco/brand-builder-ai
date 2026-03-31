@@ -22,6 +22,7 @@ interface GeneratedSlide {
   headline: string;
   body:     string;
   cta?:     string;
+  bg_prompt_hint?: string;
 }
 
 interface GeneratedContent {
@@ -351,32 +352,40 @@ const GeneratorPage = () => {
       if (!data) throw new Error('Resposta vazia da funcao');
 
       setGenStep('✅ Processando slides...');
-      setBgPromptHint(data.bg_prompt_hint || topic);
+      setBgPromptHint(data.slides?.[0]?.bg_prompt_hint || data.bg_prompt_hint || topic);
       setPostTitle(data.post_title || topic);
       setCaption(data.caption || '');
       setHashtags((data.hashtags || '').split(/[\s,]+/).filter((h: string) => h.startsWith('#')));
 
-      let configs: SlideConfig[] = data.slides.map(s => createSlideConfig({
+      let configs: SlideConfig[] = data.slides.map((s, idx) => createSlideConfig({
         templateId: globalTemplate,
         bgSource: globalImageMethod,
         visualMode: globalVisMode,
         headline: s.headline,
         body: s.body,
-        cta: s.cta
+        cta: s.cta,
+        bgPromptHint: s.bg_prompt_hint || data.bg_prompt_hint || `${topic} slide ${idx+1}`
       }));
 
       // Generate Background if selected AI method globally
-      if (globalImageMethod === 'ai') {
-        setGenStep('✨ Gerando imagens IA (fundo)...');
-        // Generate main BG to apply to all explicitly requested by AI onboarding
-        try {
-          const { data: imgData } = await supabase.functions.invoke('generate-background-image', {
-            body: { workspace_id: workspace?.id, prompt: data.bg_prompt_hint, visual_mode: globalVisMode, format }
-          });
-          if (imgData?.imageUrl) {
-            configs = configs.map(c => ({ ...c, bgImageUrl: imgData.imageUrl }));
-          }
-        } catch(e) { console.error('BG AI Failed', e); }
+      if (globalImageMethod === 'ai' && !editingPostId) {
+        setGenStep('✨ Multi-Agente Visualizando (Imagens)...');
+        for (let i = 0; i < configs.length; i++) {
+          setGenStep(`🖌️ Desenhando slide ${i + 1}/${configs.length}...`);
+          try {
+            const { data: imgData } = await supabase.functions.invoke('generate-background-image', {
+              body: { 
+                workspace_id: workspace?.id, 
+                prompt: configs[i].bgPromptHint || topic, 
+                visual_mode: globalVisMode, 
+                format 
+              }
+            });
+            if (imgData?.imageUrl) {
+              configs[i].bgImageUrl = imgData.imageUrl;
+            }
+          } catch(e) { console.error(`BG AI Failed desc for slide ${i}:`, e); }
+        }
       }
 
       configs = configs.map((cfg, i) => ({ ...cfg, html: renderSlideConfig(cfg, i, configs.length) }));
@@ -394,6 +403,7 @@ const GeneratorPage = () => {
          body: i === 0 ? 'Configure suas chaves de IA em Configurações para gerar textos compeltos.' : 'Cada slide terá um conteúdo diferente.',
          cta: i === (slideCount - 1) ? 'Siga para mais' : undefined,
          bgSource: globalImageMethod,
+         bgPromptHint: `${topic} parte ${i+1}`
       }));
       const rendered = configs.map((c, i) => ({ ...c, html: renderSlideConfig(c, i, configs.length) }));
       setSlideConfigs(rendered);
