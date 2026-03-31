@@ -22,7 +22,7 @@ type ScrapeResult = {
 };
 
 const markKeyError = async (
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   keyId: string,
   message: string,
   exhausted = false,
@@ -37,7 +37,7 @@ const markKeyError = async (
 };
 
 const incrementKeyUsage = async (
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   key: ApiKeyRow,
 ) => {
   await supabase
@@ -51,7 +51,7 @@ const incrementKeyUsage = async (
 };
 
 const scrapeUrl = async (
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   workspaceId: string,
   url: string,
 ): Promise<ScrapeResult> => {

@@ -22,7 +22,7 @@ function extractJson<T>(text: string): T {
 }
 
 const fetchArticleContext = async (
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   workspaceId: string,
   sourceUrl?: string | null,
 ): Promise<ArticleContext | null> => {
@@ -61,10 +61,10 @@ const fetchArticleContext = async (
     await supabase
       .from("api_keys")
       .update({
-        calls_today: (key.calls_today || 0) + 1,
+        calls_today: ((key.calls_today as number) || 0) + 1,
         last_used_at: new Date().toISOString(),
       })
-      .eq("id", key.id);
+      .eq("id", key.id as string);
 
     if (!markdown) return null;
     return { markdown, title };

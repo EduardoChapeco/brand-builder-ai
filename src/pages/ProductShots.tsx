@@ -90,7 +90,7 @@ const ProductShots = () => {
     image.onload = async () => {
       try {
         const extractedPalette = await getPalette(image, { colorCount: 5, quality: 8 });
-        const extracted = (extractedPalette || []).map((color) => rgbToHex([color.r, color.g, color.b]));
+        const extracted = (extractedPalette || []).map((color: any) => rgbToHex(Array.isArray(color) ? color : [color.r ?? color[0], color.g ?? color[1], color.b ?? color[2]]));
         setPalette(extracted);
         setBackgroundColor(extracted[0] || '#1a1a1a');
 
