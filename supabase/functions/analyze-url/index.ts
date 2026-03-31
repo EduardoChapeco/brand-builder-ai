@@ -51,7 +51,7 @@ const incrementKeyUsage = async (
 };
 
 const scrapeUrl = async (
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   workspaceId: string,
   url: string,
 ): Promise<ScrapeResult> => {
