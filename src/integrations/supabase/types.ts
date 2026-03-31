@@ -73,6 +73,7 @@ export type Database = {
           expression_default: string | null
           gender: string | null
           id: string
+          is_active: boolean | null
           name: string
           physical_traits: Json | null
           sample_images: Json | null
@@ -89,6 +90,7 @@ export type Database = {
           expression_default?: string | null
           gender?: string | null
           id?: string
+          is_active?: boolean | null
           name: string
           physical_traits?: Json | null
           sample_images?: Json | null
@@ -105,6 +107,7 @@ export type Database = {
           expression_default?: string | null
           gender?: string | null
           id?: string
+          is_active?: boolean | null
           name?: string
           physical_traits?: Json | null
           sample_images?: Json | null
@@ -398,6 +401,7 @@ export type Database = {
           arc_type: string | null
           created_at: string
           id: string
+          post_id: string | null
           slides_plan: Json | null
           topic: string
           workspace_id: string
@@ -406,6 +410,7 @@ export type Database = {
           arc_type?: string | null
           created_at?: string
           id?: string
+          post_id?: string | null
           slides_plan?: Json | null
           topic?: string
           workspace_id: string
@@ -414,11 +419,19 @@ export type Database = {
           arc_type?: string | null
           created_at?: string
           id?: string
+          post_id?: string | null
           slides_plan?: Json | null
           topic?: string
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "carousel_storyboards_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts_v2"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "carousel_storyboards_workspace_id_fkey"
             columns: ["workspace_id"]
@@ -617,6 +630,7 @@ export type Database = {
           id: string
           post_data: Json | null
           role: string
+          workspace_id: string | null
         }
         Insert: {
           content?: string | null
@@ -624,6 +638,7 @@ export type Database = {
           id?: string
           post_data?: Json | null
           role: string
+          workspace_id?: string | null
         }
         Update: {
           content?: string | null
@@ -631,8 +646,17 @@ export type Database = {
           id?: string
           post_data?: Json | null
           role?: string
+          workspace_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "messages_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       posts: {
         Row: {
