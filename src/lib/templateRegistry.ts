@@ -14,8 +14,44 @@ import { newsG1 }             from './templates/newsG1';
 import { tweetSocial }        from './templates/tweetSocial';
 import { appleMinimal }       from './templates/appleMinimal';
 import { glassNeon }          from './templates/glassNeon';
+import { listicleProgress }   from './templates/listicleProgress';
+import { mockupPhone }        from './templates/mockupPhone';
+import { legalClassic }       from './templates/legalClassic';
 
 export const TEMPLATE_REGISTRY: TemplateMetadata[] = [
+  {
+    id: 'listicle-progress',
+    name: 'Listicle & Progress',
+    category: 'editorial',
+    previewGradient: 'linear-gradient(135deg, #111116 0%, #303038 100%)',
+    previewAccent: '#7C3AED',
+    renderer: listicleProgress,
+    supportedFormats: ['square', 'portrait', 'landscape'],
+    imageSuggested: false,
+    description: 'Estilo checklist ou passo a passo. Ideal para tutoriais e carrosséis longos.',
+  },
+  {
+    id: 'mockup-phone',
+    name: 'Mockup Phone',
+    category: 'bold',
+    previewGradient: 'linear-gradient(135deg, #7C3AED 0%, #5d2bbb 100%)',
+    previewAccent: '#fff',
+    renderer: mockupPhone,
+    supportedFormats: ['square', 'portrait'],
+    imageSuggested: true,
+    description: 'Simula uma notificação ou conteúdo dentro de um celular fictício.',
+  },
+  {
+    id: 'legal-classic',
+    name: 'Jurídico Classic',
+    category: 'minimal',
+    previewGradient: 'linear-gradient(135deg, #0F172A 0%, #1e293b 100%)',
+    previewAccent: '#D4AF37',
+    renderer: legalClassic,
+    supportedFormats: ['square', 'portrait'],
+    imageSuggested: false,
+    description: 'Sóbrio, focado em texto e com elementos de moldura clássica (cores ouro/navy).',
+  },
   {
     id: 'glass-neon',
     name: 'Glass & Neon',
