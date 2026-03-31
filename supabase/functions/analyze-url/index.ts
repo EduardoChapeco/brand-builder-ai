@@ -37,7 +37,7 @@ const markKeyError = async (
 };
 
 const incrementKeyUsage = async (
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   key: ApiKeyRow,
 ) => {
   await supabase
