@@ -841,6 +841,7 @@ export type Database = {
       }
       viral_analyses: {
         Row: {
+          analyzed_at: string | null
           content_sample: string | null
           content_type: string | null
           created_at: string
@@ -848,12 +849,14 @@ export type Database = {
           engagement_notes: string | null
           hook_formula: string | null
           id: string
+          patterns_extracted: Json | null
           source_account: string | null
           source_url: string | null
           visual_style: string | null
           workspace_id: string
         }
         Insert: {
+          analyzed_at?: string | null
           content_sample?: string | null
           content_type?: string | null
           created_at?: string
@@ -861,12 +864,14 @@ export type Database = {
           engagement_notes?: string | null
           hook_formula?: string | null
           id?: string
+          patterns_extracted?: Json | null
           source_account?: string | null
           source_url?: string | null
           visual_style?: string | null
           workspace_id: string
         }
         Update: {
+          analyzed_at?: string | null
           content_sample?: string | null
           content_type?: string | null
           created_at?: string
@@ -874,6 +879,7 @@ export type Database = {
           engagement_notes?: string | null
           hook_formula?: string | null
           id?: string
+          patterns_extracted?: Json | null
           source_account?: string | null
           source_url?: string | null
           visual_style?: string | null
