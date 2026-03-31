@@ -23,6 +23,8 @@ export type Database = {
           id: string
           is_active: boolean
           key_value: string
+          last_error: string | null
+          last_used_at: string | null
           provider: string
           workspace_id: string
         }
@@ -34,6 +36,8 @@ export type Database = {
           id?: string
           is_active?: boolean
           key_value: string
+          last_error?: string | null
+          last_used_at?: string | null
           provider: string
           workspace_id: string
         }
@@ -45,12 +49,73 @@ export type Database = {
           id?: string
           is_active?: boolean
           key_value?: string
+          last_error?: string | null
+          last_used_at?: string | null
           provider?: string
           workspace_id?: string
         }
         Relationships: [
           {
             foreignKeyName: "api_keys_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brand_characters: {
+        Row: {
+          age_range: string | null
+          archetype: string | null
+          created_at: string
+          ethnicity_notes: string | null
+          expression_default: string | null
+          gender: string | null
+          id: string
+          name: string
+          physical_traits: Json | null
+          sample_images: Json | null
+          seed_prompt: string | null
+          signature_item: string | null
+          style_notes: string | null
+          workspace_id: string
+        }
+        Insert: {
+          age_range?: string | null
+          archetype?: string | null
+          created_at?: string
+          ethnicity_notes?: string | null
+          expression_default?: string | null
+          gender?: string | null
+          id?: string
+          name: string
+          physical_traits?: Json | null
+          sample_images?: Json | null
+          seed_prompt?: string | null
+          signature_item?: string | null
+          style_notes?: string | null
+          workspace_id: string
+        }
+        Update: {
+          age_range?: string | null
+          archetype?: string | null
+          created_at?: string
+          ethnicity_notes?: string | null
+          expression_default?: string | null
+          gender?: string | null
+          id?: string
+          name?: string
+          physical_traits?: Json | null
+          sample_images?: Json | null
+          seed_prompt?: string | null
+          signature_item?: string | null
+          style_notes?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_characters_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -263,6 +328,7 @@ export type Database = {
           id: string
           instagram_handle: string | null
           keywords: string[] | null
+          last_competitor_analysis: string | null
           linkedin_handle: string | null
           main_competitors: Json | null
           main_differentials: string | null
@@ -272,6 +338,7 @@ export type Database = {
           target_audience: string | null
           tone_of_voice: string | null
           updated_at: string | null
+          viral_patterns_cache: Json | null
           workspace_id: string
         }
         Insert: {
@@ -282,6 +349,7 @@ export type Database = {
           id?: string
           instagram_handle?: string | null
           keywords?: string[] | null
+          last_competitor_analysis?: string | null
           linkedin_handle?: string | null
           main_competitors?: Json | null
           main_differentials?: string | null
@@ -291,6 +359,7 @@ export type Database = {
           target_audience?: string | null
           tone_of_voice?: string | null
           updated_at?: string | null
+          viral_patterns_cache?: Json | null
           workspace_id: string
         }
         Update: {
@@ -301,6 +370,7 @@ export type Database = {
           id?: string
           instagram_handle?: string | null
           keywords?: string[] | null
+          last_competitor_analysis?: string | null
           linkedin_handle?: string | null
           main_competitors?: Json | null
           main_differentials?: string | null
@@ -310,6 +380,7 @@ export type Database = {
           target_audience?: string | null
           tone_of_voice?: string | null
           updated_at?: string | null
+          viral_patterns_cache?: Json | null
           workspace_id?: string
         }
         Relationships: [
@@ -317,6 +388,41 @@ export type Database = {
             foreignKeyName: "briefings_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: true
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      carousel_storyboards: {
+        Row: {
+          arc_type: string | null
+          created_at: string
+          id: string
+          slides_plan: Json | null
+          topic: string
+          workspace_id: string
+        }
+        Insert: {
+          arc_type?: string | null
+          created_at?: string
+          id?: string
+          slides_plan?: Json | null
+          topic?: string
+          workspace_id: string
+        }
+        Update: {
+          arc_type?: string | null
+          created_at?: string
+          id?: string
+          slides_plan?: Json | null
+          topic?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "carousel_storyboards_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
@@ -383,6 +489,120 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "competitor_analyses_v2_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      image_prompt_templates: {
+        Row: {
+          base_template: string
+          category: string
+          created_at: string
+          default_values: Json | null
+          id: string
+          is_system: boolean | null
+          name: string
+          platform_params: Json | null
+          subcategory: string | null
+          usage_count: number | null
+          variables: Json | null
+          workspace_id: string | null
+        }
+        Insert: {
+          base_template?: string
+          category?: string
+          created_at?: string
+          default_values?: Json | null
+          id?: string
+          is_system?: boolean | null
+          name: string
+          platform_params?: Json | null
+          subcategory?: string | null
+          usage_count?: number | null
+          variables?: Json | null
+          workspace_id?: string | null
+        }
+        Update: {
+          base_template?: string
+          category?: string
+          created_at?: string
+          default_values?: Json | null
+          id?: string
+          is_system?: boolean | null
+          name?: string
+          platform_params?: Json | null
+          subcategory?: string | null
+          usage_count?: number | null
+          variables?: Json | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "image_prompt_templates_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      media_assets: {
+        Row: {
+          asset_type: string
+          character_id: string | null
+          created_at: string
+          id: string
+          metadata: Json | null
+          module: string
+          prompt_template_id: string | null
+          public_url: string | null
+          storage_path: string | null
+          workspace_id: string
+        }
+        Insert: {
+          asset_type?: string
+          character_id?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          module?: string
+          prompt_template_id?: string | null
+          public_url?: string | null
+          storage_path?: string | null
+          workspace_id: string
+        }
+        Update: {
+          asset_type?: string
+          character_id?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          module?: string
+          prompt_template_id?: string | null
+          public_url?: string | null
+          storage_path?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_assets_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "brand_characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_assets_prompt_template_id_fkey"
+            columns: ["prompt_template_id"]
+            isOneToOne: false
+            referencedRelation: "image_prompt_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_assets_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -594,6 +814,56 @@ export type Database = {
           tags?: string[] | null
         }
         Relationships: []
+      }
+      viral_analyses: {
+        Row: {
+          content_sample: string | null
+          content_type: string | null
+          created_at: string
+          emotional_trigger: string | null
+          engagement_notes: string | null
+          hook_formula: string | null
+          id: string
+          source_account: string | null
+          source_url: string | null
+          visual_style: string | null
+          workspace_id: string
+        }
+        Insert: {
+          content_sample?: string | null
+          content_type?: string | null
+          created_at?: string
+          emotional_trigger?: string | null
+          engagement_notes?: string | null
+          hook_formula?: string | null
+          id?: string
+          source_account?: string | null
+          source_url?: string | null
+          visual_style?: string | null
+          workspace_id: string
+        }
+        Update: {
+          content_sample?: string | null
+          content_type?: string | null
+          created_at?: string
+          emotional_trigger?: string | null
+          engagement_notes?: string | null
+          hook_formula?: string | null
+          id?: string
+          source_account?: string | null
+          source_url?: string | null
+          visual_style?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "viral_analyses_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       workspaces: {
         Row: {
