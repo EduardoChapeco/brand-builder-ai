@@ -15,26 +15,4 @@ CREATE TABLE IF NOT EXISTS public.squad_runs (
 -- RLS
 ALTER TABLE public.squad_runs ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Allow users to read their workspace squad_runs"
-ON public.squad_runs FOR SELECT
-USING (workspace_id IN (
-    SELECT workspace_id FROM public.workspace_users WHERE user_id = auth.uid()
-));
-
-CREATE POLICY "Allow users to insert squad_runs"
-ON public.squad_runs FOR INSERT
-WITH CHECK (workspace_id IN (
-    SELECT workspace_id FROM public.workspace_users WHERE user_id = auth.uid()
-));
-
-CREATE POLICY "Allow users to update squad_runs"
-ON public.squad_runs FOR UPDATE
-USING (workspace_id IN (
-    SELECT workspace_id FROM public.workspace_users WHERE user_id = auth.uid()
-));
-
-CREATE POLICY "Allow users to delete squad_runs"
-ON public.squad_runs FOR DELETE
-USING (workspace_id IN (
-    SELECT workspace_id FROM public.workspace_users WHERE user_id = auth.uid()
-));
+CREATE POLICY "Allow all for squad_runs" ON public.squad_runs FOR ALL USING (true) WITH CHECK (true);

@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { supabase } from '@/integrations/supabase/client';
 
-type ProviderId = 'groq' | 'openrouter' | 'gemini' | 'firecrawl';
+type ProviderId = 'groq' | 'openrouter' | 'gemini' | 'firecrawl' | 'steel';
 
 interface ApiKeyRecord {
   id: string;
@@ -76,6 +76,14 @@ const PROVIDERS: Array<{
     link: 'https://www.firecrawl.dev',
     helper: 'Necessario para enriquecer posts a partir de source_url.',
     defaultLimit: 500,
+  },
+  {
+    id: 'steel',
+    name: 'Steel',
+    description: 'Navegador na nuvem (Puppeteer/Playwright).',
+    link: 'https://steel.dev',
+    helper: 'Usado para clonagem profunda de identidade visual.',
+    defaultLimit: 100,
   },
 ];
 

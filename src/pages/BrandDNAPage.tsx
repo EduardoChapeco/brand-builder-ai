@@ -167,7 +167,7 @@ const BrandDNAPage = () => {
     return () => clearInterval(interval);
   }, [templates, fetchTemplates]);
 
-  // ─ Orchestrator: DNA Clone Async Flow ────────────────────
+  // ─ Orchestrator: DNA Clone – uses canonical clone-brand-template function ──
   const handleClone = async () => {
     if (!url.trim()) { toast.error('Cole uma URL para analisar'); return; }
     if (!workspace?.id) { toast.error('Workspace não encontrado'); return; }
@@ -175,70 +175,47 @@ const BrandDNAPage = () => {
     setIsCloning(true);
     setSquadLogs([]);
     setClonedImage(null);
-    let currentImageUrl = '';
-    let finalDna = null;
 
     try {
-      // Step 1: SCRAPER
       addLog(`🚀 Inicializando esquadrão de extração para ${url}...`, 'success');
-      addLog(`🤖 Agente Scraper: Inicializando ambiente Sandbox Web...`, 'loading');
-      
-      const { data: scraperData, error: scraperError } = await supabase.functions.invoke('agent-scraper', {
-        body: { workspaceId: workspace.id, url: url.trim(), preferSteel: false },
+      addLog(`🤖 Agente Scraper: Capturando página e screenshot...`, 'loading');
+
+      const { data, error } = await supabase.functions.invoke('clone-brand-template', {
+        body: {
+          workspace_id: workspace.id,
+          url: url.trim(),
+          source_name: sourceName.trim() || undefined,
+          source_platform: detectPlatform(url.trim()),
+        },
       });
 
-      if (scraperError || scraperData?.error) throw new Error(scraperError?.message || scraperData?.error || 'Erro no Scraper');
-      
-      currentImageUrl = scraperData.url;
-      setClonedImage(currentImageUrl);
-      addLog(`📸 Agente Scraper: Print-screen extraído com sucesso!`, 'success');
+      if (error || data?.error) throw new Error(error?.message || data?.error || 'Erro na clonagem');
 
-      // Step 2: VISION ANALYZER
-      addLog(`👁️ Agente Vision: Inspecionando pixels e abstraindo grids...`, 'loading');
-      
-      const { data: visionData, error: visionError } = await supabase.functions.invoke('agent-vision-analyzer', {
-        body: { workspaceId: workspace.id, screenshotUrl: currentImageUrl, preferGemini: false },
-      });
+      const tpl = data.template as BrandTemplate;
 
-      if (visionError || visionData?.error) throw new Error(visionError?.message || visionData?.error || 'Erro no Agente Vision');
-      
-      finalDna = visionData.data; // { brand_dna, layout, html_template }
-      addLog(`✨ Agente Vision: DNA Mapeado! Cores e Tipografias identificadas.`, 'success');
+      if (tpl?.screenshot_url) {
+        setClonedImage(tpl.screenshot_url);
+        addLog(`📸 Print-screen extraído e salvo com sucesso!`, 'success');
+      }
 
-      // Step 3: ASSEMBLER & DATABASE SAVER
-      addLog(`✍️ Agente Montador: Consolidando variáveis e finalizando Template...`, 'loading');
-      
-      const insertPayload = {
-        workspace_id: workspace.id,
-        source_url: url.trim(),
-        source_name: sourceName.trim() || detectPlatform(url.trim()).toUpperCase(),
-        source_platform: detectPlatform(url.trim()),
-        status: 'ready',
-        html_template: finalDna.html_template,
-        brand_dna: finalDna.brand_dna,
-        layout_style: finalDna.layout,
-        is_public: true
-      };
-
-      const { data: savedTpl, error: dbError } = await supabase.from('brand_templates').insert(insertPayload).select().single();
-      if (dbError) throw dbError;
-
+      addLog(`👁️ Agente Vision: DNA visual mapeado — cores, tipografia e grid identificados.`, 'success');
+      addLog(`✍️ Agente Montador: HTML template gerado a partir do DNA clonado.`, 'success');
       addLog(`✅ Template salvo na biblioteca global com sucesso!`, 'success');
+
       toast.success('DNA Clonado com sucesso!');
-      
+
       setTimeout(() => {
         setIsCloning(false);
         setUrl('');
         setSourceName('');
         fetchTemplates();
-        if (savedTpl) setSelectedTemplate(savedTpl as BrandTemplate);
+        if (tpl) setSelectedTemplate(tpl);
       }, 2000);
 
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro ao executar esquadrão';
       addLog(`❌ Falha na Orquestração: ${msg}`, 'error');
       toast.error(msg);
-      // Mantém a tela de cloning aberta para o usuário ver o erro
     }
   };
 

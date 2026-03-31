@@ -89,7 +89,7 @@ html, body { width:${w}px; height:${h}px; overflow:hidden; }
     <div class="accent-line"></div>
   </div>
   ${data.totalSlides && data.totalSlides > 1 ? `<div class="slide-num">${data.slideNumber}/${data.totalSlides}</div>` : ''}
-  <div class="watermark">${brand.watermark_text || ''}</div>
+  <div class="watermark">${brand.watermark_text || 'Sua Marca'}</div>
 </div>
 </body>
 </html>`;

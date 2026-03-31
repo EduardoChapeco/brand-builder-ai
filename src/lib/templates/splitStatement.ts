@@ -85,7 +85,7 @@ html, body { width:${w}px; height:${h}px; overflow:hidden; }
     <div class="headline" data-postgen-field="headline" data-postgen-editable="true">${data.headline}</div>
     ${data.body ? `<div class="body" data-postgen-field="body" data-postgen-editable="true">${data.body}</div>` : ''}
     ${data.cta ? `<div class="cta-btn" data-postgen-field="cta" data-postgen-editable="true">→ ${data.cta}</div>` : ''}
-    <div class="watermark">${brand.watermark_text || ''}</div>
+    <div class="watermark">${brand.watermark_text || 'Sua Marca'}</div>
   </div>
 </div>
 </body>

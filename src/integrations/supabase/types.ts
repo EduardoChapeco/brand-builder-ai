@@ -14,9 +14,139 @@ export type Database = {
   }
   public: {
     Tables: {
+      brand_templates: {
+        Row: {
+          analyzed_at: string | null
+          brand_dna: Json | null
+          category: string | null
+          copy_dna: Json | null
+          created_at: string | null
+          error_message: string | null
+          html_template: string | null
+          id: string
+          is_public: boolean | null
+          layout_dna: Json | null
+          screenshot_url: string | null
+          thumbnail_url: string | null
+          source_name: string | null
+          source_platform: string | null
+          source_url: string
+          status: string | null
+          style_tags: string[] | null
+          use_count: number | null
+          view_count: number | null
+          workspace_id: string
+        }
+        Insert: {
+          analyzed_at?: string | null
+          brand_dna?: Json | null
+          category?: string | null
+          copy_dna?: Json | null
+          created_at?: string | null
+          error_message?: string | null
+          html_template?: string | null
+          id?: string
+          is_public?: boolean | null
+          layout_dna?: Json | null
+          screenshot_url?: string | null
+          thumbnail_url?: string | null
+          source_name?: string | null
+          source_platform?: string | null
+          source_url: string
+          status?: string | null
+          style_tags?: string[] | null
+          use_count?: number | null
+          view_count?: number | null
+          workspace_id: string
+        }
+        Update: {
+          analyzed_at?: string | null
+          brand_dna?: Json | null
+          category?: string | null
+          copy_dna?: Json | null
+          created_at?: string | null
+          error_message?: string | null
+          html_template?: string | null
+          id?: string
+          is_public?: boolean | null
+          layout_dna?: Json | null
+          screenshot_url?: string | null
+          thumbnail_url?: string | null
+          source_name?: string | null
+          source_platform?: string | null
+          source_url?: string
+          status?: string | null
+          style_tags?: string[] | null
+          use_count?: number | null
+          view_count?: number | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_templates_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      squad_runs: {
+        Row: {
+          captured_screenshots: Json | null
+          created_at: string | null
+          error_message: string | null
+          final_template_id: string | null
+          id: string
+          status: string
+          target_url: string
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          captured_screenshots?: Json | null
+          created_at?: string | null
+          error_message?: string | null
+          final_template_id?: string | null
+          id?: string
+          status?: string
+          target_url: string
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          captured_screenshots?: Json | null
+          created_at?: string | null
+          error_message?: string | null
+          final_template_id?: string | null
+          id?: string
+          status?: string
+          target_url?: string
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "squad_runs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "squad_runs_final_template_id_fkey"
+            columns: ["final_template_id"]
+            isOneToOne: false
+            referencedRelation: "brand_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       api_keys: {
         Row: {
           alias: string | null
+          last_error?: string | null
+          last_used_at?: string | null
           calls_today: number | null
           created_at: string
           daily_limit: number | null
@@ -28,6 +158,8 @@ export type Database = {
         }
         Insert: {
           alias?: string | null
+          last_error?: string | null
+          last_used_at?: string | null
           calls_today?: number | null
           created_at?: string
           daily_limit?: number | null
@@ -39,6 +171,8 @@ export type Database = {
         }
         Update: {
           alias?: string | null
+          last_error?: string | null
+          last_used_at?: string | null
           calls_today?: number | null
           created_at?: string
           daily_limit?: number | null
@@ -121,80 +255,6 @@ export type Database = {
             foreignKeyName: "brand_kits_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: true
-            referencedRelation: "workspaces"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      brand_templates: {
-        Row: {
-          analyzed_at: string | null
-          brand_dna: Json | null
-          category: string | null
-          copy_dna: Json | null
-          created_at: string
-          error_message: string | null
-          html_template: string | null
-          id: string
-          is_public: boolean
-          layout_dna: Json | null
-          layout_style: Json | null
-          screenshot_url: string | null
-          source_name: string | null
-          source_platform: string | null
-          source_url: string
-          status: string | null
-          style_tags: string[] | null
-          use_count: number
-          workspace_id: string
-        }
-        Insert: {
-          analyzed_at?: string | null
-          brand_dna?: Json | null
-          category?: string | null
-          copy_dna?: Json | null
-          created_at?: string
-          error_message?: string | null
-          html_template?: string | null
-          id?: string
-          is_public?: boolean
-          layout_dna?: Json | null
-          layout_style?: Json | null
-          screenshot_url?: string | null
-          source_name?: string | null
-          source_platform?: string | null
-          source_url: string
-          status?: string | null
-          style_tags?: string[] | null
-          use_count?: number
-          workspace_id: string
-        }
-        Update: {
-          analyzed_at?: string | null
-          brand_dna?: Json | null
-          category?: string | null
-          copy_dna?: Json | null
-          created_at?: string
-          error_message?: string | null
-          html_template?: string | null
-          id?: string
-          is_public?: boolean
-          layout_dna?: Json | null
-          layout_style?: Json | null
-          screenshot_url?: string | null
-          source_name?: string | null
-          source_platform?: string | null
-          source_url?: string
-          status?: string | null
-          style_tags?: string[] | null
-          use_count?: number
-          workspace_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "brand_templates_workspace_id_fkey"
-            columns: ["workspace_id"]
-            isOneToOne: false
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
@@ -530,6 +590,7 @@ export type Database = {
           created_at: string
           id: string
           is_active: boolean | null
+          last_fetched_at: string | null
           name: string | null
           url: string
           workspace_id: string
@@ -539,6 +600,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean | null
+          last_fetched_at?: string | null
           name?: string | null
           url: string
           workspace_id: string
@@ -548,6 +610,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean | null
+          last_fetched_at?: string | null
           name?: string | null
           url?: string
           workspace_id?: string

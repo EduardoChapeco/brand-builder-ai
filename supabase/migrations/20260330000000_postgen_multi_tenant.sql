@@ -158,30 +158,30 @@ CREATE TRIGGER update_brand_kits_updated_at
 
 -- Storage bucket for exported slides and generated backgrounds
 INSERT INTO storage.buckets (id, name, public)
-VALUES ('postgen', 'postgen', true)
+VALUES ('postgen', 'postgen', true), ('postgen_assets', 'postgen_assets', true)
 ON CONFLICT (id) DO NOTHING;
 
-DROP POLICY IF EXISTS "PostGen bucket public read" ON storage.objects;
-CREATE POLICY "PostGen bucket public read"
+DROP POLICY IF EXISTS "PostGen buckets public read" ON storage.objects;
+CREATE POLICY "PostGen buckets public read"
   ON storage.objects
   FOR SELECT
-  USING (bucket_id = 'postgen');
+  USING (bucket_id IN ('postgen', 'postgen_assets'));
 
-DROP POLICY IF EXISTS "PostGen bucket insert" ON storage.objects;
-CREATE POLICY "PostGen bucket insert"
+DROP POLICY IF EXISTS "PostGen buckets insert" ON storage.objects;
+CREATE POLICY "PostGen buckets insert"
   ON storage.objects
   FOR INSERT
-  WITH CHECK (bucket_id = 'postgen');
+  WITH CHECK (bucket_id IN ('postgen', 'postgen_assets'));
 
-DROP POLICY IF EXISTS "PostGen bucket update" ON storage.objects;
-CREATE POLICY "PostGen bucket update"
+DROP POLICY IF EXISTS "PostGen buckets update" ON storage.objects;
+CREATE POLICY "PostGen buckets update"
   ON storage.objects
   FOR UPDATE
-  USING (bucket_id = 'postgen')
-  WITH CHECK (bucket_id = 'postgen');
+  USING (bucket_id IN ('postgen', 'postgen_assets'))
+  WITH CHECK (bucket_id IN ('postgen', 'postgen_assets'));
 
-DROP POLICY IF EXISTS "PostGen bucket delete" ON storage.objects;
-CREATE POLICY "PostGen bucket delete"
+DROP POLICY IF EXISTS "PostGen buckets delete" ON storage.objects;
+CREATE POLICY "PostGen buckets delete"
   ON storage.objects
   FOR DELETE
-  USING (bucket_id = 'postgen');
+  USING (bucket_id IN ('postgen', 'postgen_assets'));
