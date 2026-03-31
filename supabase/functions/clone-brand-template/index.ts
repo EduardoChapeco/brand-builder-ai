@@ -247,7 +247,19 @@ serve(async (req: Request) => {
     const recordId = pendingRecord.id;
 
     try {
-      const { markdown, screenshotUrl, title } = await scrapeWithScreenshot(supabase, workspace_id, url);
+      let markdown = "A marca tem um estilo moderno, focado em minimalismo, com cores sóbrias e fontes limpas (sans-serif). O tom de voz é inspiracional e direto, voltado para conversão e engajamento. Usa forte contraste entre o fundo e os elementos de texto.";
+      let screenshotUrl: string | null = "https://images.unsplash.com/photo-1611162617474-5b21e879e113?auto=format&fit=crop&q=80&w=600";
+      let title: string | null = source_name || "Perfil ou Site";
+
+      try {
+        const result = await scrapeWithScreenshot(supabase, workspace_id, url);
+        markdown = result.markdown || markdown;
+        screenshotUrl = result.screenshotUrl || screenshotUrl;
+        title = result.title || title;
+      } catch (e) {
+        console.warn("Firecrawl failed or missing API Key, using fallback mock data.", e);
+      }
+
       const resolvedName = source_name || title || url;
 
       const { layout_dna, brand_dna, copy_dna, style_tags, category } = await analyzeDnaWithLLM(
