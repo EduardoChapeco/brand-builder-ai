@@ -79,7 +79,7 @@ const ViralAnalyzer = () => {
     const loadingId = toast.loading('Coletando sinais virais...');
 
     try {
-      const { data, error } = await supabase.functions.invoke('analyze-viral-patterns', {
+      const { data, error } = await supabase.functions.invoke('analyze-viral-content', {
         body: {
           workspace_id: workspace.id,
           ...payload,
