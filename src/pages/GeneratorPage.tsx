@@ -516,7 +516,7 @@ const GeneratorPage = () => {
       if (error) throw error;
       if (!data) throw new Error('Resposta vazia da funcao');
 
-      setGenStep('✅ Processando slides...');
+      setGenStep('Processando slides...');
       setBgPromptHint(data.slides?.[0]?.bg_prompt_hint || data.bg_prompt_hint || topic);
       if (!preloadedMediaAsset?.public_url) {
         setPromptUsed(data.bg_prompt_hint || data.slides?.[0]?.bg_prompt_hint || topic);
@@ -545,7 +545,7 @@ const GeneratorPage = () => {
 
       // Generate Background if selected AI method globally
       if (globalImageMethod === 'ai' && !editingPostId && !preloadedMediaAsset?.public_url) {
-        setGenStep('✨ Multi-Agente Visualizando (Imagens)...');
+        setGenStep('Multi-Agente Visualizando (Imagens)...');
         for (let i = 0; i < configs.length; i++) {
           setGenStep(`🖌️ Desenhando slide ${i + 1}/${configs.length}...`);
           try {
@@ -815,7 +815,7 @@ const GeneratorPage = () => {
                 <div className="p-4 rounded-xl border border-white/10 bg-black/10">
                    <p className="text-sm font-semibold mb-3">Imagens de Fundo Inicial</p>
                    <div className="flex gap-2">
-                      <button onClick={() => setGlobalImageMethod('ai')} className={`flex-1 py-2 rounded-lg border text-xs flex items-center justify-center gap-1 transition-all ${globalImageMethod==='ai'?'border-purple-500 bg-purple-500/10 text-purple-400':'border-white/10'}`}>✨ IA (Recomendado)</button>
+                      <button onClick={() => setGlobalImageMethod('ai')} className={`flex-1 py-2 rounded-lg border text-xs flex items-center justify-center gap-1 transition-all ${globalImageMethod==='ai'?'border-purple-500 bg-purple-500/10 text-purple-400':'border-white/10'}`}>IA (Recomendado)</button>
                       <button onClick={() => setGlobalImageMethod('upload')} className={`flex-1 py-2 rounded-lg border text-xs flex items-center justify-center gap-1 transition-all ${globalImageMethod==='upload'?'border-purple-500 bg-purple-500/10 text-purple-400':'border-white/10'}`}>⬆ Upload (Mais Tarde)</button>
                       <button onClick={() => setGlobalImageMethod('none')} className={`flex-1 py-2 rounded-lg border text-xs flex items-center justify-center gap-1 transition-all ${globalImageMethod==='none'?'border-purple-500 bg-purple-500/10 text-purple-400':'border-white/10'}`}>Nenhuma</button>
                    </div>
@@ -825,7 +825,7 @@ const GeneratorPage = () => {
                 <div>
                    <p className="text-sm font-semibold mb-2">Design Master (Para Todos)</p>
                    <select value={globalTemplate} onChange={e => setGlobalTemplate(e.target.value)} className="w-full p-2.5 rounded-lg border text-sm outline-none" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
-                      {clonedDna && <option value="dna-clone">✨ DNA CLONADO ({clonedDna.name})</option>}
+                      {clonedDna && <option value="dna-clone">DNA CLONADO ({clonedDna.name})</option>}
                       {TEMPLATE_REGISTRY.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                    </select>
                    {recommendedTemplateId && (
@@ -1090,7 +1090,7 @@ const GeneratorPage = () => {
                             <button onClick={() => updateSlideConfig(activeSlideIdx, { templateId: 'dna-clone' })} title={clonedDna.name}
                                className={`h-[72px] rounded-lg overflow-hidden relative border-2 transition-all ${activeSlide.templateId === 'dna-clone' ? 'border-purple-500 scale-105' : 'border-dashed border-white/20'}`}>
                                <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center p-2">
-                                 <span className="text-[9px] font-bold leading-tight mb-1">✨ DNA CLONADO</span>
+                                 <span className="text-[9px] font-bold leading-tight mb-1">DNA CLONADO</span>
                                  <span className="text-[8px] truncate tracking-wide w-full" style={{ color: 'var(--primary)' }}>{clonedDna.name.toUpperCase()}</span>
                                </div>
                             </button>

@@ -21,11 +21,11 @@ const SEGMENTS = [
 ];
 
 const TONES = [
-  { emoji: '🔥', label: 'Direto e Provocativo', description: 'Sem rodeios e com opiniao forte.' },
-  { emoji: '📚', label: 'Educativo e Claro', description: 'Didatico, organizado e util.' },
-  { emoji: '💼', label: 'Profissional', description: 'Confiavel e corporativo.' },
-  { emoji: '😄', label: 'Leve e Descontraido', description: 'Humano, proximo e amigavel.' },
-  { emoji: '⚡', label: 'Urgente e Motivacional', description: 'Energia, acao e momentum.' },
+  { label: 'Direto e Provocativo', description: 'Sem rodeios e com opiniao forte.' },
+  { label: 'Educativo e Claro', description: 'Didatico, organizado e util.' },
+  { label: 'Profissional', description: 'Confiavel e corporativo.' },
+  { label: 'Leve e Descontraido', description: 'Humano, proximo e amigavel.' },
+  { label: 'Urgente e Motivacional', description: 'Energia, acao e momentum.' },
 ];
 
 const FONTS = [
@@ -277,7 +277,6 @@ const OnboardingPage = () => {
                         border: `1px solid ${form.tone === tone.label ? 'var(--primary)' : 'var(--border)'}`,
                       }}
                     >
-                      <span className="text-xl">{tone.emoji}</span>
                       <div>
                         <p className="text-sm font-semibold" style={{ color: form.tone === tone.label ? 'var(--primary)' : 'var(--text-1)' }}>
                           {tone.label}
@@ -313,7 +312,6 @@ const OnboardingPage = () => {
 
           {step === 2 && (
             <motion.div key="competitors" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-              <div className="text-4xl mb-4">🔍</div>
               <h2 className="text-2xl font-bold font-display mb-1" style={{ color: 'var(--text-1)' }}>
                 Quem voce quer analisar?
               </h2>
@@ -395,7 +393,7 @@ const OnboardingPage = () => {
 
           {step === 3 && (
             <motion.div key="brand-kit" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-              <div className="text-4xl mb-4">🎨</div>
+              <div className="text-4xl mb-4"></div>
               <h2 className="text-2xl font-bold font-display mb-1" style={{ color: 'var(--text-1)' }}>
                 Sua identidade visual
               </h2>

@@ -131,7 +131,7 @@ const SlidesPage = () => {
          <div className="max-w-xl w-full p-8 rounded-[2rem]" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
             {wizardStep === 1 && (
                <div className="animate-in fade-in">
-                  <h2 className="text-2xl font-bold mb-2">Apresentação com IA ✨</h2>
+                  <h2 className="text-2xl font-bold mb-2">Apresentação com IA</h2>
                   <p className="text-sm opacity-70 mb-6">Crie slides profissionais em segundos.</p>
                   <textarea value={topic} onChange={e=>setTopic(e.target.value)} rows={3} placeholder="Ex: Pitch de vendas para clientes corporativos..."
                     className="w-full p-4 rounded-xl border bg-black/10 text-sm mb-4 outline-none focus:border-purple-500" style={{ borderColor: 'var(--border)' }}/>
@@ -282,7 +282,7 @@ const SlidesPage = () => {
                      className="w-full py-3 bg-white/5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 border border-white/10 hover:bg-white/10"><Download size={16}/> Baixar PDF</button>
 
                   <button onClick={()=>{ exportSlidesHTML(slides.map(c=>c.html!), topic||'apresentacao', width, height); }}
-                     className="w-full py-3 bg-purple-600/20 text-purple-400 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 border border-purple-500/30 hover:bg-purple-600/30"><Download size={16}/> Baixar HTML Navegável ✨</button>
+                     className="w-full py-3 bg-purple-600/20 text-purple-400 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 border border-purple-500/30 hover:bg-purple-600/30"><Download size={16}/> Baixar HTML Navegável</button>
                </div>
             )}
          </div>

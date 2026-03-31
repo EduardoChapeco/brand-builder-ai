@@ -13,11 +13,11 @@ type ApiKeyRow = {
 };
 
 const PROVIDERS = [
-  { id: 'groq', name: 'Groq (LLaMA 3)', icon: '⚡' },
-  { id: 'gemini', name: 'Google Gemini', icon: '🧠' },
-  { id: 'openrouter', name: 'OpenRouter', icon: '🌐' },
-  { id: 'firecrawl', name: 'Firecrawl (Scraping)', icon: '🕷️' },
-  { id: 'steel', name: 'Steel.dev (Browser Sandbox)', icon: '🛡️' },
+  { id: 'groq', name: 'Groq (LLaMA 3)' },
+  { id: 'gemini', name: 'Google Gemini' },
+  { id: 'openrouter', name: 'OpenRouter' },
+  { id: 'firecrawl', name: 'Firecrawl (Scraping)' },
+  { id: 'steel', name: 'Steel.dev (Browser Sandbox)' },
 ];
 
 const getErrorMessage = (error: unknown) =>
@@ -122,7 +122,7 @@ export default function ApiKeysPage() {
                 style={{ backgroundColor: 'var(--bg-elevated)', borderColor: 'var(--border)', color: 'var(--text-1)' }}
               >
                 {PROVIDERS.map(p => (
-                  <option key={p.id} value={p.id}>{p.icon} {p.name}</option>
+                  <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
               </select>
             </div>
@@ -166,28 +166,25 @@ export default function ApiKeysPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {keys.map(k => {
-                const providerInfo = PROVIDERS.find(p => p.id === k.provider) || { name: k.provider, icon: '🔌' };
+                const providerInfo = PROVIDERS.find(p => p.id === k.provider) || { name: k.provider };
                 const isShowing = showKey === k.id;
                 
                 return (
                   <div key={k.id} className="p-4 rounded-xl flex flex-col gap-3 border" style={{ backgroundColor: 'var(--bg-elevated)', borderColor: 'var(--border)' }}>
                     <div className="flex justify-between items-start">
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">{providerInfo.icon}</span>
                         <div>
                           <p className="text-sm font-semibold" style={{ color: 'var(--text-1)' }}>{providerInfo.name}</p>
                           <p className="text-[10px] uppercase font-bold tracking-wider" style={{ color: 'var(--primary)' }}>
                             {k.is_active ? 'ATIVO' : 'INATIVO'}
                           </p>
                         </div>
-                      </div>
-                      <button 
-                        onClick={() => handleRemoveKey(k.id)}
-                        className="p-1.5 rounded-md hover:bg-red-500/10 text-red-500 transition-colors"
-                        title="Remover chave"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                        <button 
+                          onClick={() => handleRemoveKey(k.id)}
+                          className="p-1.5 rounded-md hover:bg-red-500/10 text-red-500 transition-colors"
+                          title="Remover chave"
+                        >
+                          <Trash2 size={14} />
+                        </button>
                     </div>
                     
                     <div className="flex items-center gap-2 p-2 rounded-lg bg-black/5 dark:bg-black/30">

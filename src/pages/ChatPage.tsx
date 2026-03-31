@@ -27,17 +27,17 @@ type PostData = {
 };
 
 const quickActions = [
-  { emoji: "📱", label: "Post único", prompt: "Crie um post único sobre " },
-  { emoji: "🎬", label: "Carrossel", prompt: "Crie um carrossel com 5 slides sobre " },
-  { emoji: "📊", label: "Post com dados", prompt: "Crie um post visual com dados e estatísticas sobre " },
-  { emoji: "💬", label: "Depoimento", prompt: "Crie um post de depoimento de cliente sobre " },
-  { emoji: "🚀", label: "Lançamento", prompt: "Crie um post de lançamento para " },
+  { label: "Post Único",       prompt: "Crie um post único sobre " },
+  { label: "Carrossel",        prompt: "Crie um carrossel com 5 slides sobre " },
+  { label: "Post com Dados",   prompt: "Crie um post com dados e estatísticas sobre " },
+  { label: "Depoimento",       prompt: "Crie um post de depoimento de cliente sobre " },
+  { label: "Lançamento",       prompt: "Crie um post de lançamento para " },
 ];
 
 const agentSteps = [
-  { emoji: "🧭", name: "Aria", action: "Interpretando pedido...", color: "text-primary" },
-  { emoji: "✍️", name: "Bruno", action: "Escrevendo textos...", color: "text-accent" },
-  { emoji: "🎨", name: "Carla", action: "Criando layout...", color: "text-success" },
+  { name: "Aria",  action: "Interpretando pedido...",  color: "text-primary" },
+  { name: "Bruno", action: "Escrevendo textos...",      color: "text-accent" },
+  { name: "Carla", action: "Criando layout...",         color: "text-success" },
 ];
 
 const ChatPage = () => {
@@ -172,7 +172,7 @@ const ChatPage = () => {
       saveMessage("assistant", assistantMsg.content, postData);
       savePost(postData);
 
-      toast({ title: "✨ Post gerado!", description: `${postData.slides_html.length} slides criados com sucesso.` });
+      toast({ title: "Post gerado!", description: `${postData.slides_html.length} slides criados com sucesso.` });
     } catch (err: unknown) {
       console.error("Generation error:", err);
       const errMsg = err instanceof Error ? err.message : "Erro desconhecido";
@@ -180,7 +180,7 @@ const ChatPage = () => {
       const errorAssistant: Message = {
         id: crypto.randomUUID(),
         role: "assistant",
-        content: `❌ Erro ao gerar o post: ${errMsg}`,
+        content: `Erro ao gerar o post: ${errMsg}`,
       };
       setMessages((prev) => [...prev, errorAssistant]);
 
@@ -205,7 +205,7 @@ const ChatPage = () => {
   const handleCopyCaption = () => {
     if (!activePost) return;
     navigator.clipboard.writeText(activePost.caption + "\n\n" + activePost.hashtags);
-    toast({ title: "✅ Legenda copiada!" });
+    toast({ title: "Legenda copiada!" });
   };
 
   return (
@@ -236,9 +236,9 @@ const ChatPage = () => {
               </div>
               <div className="grid max-w-lg gap-3">
                 {[
-                  "📱 Crie um carrossel com 5 dicas sobre marketing digital",
-                  "🚀 Post de lançamento para um novo produto SaaS",
-                  "💬 Post com depoimento de cliente satisfeito",
+                  "Crie um carrossel com 5 dicas sobre marketing digital",
+                  "Post de lançamento para um novo produto SaaS",
+                  "Post com depoimento de cliente satisfeito",
                 ].map((prompt) => (
                   <button
                     key={prompt}
@@ -276,7 +276,7 @@ const ChatPage = () => {
                       {msg.postData && (
                         <div className="ml-10 rounded-xl border border-border bg-card p-4">
                           <div className="mb-3 flex items-center gap-2">
-                            <span className="text-sm font-semibold text-foreground">✨ {msg.postData.title}</span>
+                            <span className="text-sm font-semibold text-foreground">{msg.postData.title}</span>
                             <Badge variant="outline" className="text-xs capitalize">{msg.postData.format === "carousel" ? "Carrossel" : "Post"}</Badge>
                           </div>
                           <div className="flex gap-2 overflow-x-auto pb-2">
@@ -321,7 +321,6 @@ const ChatPage = () => {
                       ) : (
                         <span className="inline-block h-2 w-2 rounded-full bg-muted" />
                       )}
-                      <span>{step.emoji}</span>
                       <span className={`font-medium ${step.color}`}>{step.name}</span>
                       <span className="text-muted-foreground">{step.action}</span>
                     </motion.div>
@@ -342,7 +341,7 @@ const ChatPage = () => {
                 onClick={() => setInput(action.prompt)}
                 className="rounded-full border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
               >
-                {action.emoji} {action.label}
+                {action.label}
               </button>
             ))}
           </div>

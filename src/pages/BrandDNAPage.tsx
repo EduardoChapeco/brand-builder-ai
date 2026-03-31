@@ -180,7 +180,7 @@ const BrandDNAPage = () => {
     setClonedImage(null);
 
     try {
-      addLog(`🚀 Inicializando esquadrão de extração para ${targetUrl}...`, 'success');
+      addLog(`Inicializando esquadrão de extração para ${targetUrl}...`, 'success');
       addLog(`🤖 Agente Scraper: Capturando página e screenshot...`, 'loading');
 
       const { data, error } = await supabase.functions.invoke('clone-brand-template', {
@@ -202,8 +202,8 @@ const BrandDNAPage = () => {
       }
 
       addLog(`👁️ Agente Vision: DNA visual mapeado — cores, tipografia e grid identificados.`, 'success');
-      addLog(`✍️ Agente Montador: HTML template gerado a partir do DNA clonado.`, 'success');
-      addLog(`✅ Template salvo na biblioteca global com sucesso!`, 'success');
+      addLog(`Agente Montador: HTML template gerado a partir do DNA clonado.`, 'success');
+      addLog(`Template salvo na biblioteca global com sucesso!`, 'success');
 
       toast.success('DNA Clonado com sucesso!');
 
@@ -217,7 +217,7 @@ const BrandDNAPage = () => {
 
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro ao executar esquadrão';
-      addLog(`❌ Falha na Orquestração: ${msg}`, 'error');
+      addLog(`Falha na Orquestração: ${msg}`, 'error');
       toast.error(msg);
     }
   };

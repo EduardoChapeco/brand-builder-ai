@@ -544,7 +544,7 @@ const FeedSimulatorPage = () => {
                           )}
                           <div className="flex gap-4 text-xs" style={{ color: '#8a8d91' }}>
                             <span>👍 {randBetween(20, 800)}</span>
-                            <span>💬 {randBetween(2, 40)} comentários</span>
+                            <span>{randBetween(2, 40)} comentários</span>
                             <span>🔁 {randBetween(1, 30)} compartilhamentos</span>
                           </div>
                         </div>
