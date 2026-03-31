@@ -22,6 +22,9 @@ import PromptStudio from "@/pages/PromptStudio";
 import CarouselBuilder from "@/pages/CarouselBuilder";
 import ProductShots from "@/pages/ProductShots";
 import BrandCharacter from "@/pages/BrandCharacter";
+import ChatPage from "@/pages/ChatPage";
+import FeedSimulatorPage from "@/pages/FeedSimulatorPage";
+import BioLinkPage from "@/pages/BioLinkPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -47,22 +50,24 @@ const App = () => (
             }
           >
             <Route index element={<Navigate to="dashboard" replace />} />
-            <Route path="dashboard" element={<DashboardPage />} />
-            <Route path="generator" element={<GeneratorPage />} />
-            
+            <Route path="dashboard"       element={<DashboardPage />} />
+            <Route path="generator"       element={<GeneratorPage />} />
             <Route path="carousel-builder" element={<CarouselBuilder />} />
-            <Route path="image-prompts" element={<PromptStudio />} />
-            <Route path="product-shots" element={<ProductShots />} />
-            <Route path="viral-analyzer" element={<ViralAnalyzer />} />
+            <Route path="image-prompts"   element={<PromptStudio />} />
+            <Route path="product-shots"   element={<ProductShots />} />
+            <Route path="viral-analyzer"  element={<ViralAnalyzer />} />
             <Route path="brand-character" element={<BrandCharacter />} />
-            
-            <Route path="slides" element={<SlidesPage />} />
-            <Route path="library" element={<LibraryPage />} />
-            <Route path="brand-kit" element={<BrandKitPage />} />
-            <Route path="briefing" element={<BriefingPage />} />
-            <Route path="brand-dna" element={<BrandDNAPage />} />
-            <Route path="api-keys" element={<Navigate to="../settings?tab=keys" replace />} />
-            <Route path="settings" element={<SettingsPage />} />
+            <Route path="chat"            element={<ChatPage />} />
+            <Route path="feed-preview"    element={<FeedSimulatorPage />} />
+            <Route path="biolink"         element={<BioLinkPage />} />
+            <Route path="slides"          element={<SlidesPage />} />
+            <Route path="library"         element={<LibraryPage />} />
+            <Route path="brand-kit"       element={<BrandKitPage />} />
+            <Route path="briefing"        element={<BriefingPage />} />
+            <Route path="brand-dna"       element={<BrandDNAPage />} />
+            <Route path="api-keys"        element={<Navigate to="../settings?tab=keys" replace />} />
+            <Route path="settings"        element={<SettingsPage />} />
+            <Route path="*"               element={<Navigate to="dashboard" replace />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

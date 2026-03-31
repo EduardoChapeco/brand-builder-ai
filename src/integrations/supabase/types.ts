@@ -572,6 +572,7 @@ export type Database = {
           id: string
           post_data: Json | null
           role: string
+          workspace_id: string | null
         }
         Insert: {
           content?: string | null
@@ -579,6 +580,7 @@ export type Database = {
           id?: string
           post_data?: Json | null
           role: string
+          workspace_id?: string | null
         }
         Update: {
           content?: string | null
@@ -586,6 +588,7 @@ export type Database = {
           id?: string
           post_data?: Json | null
           role?: string
+          workspace_id?: string | null
         }
         Relationships: []
       }

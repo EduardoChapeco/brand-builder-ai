@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { NavLink, useParams } from 'react-router-dom';
+import { NavLink, useParams, useNavigate } from 'react-router-dom';
 import {
   Activity,
   Aperture,
@@ -10,6 +10,9 @@ import {
   Grid2x2,
   Images,
   Layers,
+  Link2,
+  MessageSquare,
+  MonitorSmartphone,
   Palette,
   Presentation,
   Settings,
@@ -21,22 +24,25 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 
 const primaryItems = [
-  { icon: Grid2x2, label: 'Dashboard', path: 'dashboard' },
-  { icon: Wand2, label: 'Post Rápido', path: 'generator' },
-  { icon: Layers, label: 'Carousel Builder', path: 'carousel-builder' },
-  { icon: Sparkles, label: 'Prompt Studio', path: 'image-prompts' },
-  { icon: Activity, label: 'Viral Analyzer', path: 'viral-analyzer' },
-  { icon: Images, label: 'Biblioteca', path: 'library' },
+  { icon: Grid2x2,    label: 'Dashboard',       path: 'dashboard',       category: 'core' },
+  { icon: Wand2,      label: 'Post Rápido',      path: 'generator',       category: 'core' },
+  { icon: Layers,     label: 'Carousel Builder', path: 'carousel-builder',category: 'core' },
+  { icon: Sparkles,   label: 'Prompt Studio',   path: 'image-prompts',   category: 'core' },
+  { icon: Activity,   label: 'Viral Analyzer',  path: 'viral-analyzer',  category: 'core' },
+  { icon: Images,     label: 'Biblioteca',       path: 'library',         category: 'core' },
+  { icon: MonitorSmartphone, label: 'Feed Preview', path: 'feed-preview',  category: 'core' },
 ];
 
 const secondaryItems = [
-  { icon: Aperture, label: 'Product Shots', path: 'product-shots' },
-  { icon: UserCircle2, label: 'Brand Character', path: 'brand-character' },
-  { icon: Dna, label: 'DNA Cloner', path: 'brand-dna' },
-  { icon: Presentation, label: 'Slides', path: 'slides' },
-  { icon: Palette, label: 'Brand Kit', path: 'brand-kit' },
-  { icon: FileText, label: 'Briefing', path: 'briefing' },
-  { icon: Settings, label: 'Configurações', path: 'settings' },
+  { icon: Aperture,   label: 'Product Shots',   path: 'product-shots',  category: 'tools' },
+  { icon: UserCircle2,label: 'Brand Character', path: 'brand-character',category: 'tools' },
+  { icon: Dna,        label: 'DNA Cloner',       path: 'brand-dna',      category: 'tools' },
+  { icon: Link2,      label: 'Bio Link',         path: 'biolink',        category: 'tools' },
+  { icon: MessageSquare, label: 'Chat IA',       path: 'chat',           category: 'tools' },
+  { icon: Presentation,label: 'Slides',          path: 'slides',         category: 'config' },
+  { icon: Palette,    label: 'Brand Kit',        path: 'brand-kit',      category: 'config' },
+  { icon: FileText,   label: 'Briefing',         path: 'briefing',       category: 'config' },
+  { icon: Settings,   label: 'Configurações',    path: 'settings',       category: 'config' },
 ];
 
 const SidebarLink = ({
@@ -53,24 +59,38 @@ const SidebarLink = ({
   const { workspaceId } = useParams();
 
   return (
-    <Tooltip delayDuration={250}>
+    <Tooltip delayDuration={200}>
       <TooltipTrigger asChild>
         <NavLink
           to={`/workspace/${workspaceId}/${path}`}
           className={({ isActive }) =>
-            `w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-150 ${
+            `relative w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-150 group/link ${
               isActive
                 ? 'text-white'
-                : 'text-[color:var(--text-3)] hover:text-[color:var(--text-1)] hover:bg-[color:var(--bg-card)]'
+                : 'text-[color:var(--text-3)] hover:text-[color:var(--text-1)]'
             }`
           }
-          style={({ isActive }) => (isActive ? { background: primaryColor } : {})}
+          style={({ isActive }) =>
+            isActive
+              ? { background: primaryColor, boxShadow: `0 4px 16px ${primaryColor}50` }
+              : {}
+          }
         >
-          <Icon size={18} strokeWidth={1.8} />
+          {({ isActive }) => (
+            <>
+              {!isActive && (
+                <span className="absolute inset-0 rounded-xl opacity-0 group-hover/link:opacity-100 transition-opacity duration-150"
+                  style={{ background: 'rgba(255,255,255,0.05)' }} />
+              )}
+              <Icon size={18} strokeWidth={isActive ? 2 : 1.7} />
+            </>
+          )}
         </NavLink>
       </TooltipTrigger>
-      <TooltipContent side="right" sideOffset={8}>
-        <p className="text-xs font-medium">{label}</p>
+      <TooltipContent side="right" sideOffset={10}
+        className="text-xs font-semibold px-3 py-1.5 rounded-xl"
+        style={{ background: 'rgba(15,15,26,0.95)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff' }}>
+        {label}
       </TooltipContent>
     </Tooltip>
   );
@@ -78,6 +98,8 @@ const SidebarLink = ({
 
 const AppSidebar = () => {
   const { workspace, brandKit } = useWorkspace();
+  const navigate = useNavigate();
+  const { workspaceId } = useParams();
   const [showSecondary, setShowSecondary] = useState(false);
 
   const initials = workspace?.name
@@ -88,7 +110,7 @@ const AppSidebar = () => {
 
   return (
     <aside
-      className="flex flex-col items-center py-4 gap-2 shrink-0"
+      className="flex flex-col items-center py-4 gap-1 shrink-0 h-full overflow-hidden"
       style={{
         width: 64,
         background: 'var(--bg-surface)',
@@ -96,50 +118,92 @@ const AppSidebar = () => {
         zIndex: 50,
       }}
     >
-      <div
-        className="w-10 h-10 rounded-xl flex items-center justify-center mb-2 shrink-0"
-        style={{ background: primaryColor }}
-      >
-        <span className="text-white font-bold text-base" style={{ fontFamily: 'var(--font-display)' }}>P</span>
-      </div>
+      {/* Logo / Workspace Avatar */}
+      <Tooltip delayDuration={200}>
+        <TooltipTrigger asChild>
+          <button
+            onClick={() => navigate('/workspaces')}
+            className="w-10 h-10 rounded-xl flex items-center justify-center mb-3 shrink-0 transition-all hover:opacity-90 hover:scale-105"
+            style={{ background: primaryColor, boxShadow: `0 4px 14px ${primaryColor}40` }}
+          >
+            <span className="text-white font-display font-bold text-base">{initials}</span>
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="right" sideOffset={10}
+          className="text-xs font-semibold px-3 py-1.5 rounded-xl"
+          style={{ background: 'rgba(15,15,26,0.95)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff' }}>
+          {workspace?.name || 'Trocar Workspace'}
+        </TooltipContent>
+      </Tooltip>
 
-      <nav className="flex flex-col gap-1 flex-1">
+      {/* Divider */}
+      <div className="w-8 h-px shrink-0 mb-1" style={{ background: 'var(--border)' }} />
+
+      {/* Primary Nav — scrollable */}
+      <nav
+        className="flex flex-col gap-1 flex-1 min-h-0 overflow-y-auto w-full items-center no-scrollbar pb-2"
+      >
         {primaryItems.map((item) => (
           <SidebarLink key={item.path} {...item} primaryColor={primaryColor} />
         ))}
 
-        <Tooltip delayDuration={250}>
+        {/* Divider */}
+        <div className="my-1 w-8 h-px shrink-0" style={{ background: 'var(--border)' }} />
+
+        {/* Toggle for secondary */}
+        <Tooltip delayDuration={200}>
           <TooltipTrigger asChild>
             <button
               onClick={() => setShowSecondary((current) => !current)}
-              className="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-150 text-[color:var(--text-3)] hover:text-[color:var(--text-1)] hover:bg-[color:var(--bg-card)]"
+              className="w-10 h-10 shrink-0 rounded-xl flex items-center justify-center transition-all duration-150"
+              style={{
+                color: showSecondary ? 'var(--primary)' : 'var(--text-3)',
+                background: showSecondary ? 'var(--primary-muted)' : 'transparent',
+              }}
             >
-              {showSecondary ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+              {showSecondary ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
             </button>
           </TooltipTrigger>
-          <TooltipContent side="right" sideOffset={8}>
-            <p className="text-xs font-medium">{showSecondary ? 'Recolher Ferramentas' : 'Ferramentas Secundárias'}</p>
+          <TooltipContent side="right" sideOffset={10}
+            className="text-xs font-semibold px-3 py-1.5 rounded-xl"
+            style={{ background: 'rgba(15,15,26,0.95)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff' }}>
+            {showSecondary ? 'Recolher' : 'Mais Ferramentas'}
           </TooltipContent>
         </Tooltip>
 
-        {showSecondary && secondaryItems.map((item) => (
-          <SidebarLink key={item.path} {...item} primaryColor={primaryColor} />
-        ))}
+        {showSecondary && (
+          <>
+            <div className="my-1 w-8 h-px shrink-0" style={{ background: 'var(--border)' }} />
+            {secondaryItems.map((item) => (
+              <SidebarLink key={item.path} {...item} primaryColor={primaryColor} />
+            ))}
+          </>
+        )}
       </nav>
 
-      <Tooltip delayDuration={250}>
-        <TooltipTrigger asChild>
-          <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold text-white cursor-default shrink-0"
-            style={{ background: primaryColor, opacity: 0.8 }}
-          >
-            {initials}
-          </div>
-        </TooltipTrigger>
-        <TooltipContent side="right" sideOffset={8}>
-          <p className="text-xs">{workspace?.name}</p>
-        </TooltipContent>
-      </Tooltip>
+      {/* Bottom: Settings shortcut */}
+      <div className="shrink-0 mt-1">
+        <Tooltip delayDuration={200}>
+          <TooltipTrigger asChild>
+            <NavLink
+              to={`/workspace/${workspaceId}/settings`}
+              className={({ isActive }) =>
+                `w-8 h-8 rounded-lg flex items-center justify-center transition-all text-[10px] font-bold text-white ${
+                  isActive ? 'opacity-100' : 'opacity-60 hover:opacity-90'
+                }`
+              }
+              style={{ background: primaryColor }}
+            >
+              {initials}
+            </NavLink>
+          </TooltipTrigger>
+          <TooltipContent side="right" sideOffset={10}
+            className="text-xs font-semibold px-3 py-1.5 rounded-xl"
+            style={{ background: 'rgba(15,15,26,0.95)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff' }}>
+            {workspace?.name}
+          </TooltipContent>
+        </Tooltip>
+      </div>
     </aside>
   );
 };

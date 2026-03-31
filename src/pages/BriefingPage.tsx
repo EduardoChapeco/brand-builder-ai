@@ -316,24 +316,24 @@ const BriefingPage = () => {
   const getAnalysisByUrl = (url: string) => analyses.find(item => item.url === url);
 
   return (
-    <div className="flex flex-col h-full overflow-hidden" style={{ background: 'var(--bg-app)' }}>
-      <div
-        className="flex items-center gap-3 px-6 py-4 shrink-0"
-        style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)' }}
-      >
-        <FileText size={20} style={{ color: 'var(--primary)' }} />
-        <h1 className="text-lg font-bold font-display" style={{ color: 'var(--text-1)' }}>
-          Briefing
-        </h1>
-        <span
-          className="text-xs px-2 py-0.5 rounded-full"
-          style={{ background: 'var(--primary-muted)', color: 'var(--primary)' }}
-        >
-          Base de conhecimento da IA
-        </span>
+    <div className="page-layout">
+      <div className="page-hero">
+        <div className="relative z-10 flex items-start justify-between gap-4">
+          <div>
+            <p className="page-hero-eyebrow">Intelligence Suite • Briefing</p>
+            <h1 className="page-hero-title" style={{ fontSize: '2rem' }}>Briefing</h1>
+            <p className="text-sm mt-2" style={{ color: 'var(--text-3)' }}>
+              Base de conhecimento da IA — preenchida uma vez, usada em todos os posts
+            </p>
+          </div>
+          <span className="shrink-0 text-xs px-2.5 py-1 rounded-full font-semibold"
+            style={{ background: 'var(--primary-muted)', color: 'var(--primary)', border: '1px solid var(--primary)' }}>
+            Base da IA
+          </span>
+        </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="page-content no-scrollbar">
         <div className="max-w-3xl mx-auto p-6">
           <Accordion type="multiple" defaultValue={['empresa', 'publico', 'concorrentes']} className="space-y-3">
             <AccordionItem value="empresa" className="rounded-2xl overflow-hidden" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>

@@ -57,10 +57,10 @@ const SortableStoryboardCard = ({
       style={{
         transform: CSS.Transform.toString(transform),
         transition,
-        background: isActive ? 'var(--primary-muted)' : 'var(--bg-card)',
-        border: `1px solid ${isActive ? 'var(--primary)' : 'var(--border)'}`,
+        background: isActive ? 'var(--primary-muted)' : 'rgba(255,255,255,0.03)',
+        border: `1px solid ${isActive ? 'var(--primary)' : 'rgba(255,255,255,0.05)'}`,
       }}
-      className="rounded-2xl p-4"
+      className={`rounded-2xl p-5 hover:shadow-xl transition-shadow cursor-pointer ${isActive ? 'shadow-inner' : ''}`}
       onClick={onSelect}
       {...attributes}
       aria-hidden={false}
@@ -76,15 +76,15 @@ const SortableStoryboardCard = ({
       onMouseDown={(event) => event.stopPropagation()}
     >
       <div className="flex items-start justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <button {...listeners} className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.06)' }}>
-            <GripVertical size={14} />
+        <div className="flex items-center gap-4">
+          <button {...listeners} className="w-10 h-10 rounded-xl flex items-center justify-center cursor-grab active:cursor-grabbing hover:bg-white/5 transition-colors" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.05)' }}>
+            <GripVertical size={16} />
           </button>
           <div>
-            <p className="text-xs uppercase tracking-[0.2em]" style={{ color: 'var(--text-3)' }}>
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: isActive ? 'var(--primary)' : 'var(--text-3)' }}>
               Slide {index + 1}
             </p>
-            <p className="mt-1 font-semibold" style={{ color: 'var(--text-1)' }}>{slide.role}</p>
+            <p className="mt-1 font-semibold text-base" style={{ color: 'var(--text-1)' }}>{slide.role}</p>
           </div>
         </div>
         <button
@@ -92,17 +92,26 @@ const SortableStoryboardCard = ({
             event.stopPropagation();
             onRemove(slide.id);
           }}
-          className="w-8 h-8 rounded-xl flex items-center justify-center"
-          style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444' }}
+          className="w-10 h-10 rounded-xl flex items-center justify-center transition-colors border-red-500/10 hover:border-red-500/30"
+          style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.1)' }}
         >
-          <Trash2 size={14} />
+          <Trash2 size={16} />
         </button>
       </div>
 
-      <div className="mt-4 space-y-3">
-        <Input value={slide.headline_draft} onChange={(event) => onChange(slide.id, 'headline_draft', event.target.value)} placeholder="Headline do slide" />
-        <Textarea value={slide.notes} onChange={(event) => onChange(slide.id, 'notes', event.target.value)} className="min-h-[82px] resize-none" placeholder="Notas e instrucoes do slide" />
-        <Input value={slide.template_suggestion} onChange={(event) => onChange(slide.id, 'template_suggestion', event.target.value)} placeholder="Template sugerido" />
+      <div className="mt-5 space-y-4">
+        <div className="space-y-1.5">
+          <label className="text-[11px] font-medium tracking-wide uppercase" style={{ color: 'var(--text-3)' }}>Tese Inicial (Headline)</label>
+          <Input className="h-11 bg-black/20 border-white/10 rounded-xl font-medium" value={slide.headline_draft} onChange={(event) => onChange(slide.id, 'headline_draft', event.target.value)} placeholder="A grande promessa ou impacto..." />
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-[11px] font-medium tracking-wide uppercase" style={{ color: 'var(--text-3)' }}>Argumento Visual e Narrativo</label>
+          <Textarea className="min-h-[92px] bg-black/20 border-white/10 rounded-xl resize-none text-[15px] leading-relaxed" value={slide.notes} onChange={(event) => onChange(slide.id, 'notes', event.target.value)} placeholder="Direcionamento profundo para imagem ou texto âncora..." />
+        </div>
+        <div className="space-y-1.5 hidden">
+          <label className="text-[11px] font-medium tracking-wide uppercase" style={{ color: 'var(--text-3)' }}>Layout Engine</label>
+          <Input className="h-11 bg-black/20 border-white/10 rounded-xl" value={slide.template_suggestion} onChange={(event) => onChange(slide.id, 'template_suggestion', event.target.value)} placeholder="Template sugerido" />
+        </div>
       </div>
     </div>
   );

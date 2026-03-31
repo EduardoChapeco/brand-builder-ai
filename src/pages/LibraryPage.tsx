@@ -182,63 +182,43 @@ const LibraryPage = () => {
   const modalDimensions = selectedPost ? getPostDimensions(selectedPost) : null;
 
   return (
-    <div className="flex flex-col h-full overflow-hidden" style={{ background: 'var(--bg-app)' }}>
-      <div
-        className="flex items-center justify-between px-6 py-4 shrink-0"
-        style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)' }}
-      >
-        <div className="flex items-center gap-3">
-          <Images size={20} style={{ color: 'var(--primary)' }} />
-          <h1 className="text-lg font-bold font-display" style={{ color: 'var(--text-1)' }}>
-            Biblioteca
-          </h1>
-          <span
-            className="px-2 py-0.5 text-xs rounded-full font-medium"
-            style={{ background: 'var(--primary-muted)', color: 'var(--primary)' }}
-          >
-            {filtered.length}
-          </span>
-        </div>
-
-        <div className="relative">
-          <Search
-            size={14}
-            className="absolute left-3 top-1/2 -translate-y-1/2"
-            style={{ color: 'var(--text-3)' }}
-          />
-          <input
-            value={search}
-            onChange={event => setSearch(event.target.value)}
-            placeholder="Buscar posts..."
-            className="pl-8 pr-3 py-2 rounded-xl text-sm outline-none"
-            style={{
-              background: 'var(--bg-card)',
-              border: '1px solid var(--border)',
-              color: 'var(--text-1)',
-              width: 220,
-            }}
-          />
+    <div className="page-layout">
+      <div className="page-hero">
+        <div className="relative z-10 flex items-center justify-between">
+          <div>
+            <p className="page-hero-eyebrow">Intelligence Suite • Biblioteca</p>
+            <h1 className="page-hero-title" style={{ fontSize: '2rem' }}>Biblioteca de Posts</h1>
+            <p className="text-sm mt-2" style={{ color: 'var(--text-3)' }}>
+              {filtered.length} {filtered.length === 1 ? 'post' : 'posts'} · todos os formatos
+            </p>
+          </div>
+          <div className="relative hidden md:block">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-3)' }} />
+            <input
+              value={search}
+              onChange={event => setSearch(event.target.value)}
+              placeholder="Buscar posts..."
+              className="pl-9 pr-4 py-2.5 rounded-xl text-sm outline-none"
+              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-1)', width: 240 }}
+            />
+          </div>
         </div>
       </div>
 
-      <div className="flex items-center gap-2 px-6 py-3 shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
+      <div className="flex items-center gap-2 px-6 py-3 shrink-0" style={{ borderBottom: '1px solid var(--border)', background: 'rgba(0,0,0,0.2)' }}>
         {FILTERS.map(filter => (
           <button
             key={filter.id}
             onClick={() => setFilterFormat(filter.id)}
-            className="chip"
-            style={{
-              background: filterFormat === filter.id ? 'var(--primary-muted)' : 'var(--bg-card)',
-              borderColor: filterFormat === filter.id ? 'var(--primary)' : 'var(--border)',
-              color: filterFormat === filter.id ? 'var(--primary)' : 'var(--text-2)',
-            }}
+            className={`chip ${filterFormat === filter.id ? 'active' : ''}`}
           >
             {filter.label}
           </button>
         ))}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="page-content no-scrollbar">
+        <div className="p-6">
         {isLoading ? (
           <div className="grid grid-cols-3 gap-4">
             {Array.from({ length: 6 }).map((_, index) => (
@@ -353,6 +333,7 @@ const LibraryPage = () => {
             ))}
           </div>
         )}
+        </div>
       </div>
 
       <Dialog open={!!selectedPost} onOpenChange={() => setSelectedPost(null)}>

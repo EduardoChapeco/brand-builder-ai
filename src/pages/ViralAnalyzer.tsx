@@ -119,35 +119,39 @@ const ViralAnalyzer = () => {
   };
 
   return (
-    <div className="flex h-full w-full overflow-hidden" style={{ background: 'var(--bg-app)' }}>
-      <div className="flex-1 overflow-y-auto">
-        <div className="px-8 py-8 border-b" style={{ borderColor: 'var(--border)', background: 'var(--bg-surface)' }}>
-          <p className="text-xs uppercase tracking-[0.24em]" style={{ color: 'var(--text-3)' }}>
-            Intelligence Layer
+    <div className="flex flex-col h-full w-full overflow-hidden gradient-mesh" style={{ background: 'var(--bg-app)' }}>
+      <div className="flex-1 overflow-y-auto no-scrollbar scroll-smooth">
+        <div className="px-8 py-10 relative overflow-hidden" style={{ borderBottom: '1px solid var(--border)', background: 'rgba(15, 15, 26, 0.4)', backdropFilter: 'blur(20px)' }}>
+          <div className="absolute top-0 right-0 w-[500px] h-[300px] opacity-10 pointer-events-none" style={{ background: 'radial-gradient(circle at top right, var(--primary), transparent 70%)' }}></div>
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] mb-3" style={{ color: 'var(--primary)' }}>
+            Intelligence Suite
           </p>
-          <h1 className="mt-2 text-3xl font-display font-bold" style={{ color: 'var(--text-1)' }}>
+          <h1 className="mt-2 text-4xl font-display font-extrabold tracking-tight" style={{ color: 'var(--text-1)' }}>
             Viral Analyzer
           </h1>
-          <p className="mt-2 max-w-3xl text-sm leading-6" style={{ color: 'var(--text-2)' }}>
-            Monitore perfis, extraia padroes replicaveis e transforme sinais virais em briefing acionavel para
-            o gerador rapido ou para o storyboard avancado.
+          <p className="mt-4 max-w-2xl text-base leading-relaxed" style={{ color: 'var(--text-2)' }}>
+            Monitore perfis concorrentes, extraia padroes replicaveis e transforme sinais virais de alta performance em briefing acionavel para a sua maquina de contetudo.
           </p>
         </div>
 
-        <div className="p-8">
+        <div className="p-8 max-w-[1600px] mx-auto">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList>
-              <TabsTrigger value="profiles">Analisar Perfis</TabsTrigger>
-              <TabsTrigger value="patterns">Padroes Descobertos</TabsTrigger>
+            <TabsList className="glass-card mb-2 rounded-xl border border-white/5 bg-black/20 p-1">
+              <TabsTrigger value="profiles" className="rounded-lg data-[state=active]:bg-white/10 data-[state=active]:text-white">Analisar Perfis</TabsTrigger>
+              <TabsTrigger value="patterns" className="rounded-lg data-[state=active]:bg-white/10 data-[state=active]:text-white">Padroes Extraídos</TabsTrigger>
             </TabsList>
 
             <TabsContent value="profiles" className="mt-6 space-y-6">
-              <div className="grid grid-cols-1 xl:grid-cols-[1.1fr_0.9fr] gap-6">
-                <div className="rounded-3xl p-6" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
-                  <div className="flex items-center gap-3 mb-6">
-                    <Search size={18} style={{ color: 'var(--primary)' }} />
+              <div className="grid grid-cols-1 xl:grid-cols-[1.2fr_0.8fr] gap-6">
+                <div className="glass-card rounded-[2rem] p-8 shadow-2xl relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 opacity-10" style={{ background: 'radial-gradient(circle at center, var(--primary), transparent 70%)' }}></div>
+                  
+                  <div className="flex items-center gap-4 mb-8">
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center shadow-inner" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                      <Search size={22} style={{ color: 'var(--primary)' }} />
+                    </div>
                     <div>
-                      <h2 className="font-display text-xl font-semibold" style={{ color: 'var(--text-1)' }}>
+                      <h2 className="font-display text-2xl font-bold" style={{ color: 'var(--text-1)' }}>
                         Adicionar perfil para analise
                       </h2>
                       <p className="text-sm" style={{ color: 'var(--text-3)' }}>
@@ -188,20 +192,22 @@ const ViralAnalyzer = () => {
                     }}
                     style={{ background: 'var(--primary)', color: '#fff' }}
                   >
-                    {isAnalyzingProfile ? <Loader2 size={14} className="animate-spin" /> : <Activity size={14} />}
-                    {isAnalyzingProfile ? 'Analisando...' : 'Analisar perfil'}
+                    {isAnalyzingProfile ? <Loader2 size={16} className="animate-spin" /> : <Activity size={16} />}
+                    {isAnalyzingProfile ? 'Processando Amostra...' : 'Iniciar Análise de Perfil'}
                   </Button>
                 </div>
 
-                <div className="rounded-3xl p-6" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
-                  <div className="flex items-center gap-3 mb-6">
-                    <BrainCircuit size={18} style={{ color: 'var(--primary)' }} />
+                <div className="glass-card rounded-[2rem] p-8 shadow-2xl relative overflow-hidden">
+                  <div className="flex items-center gap-4 mb-8">
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center shadow-inner" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                      <BrainCircuit size={22} style={{ color: 'var(--primary)' }} />
+                    </div>
                     <div>
-                      <h2 className="font-display text-xl font-semibold" style={{ color: 'var(--text-1)' }}>
-                        Analise manual
+                      <h2 className="font-display text-2xl font-bold" style={{ color: 'var(--text-1)' }}>
+                        Análise Manual de Peça
                       </h2>
                       <p className="text-sm" style={{ color: 'var(--text-3)' }}>
-                        Cole legenda, thread ou transcricao para extrair formula rapidamente.
+                        Cole aqui uma legenda, thread ou transcrição focada.
                       </p>
                     </div>
                   </div>
@@ -209,12 +215,12 @@ const ViralAnalyzer = () => {
                   <Textarea
                     value={manualContent}
                     onChange={(event) => setManualContent(event.target.value)}
-                    placeholder="Cole aqui um post de alta performance..."
-                    className="min-h-[180px] resize-none"
+                    placeholder="Exemplo de conteúdo..."
+                    className="min-h-[220px] resize-none rounded-xl border-white/10 bg-black/20 focus:border-primary/50 text-base p-4"
                   />
 
                   <Button
-                    className="mt-6 gap-2"
+                    className="mt-6 gap-2 w-full h-12 rounded-xl text-base font-medium"
                     disabled={isAnalyzingManual || manualContent.trim().length < 30}
                     onClick={async () => {
                       setIsAnalyzingManual(true);
@@ -223,27 +229,25 @@ const ViralAnalyzer = () => {
                     }}
                     variant="outline"
                   >
-                    {isAnalyzingManual ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                    {isAnalyzingManual ? 'Extraindo padrao...' : 'Extrair padrao'}
+                    {isAnalyzingManual ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                    {isAnalyzingManual ? 'Extraindo Arquitetura Viral...' : 'Decodificar Padrão'}
                   </Button>
                 </div>
               </div>
 
-              <div className="rounded-3xl p-6" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
-                <div className="flex items-center justify-between gap-4 mb-5">
-                  <div>
-                    <h3 className="font-display text-xl font-semibold" style={{ color: 'var(--text-1)' }}>
-                      Perfis e amostras analisados
-                    </h3>
-                    <p className="text-sm" style={{ color: 'var(--text-3)' }}>
-                      {analyses.length} registros ligados ao workspace {workspace?.name || ''}.
-                    </p>
-                  </div>
+              <div className="glass-card rounded-[2rem] p-8 mt-6">
+                <div className="flex flex-col mb-8 gap-2">
+                  <h3 className="font-display text-2xl font-bold" style={{ color: 'var(--text-1)' }}>
+                    Histórico de Análises
+                  </h3>
+                  <p className="text-sm" style={{ color: 'var(--text-3)' }}>
+                    {analyses.length} registros ligados ao workspace {workspace?.name || ''}.
+                  </p>
                 </div>
 
                 <div className="space-y-3">
                   {analyses.length === 0 ? (
-                    <div className="rounded-2xl p-5 text-sm" style={{ background: 'var(--bg-card)', color: 'var(--text-3)' }}>
+                    <div className="glass-card rounded-2xl p-6 text-sm flex items-center justify-center min-h-[140px]" style={{ color: 'var(--text-3)' }}>
                       Nenhuma analise ainda. Comece por um concorrente ou por um post manual.
                     </div>
                   ) : (

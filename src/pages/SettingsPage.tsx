@@ -312,19 +312,20 @@ const SettingsPage = () => {
   ];
 
   return (
-    <div className="flex flex-col h-full overflow-hidden" style={{ background: 'var(--bg-app)' }}>
-      <div
-        className="flex items-center gap-3 px-6 py-4 shrink-0"
-        style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)' }}
-      >
-        <Settings size={20} style={{ color: 'var(--primary)' }} />
-        <h1 className="text-lg font-bold font-display" style={{ color: 'var(--text-1)' }}>
-          Configuracoes
-        </h1>
+    <div className="page-layout">
+      <div className="page-hero">
+        <div className="relative z-10">
+          <p className="page-hero-eyebrow">Intelligence Suite • Configurações</p>
+          <h1 className="page-hero-title" style={{ fontSize: '2rem' }}>Configurações</h1>
+          <p className="text-sm mt-2" style={{ color: 'var(--text-3)' }}>
+            Chaves de API, Feeds RSS e preferências de geração do workspace
+          </p>
+        </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6">
-        <div className="max-w-4xl mx-auto">
+      <div className="page-content no-scrollbar">
+        <div className="p-6">
+          <div className="max-w-4xl mx-auto">
           <Tabs
             value={activeTab}
             onValueChange={(value) => setSearchParams(value === 'keys' ? {} : { tab: value })}
@@ -691,6 +692,7 @@ const SettingsPage = () => {
               Carregando configuracoes...
             </div>
           )}
+          </div>
         </div>
       </div>
     </div>

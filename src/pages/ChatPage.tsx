@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 type Message = {
   id: string;
@@ -49,18 +50,22 @@ const ChatPage = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { toast } = useToast();
+  const { workspace, briefing: wsBriefing } = useWorkspace();
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isGenerating]);
 
-  // Load messages on mount
+  // Load messages on mount — workspace-isolated
   useEffect(() => {
+    if (!workspace?.id) return;
     const loadMessages = async () => {
       const { data } = await supabase
         .from("messages")
         .select("*")
-        .order("created_at", { ascending: true });
+        .eq("workspace_id", workspace.id)
+        .order("created_at", { ascending: true })
+        .limit(100);
       if (data) {
         setMessages(
           data.map((m) => ({
@@ -70,7 +75,6 @@ const ChatPage = () => {
             postData: m.post_data as PostData | null,
           }))
         );
-        // Set last post as active
         const lastPost = [...(data || [])].reverse().find((m) => m.post_data);
         if (lastPost?.post_data) {
           setActivePost(lastPost.post_data as PostData);
@@ -79,27 +83,29 @@ const ChatPage = () => {
       }
     };
     loadMessages();
-  }, []);
+  }, [workspace?.id]);
 
   const fetchBriefing = async () => {
-    const { data } = await supabase.from("briefing").select("*").limit(1).maybeSingle();
-    return data;
+    return wsBriefing ?? null;
   };
 
   const saveMessage = async (role: string, content: string, postData?: PostData | null) => {
+    if (!workspace?.id) return;
     await supabase.from("messages").insert({
       role,
       content,
       post_data: postData ?? null,
+      workspace_id: workspace.id,
     });
   };
 
   const savePost = async (postData: PostData) => {
-    await supabase.from("posts").insert({
+    if (!workspace?.id) return;
+    await supabase.from("posts_v2").insert({
+      workspace_id: workspace.id,
       title: postData.title,
       format: postData.format,
-      slides_count: postData.slides_html.length,
-      html_content: postData.slides_html,
+      slides_html: postData.slides_html,
       caption: postData.caption,
       hashtags: postData.hashtags,
       template_name: postData.template,

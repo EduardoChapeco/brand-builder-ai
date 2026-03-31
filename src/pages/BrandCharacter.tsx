@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Copy, Loader2, Plus, Sparkles, Trash2, UserCircle2 } from 'lucide-react';
+import { Copy, Loader2, Plus, Sparkles, Trash2, UserCircle2, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -226,71 +226,76 @@ const BrandCharacterPage = () => {
   };
 
   return (
-    <div className="flex h-full w-full overflow-hidden" style={{ background: 'var(--bg-app)' }}>
-      <div className="flex-1 overflow-y-auto">
-        <div className="px-8 py-8 border-b" style={{ borderColor: 'var(--border)', background: 'var(--bg-surface)' }}>
-          <p className="text-xs uppercase tracking-[0.24em]" style={{ color: 'var(--text-3)' }}>
-            Brand Character Module
-          </p>
-          <h1 className="mt-2 text-3xl font-display font-bold" style={{ color: 'var(--text-1)' }}>
-            Personagens consistentes para a marca
-          </h1>
-          <p className="mt-2 max-w-3xl text-sm leading-6" style={{ color: 'var(--text-2)' }}>
-            Crie uma persona visual reutilizavel, gere o seed prompt tecnico e entregue esse contexto para o Prompt
-            Studio ou para o Quick Post sem quebrar a consistencia da marca.
-          </p>
+    <div className="flex h-full w-full overflow-hidden gradient-mesh" style={{ background: 'var(--bg-app)' }}>
+      <div className="flex-1 overflow-y-auto no-scrollbar scroll-smooth">
+        <div className="px-8 py-10 relative overflow-hidden flex flex-col justify-end min-h-[160px]" style={{ borderBottom: '1px solid var(--border)', background: 'rgba(15, 15, 26, 0.4)', backdropFilter: 'blur(20px)' }}>
+          <div className="absolute top-0 right-0 w-[500px] h-[300px] opacity-10 pointer-events-none" style={{ background: 'radial-gradient(circle at top right, var(--primary), transparent 70%)' }}></div>
+          <div className="relative z-10 w-full max-w-[1600px] mx-auto">
+            <p className="text-[11px] font-bold uppercase tracking-[0.24em] mb-3" style={{ color: 'var(--primary)' }}>
+              Intelligence Suite • Personagens Inteligentes
+            </p>
+            <h1 className="mt-2 text-4xl font-display font-extrabold tracking-tight" style={{ color: 'var(--text-1)' }}>
+              Brand Character Designer
+            </h1>
+            <p className="mt-4 max-w-2xl text-base leading-relaxed" style={{ color: 'var(--text-2)' }}>
+              Crie personas dinâmicas reutilizáveis que aprendem sobre sua identidade visual. Envie o seed_prompt diretamente ao Prompt Studio e nunca quebre a consistência nos assets gerados.
+            </p>
+          </div>
         </div>
 
-        <div className="p-8 grid grid-cols-1 xl:grid-cols-[1fr_1.1fr] gap-6">
-          <div className="rounded-3xl p-6 space-y-5" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
-            <div className="flex items-center gap-3">
-              <UserCircle2 size={18} style={{ color: 'var(--primary)' }} />
+        <div className="p-8 grid grid-cols-1 xl:grid-cols-[1fr_1.1fr] gap-8 max-w-[1600px] mx-auto w-full">
+          <div className="glass-card rounded-[2rem] shadow-2xl p-8 space-y-8 h-fit">
+            <div className="flex items-center gap-4 border-b pb-6" style={{ borderColor: 'var(--border)' }}>
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center shadow-inner" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <UserCircle2 size={24} style={{ color: 'var(--primary)' }} />
+              </div>
               <div>
-                <h2 className="font-display text-xl font-semibold" style={{ color: 'var(--text-1)' }}>
-                  Criar personagem
+                <h2 className="font-display text-2xl font-bold" style={{ color: 'var(--text-1)' }}>
+                  Forja de Identidade
                 </h2>
-                <p className="text-sm" style={{ color: 'var(--text-3)' }}>
-                  Seed prompt, traços dominantes e item assinatura.
+                <p className="text-sm mt-1" style={{ color: 'var(--text-3)' }}>
+                  Determine características dominantes e o gatilho emocional base.
                 </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2 md:col-span-2">
-                <label className="text-sm font-medium" style={{ color: 'var(--text-2)' }}>Nome</label>
-                <Input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-3 md:col-span-2">
+                <label className="text-sm font-semibold tracking-wide" style={{ color: 'var(--text-2)' }}>Nome ou Entidade</label>
+                <Input className="h-12 bg-black/20 border-white/10 rounded-xl" value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} placeholder="Ex: Alex, Especialista" />
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium" style={{ color: 'var(--text-2)' }}>Genero</label>
-                <Input value={form.gender} onChange={(event) => setForm((current) => ({ ...current, gender: event.target.value }))} />
+              <div className="space-y-3">
+                <label className="text-sm font-semibold tracking-wide" style={{ color: 'var(--text-2)' }}>Gênero</label>
+                <Input className="h-12 bg-black/20 border-white/10 rounded-xl" value={form.gender} onChange={(event) => setForm((current) => ({ ...current, gender: event.target.value }))} />
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium" style={{ color: 'var(--text-2)' }}>Faixa etaria</label>
-                <Input value={form.age_range} onChange={(event) => setForm((current) => ({ ...current, age_range: event.target.value }))} />
+              <div className="space-y-3">
+                <label className="text-sm font-semibold tracking-wide" style={{ color: 'var(--text-2)' }}>Idade Geral</label>
+                <Input className="h-12 bg-black/20 border-white/10 rounded-xl" value={form.age_range} onChange={(event) => setForm((current) => ({ ...current, age_range: event.target.value }))} />
               </div>
-              <div className="space-y-2 md:col-span-2">
-                <label className="text-sm font-medium" style={{ color: 'var(--text-2)' }}>Arquetipo</label>
-                <Input value={form.archetype} onChange={(event) => setForm((current) => ({ ...current, archetype: event.target.value }))} />
+              <div className="space-y-3 md:col-span-2">
+                <label className="text-sm font-semibold tracking-wide" style={{ color: 'var(--text-2)' }}>Arquétipo Principal</label>
+                <Input className="h-12 bg-black/20 border-white/10 rounded-xl" value={form.archetype} onChange={(event) => setForm((current) => ({ ...current, archetype: event.target.value }))} />
               </div>
-              <div className="space-y-2 md:col-span-2">
-                <label className="text-sm font-medium" style={{ color: 'var(--text-2)' }}>Ethnicity notes</label>
-                <Input value={form.ethnicity_notes} onChange={(event) => setForm((current) => ({ ...current, ethnicity_notes: event.target.value }))} />
+              <div className="space-y-3 md:col-span-2">
+                <label className="text-sm font-semibold tracking-wide" style={{ color: 'var(--text-2)' }}>Etnia e Notas Raciais</label>
+                <Input className="h-12 bg-black/20 border-white/10 rounded-xl" value={form.ethnicity_notes} onChange={(event) => setForm((current) => ({ ...current, ethnicity_notes: event.target.value }))} />
               </div>
-              <div className="space-y-2 md:col-span-2">
-                <label className="text-sm font-medium" style={{ color: 'var(--text-2)' }}>Item assinatura</label>
-                <Input value={form.signature_item} onChange={(event) => setForm((current) => ({ ...current, signature_item: event.target.value }))} placeholder="blue blazer, gold earrings..." />
+              <div className="space-y-3 md:col-span-2">
+                <label className="text-sm font-semibold tracking-wide" style={{ color: 'var(--text-2)' }}>Item Assinatura (Obrigatório Visualmente)</label>
+                <Input className="h-12 bg-black/20 border-white/10 rounded-xl" value={form.signature_item} onChange={(event) => setForm((current) => ({ ...current, signature_item: event.target.value }))} placeholder="Óculos redondo, gravata amarela..." />
               </div>
-              <div className="space-y-2 md:col-span-2">
-                <label className="text-sm font-medium" style={{ color: 'var(--text-2)' }}>Expressao padrao</label>
-                <Input value={form.expression_default} onChange={(event) => setForm((current) => ({ ...current, expression_default: event.target.value }))} />
+              <div className="space-y-3 md:col-span-2">
+                <label className="text-sm font-semibold tracking-wide" style={{ color: 'var(--text-2)' }}>Expressão Recorrente</label>
+                <Input className="h-12 bg-black/20 border-white/10 rounded-xl" value={form.expression_default} onChange={(event) => setForm((current) => ({ ...current, expression_default: event.target.value }))} />
               </div>
-              <div className="space-y-2 md:col-span-2">
-                <label className="text-sm font-medium" style={{ color: 'var(--text-2)' }}>Traços fisicos</label>
-                <div className="flex gap-2">
+              <div className="space-y-3 md:col-span-2">
+                <label className="text-sm font-semibold tracking-wide mb-1 block" style={{ color: 'var(--text-2)' }}>Traços Anatômicos (Adicione e Enter)</label>
+                <div className="flex gap-3">
                   <Input
+                    className="h-12 bg-black/20 border-white/10 rounded-xl flex-1"
                     value={form.physical_traits_input}
                     onChange={(event) => setForm((current) => ({ ...current, physical_traits_input: event.target.value }))}
-                    placeholder="curly dark hair"
+                    placeholder="Sardas, cabelo cacheado escuro..."
                     onKeyDown={(event) => {
                       if (event.key !== 'Enter') return;
                       event.preventDefault();
@@ -305,6 +310,7 @@ const BrandCharacterPage = () => {
                   />
                   <Button
                     variant="outline"
+                    className="h-12 w-12 rounded-xl border-white/10 bg-white/5 hover:bg-white/10"
                     onClick={() => {
                       const value = form.physical_traits_input.trim();
                       if (!value) return;
@@ -315,74 +321,81 @@ const BrandCharacterPage = () => {
                       }));
                     }}
                   >
-                    <Plus size={14} />
+                    <Plus size={16} />
                   </Button>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {form.physical_traits.map((trait) => (
-                    <button
-                      key={trait}
-                      type="button"
-                      onClick={() => setForm((current) => ({
-                        ...current,
-                        physical_traits: current.physical_traits.filter((item) => item !== trait),
-                      }))}
-                      className="px-3 py-1 rounded-full text-xs font-semibold"
-                      style={{ background: 'var(--primary-muted)', color: 'var(--primary)' }}
-                    >
-                      {trait} x
-                    </button>
-                  ))}
-                </div>
+                {form.physical_traits.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {form.physical_traits.map((trait) => (
+                      <button
+                        key={trait}
+                        type="button"
+                        onClick={() => setForm((current) => ({
+                          ...current,
+                          physical_traits: current.physical_traits.filter((item) => item !== trait),
+                        }))}
+                        className="px-4 py-1.5 rounded-full text-xs font-bold transition-all hover:opacity-80 flex items-center gap-2 shadow-sm"
+                        style={{ background: 'var(--primary-muted)', color: 'var(--primary)', border: '1px solid rgba(124, 58, 237, 0.2)' }}
+                      >
+                        {trait} <span className="opacity-50 hover:opacity-100">✕</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-              <div className="space-y-2 md:col-span-2">
-                <label className="text-sm font-medium" style={{ color: 'var(--text-2)' }}>Notas de estilo</label>
-                <Textarea value={form.style_notes} onChange={(event) => setForm((current) => ({ ...current, style_notes: event.target.value }))} className="min-h-[100px] resize-none" />
+              <div className="space-y-3 md:col-span-2">
+                <label className="text-sm font-semibold tracking-wide" style={{ color: 'var(--text-2)' }}>Vibe & Estilo Fotográfico</label>
+                <Textarea className="bg-black/20 border-white/10 rounded-xl p-4 text-[15px] resize-none h-32" value={form.style_notes} onChange={(event) => setForm((current) => ({ ...current, style_notes: event.target.value }))} />
               </div>
             </div>
 
-            <div className="rounded-2xl p-4" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-              <div className="flex items-center justify-between gap-4 mb-3">
-                <p className="text-sm font-semibold" style={{ color: 'var(--text-1)' }}>Seed prompt</p>
-                <Button variant="outline" size="sm" onClick={() => navigator.clipboard.writeText(form.seed_prompt)}>
-                  <Copy size={14} />
+            <div className="rounded-2xl p-6 relative overflow-hidden group" style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <div className="flex items-center justify-between gap-4 mb-4 relative z-10">
+                <p className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: 'var(--text-3)' }}>Seed Prompt Base (Midjourney Ready)</p>
+                <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg bg-black/40 border-white/5 hover:bg-white/10" onClick={() => navigator.clipboard.writeText(form.seed_prompt)}>
+                  <Copy size={12} />
                 </Button>
               </div>
               <Textarea
                 value={form.seed_prompt}
                 onChange={(event) => setForm((current) => ({ ...current, seed_prompt: event.target.value }))}
-                className="min-h-[150px] resize-none"
+                className="min-h-[160px] resize-none border-none bg-transparent p-0 text-[15px] leading-relaxed font-mono focus-visible:ring-0 relative z-10"
+                style={{ color: 'var(--text-2)' }}
+                placeholder="Insira manualmente ou clique em 'Sintetizar Genoma Visual' para que a IA crie o prompt técnico otimizado para a engine..."
               />
             </div>
 
-            <div className="flex flex-wrap gap-3">
-              <Button onClick={handleGenerateSeed} disabled={isGeneratingSeed} className="gap-2" style={{ background: 'var(--primary)', color: '#fff' }}>
-                {isGeneratingSeed ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                {isGeneratingSeed ? 'Gerando seed...' : 'Gerar seed prompt'}
+            <div className="flex flex-wrap gap-3 pt-2">
+              <Button onClick={handleGenerateSeed} disabled={isGeneratingSeed} className="gap-2 flex-1 h-12 rounded-xl text-sm font-semibold shadow-primary/20" style={{ background: 'var(--primary)', color: '#fff' }}>
+                {isGeneratingSeed ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                {isGeneratingSeed ? 'Decodificando DNA Visual...' : 'Sintetizar Genoma Visual'}
               </Button>
-              <Button variant="outline" onClick={() => setForm(defaultForm)}>Limpar</Button>
-              <Button variant="outline" onClick={handleSave} disabled={isSaving}>
-                {isSaving ? 'Salvando...' : form.id ? 'Atualizar personagem' : 'Salvar personagem'}
+              <Button onClick={handleSave} disabled={isSaving} className="gap-2 h-12 px-6 rounded-xl border-white/10 bg-white/5 hover:bg-white/10 text-white font-medium">
+                <Save size={16} />
+                {isSaving ? 'Gravando...' : form.id ? 'Salvar Mutação' : 'Registrar Entidade'}
               </Button>
+              {form.id && (
+                <Button variant="outline" onClick={() => setForm(defaultForm)} className="gap-2 h-12 px-4 rounded-xl border-white/10 bg-transparent hover:bg-white/5 text-white/50">
+                  Cancelar
+                </Button>
+              )}
             </div>
           </div>
 
-          <div className="rounded-3xl p-6" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
-            <div className="flex items-center justify-between gap-4 mb-5">
-              <div>
-                <h2 className="font-display text-xl font-semibold" style={{ color: 'var(--text-1)' }}>
-                  Meus personagens
-                </h2>
-                <p className="text-sm" style={{ color: 'var(--text-3)' }}>
-                  Cards prontos para editar, duplicar e reaproveitar em outros modulos.
-                </p>
-              </div>
+          <div className="glass-card rounded-[2rem] shadow-2xl p-8 h-fit flex flex-col">
+            <div className="flex flex-col gap-2 mb-8 border-b pb-6" style={{ borderColor: 'var(--border)' }}>
+              <h2 className="font-display text-2xl font-bold" style={{ color: 'var(--text-1)' }}>
+                Galeria de Entidades
+              </h2>
+              <p className="text-sm leading-relaxed" style={{ color: 'var(--text-3)' }}>
+                Personagens isolados e prontos para injeção via Prompt Studio na criação de assets da marca.
+              </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {characters.length === 0 ? (
-                <div className="rounded-2xl p-5 text-sm md:col-span-2" style={{ background: 'var(--bg-card)', color: 'var(--text-3)' }}>
-                  Nenhum personagem salvo ainda.
+                <div className="glass-card rounded-2xl p-8 flex items-center justify-center min-h-[160px] text-center md:col-span-2" style={{ color: 'var(--text-3)' }}>
+                  Ainda não existem Personagens parametrizados neste Brand Kit. Crie seu primeiro mascote ao lado.
                 </div>
               ) : (
                 characters.map((character) => {
@@ -390,50 +403,51 @@ const BrandCharacterPage = () => {
                   return (
                     <div
                       key={character.id}
-                      className="rounded-2xl overflow-hidden"
-                      style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
+                      className="rounded-2xl overflow-hidden hover:shadow-2xl transition-all duration-300 flex flex-col"
+                      style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}
                     >
-                      <div className="p-4">
-                        <div className="flex items-center gap-3">
+                      <div className="p-5 flex-1 flex flex-col">
+                        <div className="flex items-center gap-4 mb-4">
                           <div
-                            className="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-semibold"
-                            style={{ background: brandKit?.color_primary || '#7C3AED' }}
+                            className="w-14 h-14 rounded-xl flex items-center justify-center text-white font-display text-lg font-bold shadow-lg"
+                            style={{ background: `linear-gradient(135deg, ${brandKit?.color_primary || '#7C3AED'} 0%, ${brandKit?.color_secondary || '#EC4899'} 100%)` }}
                           >
                             {character.name.slice(0, 2).toUpperCase()}
                           </div>
                           <div>
-                            <p className="font-semibold" style={{ color: 'var(--text-1)' }}>{character.name}</p>
-                            <p className="text-xs" style={{ color: 'var(--text-3)' }}>{character.archetype || 'generalist'}</p>
+                            <p className="font-bold text-[17px] truncate max-w-[120px]" style={{ color: 'var(--text-1)' }}>{character.name}</p>
+                            <p className="text-[11px] font-bold uppercase tracking-wider mt-1" style={{ color: 'var(--text-3)' }}>{character.archetype || 'Hero'}</p>
                           </div>
                         </div>
 
-                        <p className="mt-4 text-sm leading-6 line-clamp-4" style={{ color: 'var(--text-2)' }}>
-                          {character.seed_prompt || 'Seed prompt ainda nao gerado.'}
+                        <p className="mt-2 text-[13px] leading-6 line-clamp-3 mb-4 flex-1" style={{ color: 'var(--text-2)' }}>
+                          {character.seed_prompt || 'Seed técnico ainda não parametrizado, atualize a entidade.'}
                         </p>
 
                         {gallery[0] && (
-                          <img
-                            src={gallery[0].public_url}
-                            alt={character.name}
-                            className="mt-4 w-full aspect-square object-cover rounded-2xl"
-                          />
+                          <div className="relative aspect-[4/3] rounded-xl overflow-hidden mb-5 border" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+                            <img
+                              src={gallery[0].public_url}
+                              alt={character.name}
+                              className="w-full h-full object-cover transition-transform duration-700 hover:scale-110"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none"></div>
+                            <span className="absolute bottom-3 left-3 px-2 py-1 rounded text-[9px] font-bold uppercase tracking-widest bg-black/50 backdrop-blur-md text-white border border-white/20">Última Foto</span>
+                          </div>
                         )}
 
-                        <div className="mt-4 flex flex-wrap gap-2">
-                          <Button size="sm" onClick={() => navigate('../image-prompts', { state: { character } })}>
-                            Usar no Prompt Studio
+                        <div className="grid grid-cols-2 gap-2 mt-auto">
+                          <Button className="h-9 px-3 rounded-lg text-xs font-semibold col-span-2 shadow-primary/30" style={{ background: 'var(--primary)', color: '#fff' }} onClick={() => navigate('../image-prompts', { state: { character } })}>
+                            Usar no Studio
                           </Button>
-                          <Button size="sm" variant="outline" onClick={() => navigate('../generator', { state: { character } })}>
-                            Usar no Quick Post
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={() => handleEdit(character)}>
+                          <Button variant="outline" className="h-9 px-2 rounded-lg text-[11px] font-medium border-white/10 bg-white/5 hover:bg-white/10" onClick={() => handleEdit(character)}>
                             Editar
                           </Button>
-                          <Button size="sm" variant="outline" onClick={() => handleDuplicate(character)}>
-                            Duplicar
+                          <Button variant="outline" className="h-9 px-2 rounded-lg text-[11px] font-medium border-white/10 bg-white/5 hover:bg-white/10" onClick={() => handleDuplicate(character)}>
+                            Clonar
                           </Button>
-                          <Button size="sm" variant="outline" onClick={() => handleDelete(character.id)}>
-                            <Trash2 size={14} />
+                          <Button variant="outline" className="h-9 rounded-lg border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500/20 col-span-2" onClick={() => handleDelete(character.id)}>
+                            Excluir Personagem
                           </Button>
                         </div>
                       </div>

@@ -138,16 +138,16 @@ const PromptStudio = () => {
       category: selectedTemplate.category,
       subcategory: selectedTemplate.subcategory,
       base_template: selectedTemplate.base_template,
-      variables: selectedTemplate.variables,
-      default_values: values,
-      platform_params: selectedTemplate.platform_params,
+      variables: selectedTemplate.variables as unknown as Json,
+      default_values: values as unknown as Json,
+      platform_params: selectedTemplate.platform_params as unknown as Json,
       is_system: false,
     };
 
     const isExistingWorkspaceTemplate = selectedTemplate.workspace_id === workspace.id && !selectedTemplate.is_system;
     const query = isExistingWorkspaceTemplate
       ? supabase.from('image_prompt_templates').update(payload).eq('id', selectedTemplate.id)
-      : supabase.from('image_prompt_templates').insert(payload);
+      : supabase.from('image_prompt_templates').insert(payload as unknown as any);
 
     const { error } = await query;
     if (error) {
@@ -223,17 +223,19 @@ const PromptStudio = () => {
   };
 
   return (
-    <div className="flex h-full w-full overflow-hidden" style={{ background: 'var(--bg-app)' }}>
-      <div className="w-[300px] flex-shrink-0 border-r overflow-y-auto" style={{ borderRightColor: 'var(--border)', background: 'var(--bg-card)' }}>
-        <div className="p-5 border-b sticky top-0 z-10" style={{ borderBottomColor: 'var(--border)', background: 'var(--bg-card)' }}>
-          <h2 className="font-display font-semibold text-lg flex items-center gap-2" style={{ color: 'var(--text-1)' }}>
-            <Sparkles className="w-5 h-5 text-[color:var(--primary)]" />
-            Prompt Config
+    <div className="flex h-full w-full overflow-hidden gradient-mesh" style={{ background: 'var(--bg-app)' }}>
+      <div className="w-[320px] flex-shrink-0 border-r overflow-y-auto no-scrollbar" style={{ borderRightColor: 'var(--border)', background: 'rgba(15, 15, 26, 0.4)', backdropFilter: 'blur(20px)' }}>
+        <div className="p-6 border-b sticky top-0 z-10" style={{ borderBottomColor: 'var(--border)', background: 'rgba(15, 15, 26, 0.8)', backdropFilter: 'blur(12px)' }}>
+          <h2 className="font-display font-bold text-xl flex items-center gap-3" style={{ color: 'var(--text-1)' }}>
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center shadow-inner" style={{ background: 'var(--primary-muted)', border: '1px solid var(--primary-muted)' }}>
+              <Sparkles className="w-4 h-4 text-[color:var(--primary)]" />
+            </div>
+            Prompt Studio
           </h2>
-          <p className="text-sm mt-1" style={{ color: 'var(--text-3)' }}>Brand-aware prompt builder e media library.</p>
+          <p className="text-sm mt-3 leading-relaxed" style={{ color: 'var(--text-3)' }}>Brand-aware prompt builder e media library inteligente.</p>
         </div>
 
-        <div className="p-5 space-y-5">
+        <div className="p-6 space-y-6">
           <div className="space-y-2">
             <Label>Template Base</Label>
             <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
@@ -323,54 +325,67 @@ const PromptStudio = () => {
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col min-w-0">
-        <div className="p-6 border-b flex items-center justify-between" style={{ borderBottomColor: 'var(--border)', background: 'var(--bg-surface)' }}>
+      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto no-scrollbar scroll-smooth">
+        <div className="px-8 py-10 relative overflow-hidden flex items-center justify-between" style={{ borderBottom: '1px solid var(--border)', background: 'rgba(15, 15, 26, 0.4)', backdropFilter: 'blur(20px)' }}>
+          <div className="absolute top-0 right-0 w-[500px] h-[300px] opacity-10 pointer-events-none" style={{ background: 'radial-gradient(circle at top right, var(--primary), transparent 70%)' }}></div>
           <div>
-            <h1 className="text-2xl font-display font-bold" style={{ color: 'var(--text-1)' }}>Prompt Studio</h1>
-            <p className="text-sm mt-1" style={{ color: 'var(--text-3)' }}>O prompt é compilado com a marca, a plataforma e, se quiser, com seu personagem de marca.</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] mb-3" style={{ color: 'var(--primary)' }}>
+              Intelligence Suite
+            </p>
+            <h1 className="mt-2 text-4xl font-display font-extrabold tracking-tight" style={{ color: 'var(--text-1)' }}>
+              Prompt Builder
+            </h1>
+            <p className="mt-4 max-w-2xl text-base leading-relaxed" style={{ color: 'var(--text-2)' }}>
+              O prompt é compilado automaticamente integrando tokens da marca, sintaxe da plataforma escolhida e o seed_prompt do seu Brand Character.
+            </p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => navigator.clipboard.writeText(compiled.prompt || '')} className="gap-2">
-              <Copy size={14} /> Copiar
+
+          <div className="flex gap-3 relative z-10">
+            <Button variant="outline" onClick={() => navigator.clipboard.writeText(compiled.prompt || '')} className="gap-2 h-11 px-5 rounded-xl border-white/10 bg-white/5 hover:bg-white/10 text-white">
+              <Copy size={16} /> Copiar
             </Button>
-            <Button variant="outline" onClick={handleGenerateVariants} disabled={isGeneratingVariants} className="gap-2">
-              <RefreshCcw size={14} /> {isGeneratingVariants ? 'Gerando...' : '3 Variações'}
+            <Button variant="outline" onClick={handleGenerateVariants} disabled={isGeneratingVariants} className="gap-2 h-11 px-5 rounded-xl border-white/10 bg-white/5 hover:bg-white/10 text-white">
+              <RefreshCcw size={16} /> {isGeneratingVariants ? 'Gerando...' : 'Criar Variações'}
             </Button>
-            <Button onClick={handleGenerateImage} disabled={isGeneratingImage || !compiled.prompt} className="gap-2" style={{ background: 'var(--primary)', color: '#fff' }}>
-              <ImageIcon size={14} /> {isGeneratingImage ? 'Gerando...' : 'Gerar Imagem'}
+            <Button onClick={handleGenerateImage} disabled={isGeneratingImage || !compiled.prompt} className="gap-2 h-11 px-6 rounded-xl shadow-primary/30" style={{ background: 'var(--primary)', color: '#fff' }}>
+              <ImageIcon size={16} /> {isGeneratingImage ? 'Gerando...' : 'Gerar Imagem Pronta'}
             </Button>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 xl:grid-cols-[1.3fr_0.9fr] gap-6">
-          <div className="rounded-3xl border overflow-hidden" style={{ borderColor: 'var(--border)', background: 'var(--bg-surface)' }}>
-            <div className="p-4 border-b" style={{ borderBottomColor: 'var(--border)', background: 'var(--bg-card)' }}>
-              <p className="text-xs uppercase tracking-[0.2em]" style={{ color: 'var(--text-3)' }}>Preview do Prompt</p>
+        <div className="flex-1 p-8 grid grid-cols-1 xl:grid-cols-[1.3fr_0.9fr] gap-8 max-w-[1600px] mx-auto w-full">
+          <div className="glass-card rounded-[2rem] shadow-2xl overflow-hidden flex flex-col">
+            <div className="p-6 border-b" style={{ borderBottomColor: 'var(--border)', background: 'rgba(255,255,255,0.02)' }}>
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: 'var(--text-3)' }}>Renderizador de Prompt</p>
             </div>
-            <div className="p-6">
-              <pre className="whitespace-pre-wrap text-sm leading-7" style={{ color: 'var(--text-1)', fontFamily: 'var(--font-mono)' }}>
-                {compiled.prompt}
+            
+            <div className="p-8 flex-1">
+              <pre className="whitespace-pre-wrap text-[15px] leading-8 p-6 rounded-2xl" style={{ color: 'var(--text-1)', fontFamily: 'var(--font-mono)', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                {compiled.prompt || 'Nenhum prompt disponível.'}
               </pre>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {compiled.warnings.map((warning) => (
-                  <span key={warning} className="px-3 py-1 rounded-full text-xs font-medium" style={{ background: 'rgba(245, 158, 11, 0.14)', color: '#F59E0B' }}>
-                    {warning}
-                  </span>
-                ))}
-              </div>
+              
+              {compiled.warnings.length > 0 && (
+                <div className="mt-6 flex flex-wrap gap-2">
+                  {compiled.warnings.map((warning) => (
+                    <span key={warning} className="px-4 py-1.5 rounded-full text-xs font-semibold" style={{ background: 'rgba(245, 158, 11, 0.15)', border: '1px solid rgba(245, 158, 11, 0.3)', color: '#F59E0B' }}>
+                      {warning}
+                    </span>
+                  ))}
+                </div>
+              )}
 
               {variants.length > 0 && (
-                <div className="mt-6 space-y-3">
-                  <p className="text-sm font-semibold" style={{ color: 'var(--text-2)' }}>Variações</p>
+                <div className="mt-8 space-y-4">
+                  <p className="text-sm font-semibold uppercase tracking-wider" style={{ color: 'var(--text-3)' }}>Variações Opcionais</p>
                   {variants.map((variant, index) => (
                     <button
                       key={`${index}-${variant.slice(0, 24)}`}
                       onClick={() => navigator.clipboard.writeText(variant)}
-                      className="w-full rounded-2xl p-4 text-left"
-                      style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
+                      className="w-full rounded-2xl p-5 text-left transition-all hover:-translate-y-1 hover:shadow-xl"
+                      style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)' }}
                     >
-                      <p className="text-xs uppercase tracking-[0.2em]" style={{ color: 'var(--text-3)' }}>Variação {index + 1}</p>
-                      <p className="mt-2 text-sm leading-6" style={{ color: 'var(--text-1)' }}>{variant}</p>
+                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] mb-2" style={{ color: 'var(--primary)' }}>Variação inteligente {index + 1}</p>
+                      <p className="text-[15px] leading-7" style={{ color: 'var(--text-2)' }}>{variant}</p>
                     </button>
                   ))}
                 </div>
@@ -378,27 +393,31 @@ const PromptStudio = () => {
             </div>
           </div>
 
-          <div className="rounded-3xl border overflow-hidden" style={{ borderColor: 'var(--border)', background: 'var(--bg-surface)' }}>
-            <Tabs defaultValue="assets">
-              <div className="p-4 border-b" style={{ borderBottomColor: 'var(--border)', background: 'var(--bg-card)' }}>
-                <TabsList>
-                  <TabsTrigger value="assets">Resultados</TabsTrigger>
-                  <TabsTrigger value="library">Biblioteca</TabsTrigger>
+          <div className="glass-card rounded-[2rem] shadow-2xl overflow-hidden flex flex-col">
+            <Tabs defaultValue="assets" className="flex-1 flex flex-col">
+              <div className="p-6 border-b" style={{ borderBottomColor: 'var(--border)', background: 'rgba(255,255,255,0.02)' }}>
+                <TabsList className="bg-black/30 border border-white/5 rounded-xl p-1">
+                  <TabsTrigger value="assets" className="rounded-lg data-[state=active]:bg-white/10 data-[state=active]:text-white">Assets Gerados</TabsTrigger>
+                  <TabsTrigger value="library" className="rounded-lg data-[state=active]:bg-white/10 data-[state=active]:text-white">Biblioteca Geral</TabsTrigger>
                 </TabsList>
               </div>
 
-              <TabsContent value="assets" className="m-0 p-4 space-y-4">
+              <TabsContent value="assets" className="p-8 m-0 flex-1 overflow-y-auto no-scrollbar">
                 {assets.length === 0 ? (
-                  <div className="rounded-2xl p-6 text-sm" style={{ background: 'var(--bg-card)', color: 'var(--text-3)' }}>
-                    Nenhum asset salvo para este template ainda. Gere uma imagem para popular a galeria.
+                  <div className="glass-card rounded-2xl p-8 flex items-center justify-center min-h-[200px] text-center" style={{ color: 'var(--text-3)' }}>
+                    Nenhum asset salvo.<br/>Gere uma imagem usando o builder para registrar no workspace.
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-4">
                     {assets.map((asset) => (
-                      <div key={asset.id} className="rounded-2xl overflow-hidden" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-                        <img src={asset.public_url} alt={asset.asset_type} className="w-full aspect-square object-cover" />
-                        <div className="p-3">
-                          <p className="text-xs" style={{ color: 'var(--text-3)' }}>{asset.module}</p>
+                      <div key={asset.id} className="rounded-2xl overflow-hidden group cursor-pointer" style={{ border: '1px solid var(--border)', background: 'rgba(255,255,255,0.02)' }}>
+                        <div className="relative aspect-square overflow-hidden">
+                          <img src={asset.public_url} alt={asset.asset_type} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                        </div>
+                        <div className="p-4">
+                          <p className="text-[10px] font-bold uppercase tracking-widest whitespace-nowrap overflow-hidden text-ellipsis" style={{ color: 'var(--text-2)' }}>
+                            {asset.module}
+                          </p>
                         </div>
                       </div>
                     ))}
@@ -406,23 +425,23 @@ const PromptStudio = () => {
                 )}
               </TabsContent>
 
-              <TabsContent value="library" className="m-0 p-4 space-y-3">
+              <TabsContent value="library" className="p-8 m-0 flex-1 overflow-y-auto no-scrollbar space-y-3">
                 {templates.map((template) => (
                   <button
                     key={template.id}
                     onClick={() => setSelectedTemplateId(template.id)}
-                    className="w-full rounded-2xl p-4 text-left"
+                    className="w-full rounded-2xl p-5 text-left transition-all"
                     style={{
-                      background: selectedTemplateId === template.id ? 'var(--primary-muted)' : 'var(--bg-card)',
+                      background: selectedTemplateId === template.id ? 'var(--primary-muted)' : 'rgba(255,255,255,0.02)',
                       border: `1px solid ${selectedTemplateId === template.id ? 'var(--primary)' : 'var(--border)'}`,
                     }}
                   >
                     <div className="flex items-center justify-between gap-4">
                       <div>
-                        <p className="font-medium" style={{ color: 'var(--text-1)' }}>{template.name}</p>
-                        <p className="text-xs mt-1" style={{ color: 'var(--text-3)' }}>{template.category}{template.is_system ? ' • Sistema' : ' • Workspace'}</p>
+                        <p className="font-semibold text-base" style={{ color: 'var(--text-1)' }}>{template.name}</p>
+                        <p className="text-[11px] font-medium uppercase tracking-wider mt-1.5" style={{ color: 'var(--text-3)' }}>{template.category}{template.is_system ? ' • Builtin' : ' • Custom'}</p>
                       </div>
-                      <span className="text-xs font-semibold" style={{ color: 'var(--primary)' }}>{template.usage_count}x</span>
+                      <span className="text-xs font-bold px-3 py-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--primary)' }}>{template.usage_count}x</span>
                     </div>
                   </button>
                 ))}
