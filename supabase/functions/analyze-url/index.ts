@@ -22,7 +22,7 @@ type ScrapeResult = {
 };
 
 const markKeyError = async (
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   keyId: string,
   message: string,
   exhausted = false,
