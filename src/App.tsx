@@ -30,6 +30,7 @@ import NewsPortalPage from "@/pages/NewsPortalPage";
 import BlogManagerPage from "@/pages/BlogManagerPage";
 import WebClonerPage from "@/pages/WebClonerPage";
 import VibeCoderPage from "@/pages/VibeCoderPage";
+import SiteBuilderPage from "@/pages/SiteBuilderPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -57,6 +58,7 @@ const App = () => (
           >
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard"       element={<DashboardPage />} />
+            <Route path="site-builder"    element={<SiteBuilderPage />} />
             <Route path="generator"       element={<GeneratorPage />} />
             <Route path="carousel-builder" element={<CarouselBuilder />} />
             <Route path="image-prompts"   element={<PromptStudio />} />
