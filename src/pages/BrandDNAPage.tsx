@@ -180,8 +180,8 @@ const BrandDNAPage = () => {
     setClonedImage(null);
 
     try {
-      addLog(`Inicializando esquadrão de extração para ${targetUrl}...`, 'success');
-      addLog(`🤖 Agente Scraper: Capturando página e screenshot...`, 'loading');
+      addLog(`Inicializando analise real para ${targetUrl}...`, 'success');
+      addLog(`Capturando pagina e screenshot da URL alvo...`, 'loading');
 
       const { data, error } = await supabase.functions.invoke('clone-brand-template', {
         body: {
@@ -198,26 +198,25 @@ const BrandDNAPage = () => {
 
       if (tpl?.screenshot_url) {
         setClonedImage(tpl.screenshot_url);
-        addLog(`📸 Print-screen extraído e salvo com sucesso!`, 'success');
+        addLog(`Screenshot extraido e salvo com sucesso.`, 'success');
       }
 
-      addLog(`👁️ Agente Vision: DNA visual mapeado — cores, tipografia e grid identificados.`, 'success');
-      addLog(`Agente Montador: HTML template gerado a partir do DNA clonado.`, 'success');
-      addLog(`Template salvo na biblioteca global com sucesso!`, 'success');
+      addLog(`Analise visual concluida: cores, tipografia e grid identificados.`, 'success');
+      addLog(`Template HTML gerado a partir do DNA clonado.`, 'success');
+      addLog(`Template salvo na biblioteca global com sucesso.`, 'success');
 
       toast.success('DNA Clonado com sucesso!');
 
-      setTimeout(() => {
-        setIsCloning(false);
-        setUrl('');
-        setSourceName('');
-        fetchTemplates();
-        if (tpl) setSelectedTemplate(tpl);
-      }, 2000);
+      setIsCloning(false);
+      setUrl('');
+      setSourceName('');
+      fetchTemplates();
+      if (tpl) setSelectedTemplate(tpl);
 
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Erro ao executar esquadrão';
-      addLog(`Falha na Orquestração: ${msg}`, 'error');
+      const msg = err instanceof Error ? err.message : 'Erro ao executar a analise';
+      addLog(`Falha na analise: ${msg}`, 'error');
+      setIsCloning(false);
       toast.error(msg);
     }
   };
@@ -321,7 +320,7 @@ const BrandDNAPage = () => {
               <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/10 rounded-full blur-[80px] pointer-events-none" />
               
               <h2 className="font-bold flex items-center gap-2 relative z-10" style={{ color: 'var(--text-1)' }}>
-                <Terminal size={18} style={{ color: 'var(--primary)' }} /> Terminal do Esquadrão
+                <Terminal size={18} style={{ color: 'var(--primary)' }} /> Terminal da Analise
               </h2>
               
               <div className="flex-1 flex flex-col gap-3 font-mono text-[11.5px] overflow-y-auto p-5 rounded-2xl relative z-10 text-left min-h-[300px]"
@@ -362,7 +361,7 @@ const BrandDNAPage = () => {
                   <img src={clonedImage} alt="Scraped View" className="max-w-full max-h-full object-contain mix-blend-multiply dark:mix-blend-normal rounded-lg shadow-sm" />
                   <div className="absolute top-4 right-4 px-3 py-1.5 rounded-full backdrop-blur-md text-[10px] text-white font-bold flex items-center gap-1.5 shadow-xl border border-white/10"
                        style={{ background: 'linear-gradient(135deg, rgba(124,58,237,0.8), rgba(67,56,202,0.8))' }}>
-                    <Activity size={12} className="animate-pulse" /> Visão Multimodal do Agente
+                    <Activity size={12} className="animate-pulse" /> Analise Visual em Execucao
                   </div>
                 </motion.div>
               ) : (

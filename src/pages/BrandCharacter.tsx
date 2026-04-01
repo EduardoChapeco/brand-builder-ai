@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
-import { parseJsonArray } from '@/lib/postgenPhase2';
+import { parseJsonArray } from '@/lib/postgenPhase3';
 
 type BrandCharacter = Tables<'brand_characters'>;
 type MediaAsset = Tables<'media_assets'>;

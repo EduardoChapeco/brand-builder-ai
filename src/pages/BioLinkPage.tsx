@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Copy, Eye, Globe, Link2, Plus, Save, Send, Trash2 } from 'lucide-react';
+import { Copy, Globe, Link2, Plus, Save, Send, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { BioLinkRenderer, type BioLinkData } from '@/components/biolink/BioLinkRenderer';
 import { Button } from '@/components/ui/button';
@@ -262,16 +262,32 @@ const BioLinkPage = () => {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label>Blocos</Label>
-              <Select onValueChange={(value) => addBlock(value as BioLinkBlockType)}>
-                <SelectTrigger className="w-[160px]"><SelectValue placeholder="Adicionar bloco" /></SelectTrigger>
-                <SelectContent>
-                  {blockOptions.map((option) => (
-                    <SelectItem key={option.id} value={option.id}>{option.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
 
+            <div className="grid grid-cols-2 gap-2">
+              {([
+                { type: 'link',       emoji: '🔗', label: 'Link CTA' },
+                { type: 'youtube',    emoji: '▶️', label: 'YouTube' },
+                { type: 'spotify',    emoji: '🎵', label: 'Spotify' },
+                { type: 'map',        emoji: '📍', label: 'Mapa' },
+                { type: 'newsletter', emoji: '✉️', label: 'Newsletter' },
+                { type: 'spacer',     emoji: '↕️', label: 'Espaço' },
+              ] as const).map(({ type, emoji, label }) => (
+                <button
+                  key={type}
+                  onClick={() => addBlock(type)}
+                  className="h-10 rounded-xl flex items-center justify-center gap-2 text-xs font-semibold transition-all"
+                  style={{
+                    background: 'rgba(255,255,255,0.04)',
+                    border: '1px solid rgba(255,255,255,0.07)',
+                    color: 'var(--text-2)',
+                  }}
+                >
+                  <span>{emoji}</span> {label} <Plus size={12} style={{ color: 'var(--primary)', marginLeft: 'auto' }} />
+                </button>
+              ))}
+            </div>
+            
             <div className="space-y-2">
               {blocks.map((block, index) => (
                 <button

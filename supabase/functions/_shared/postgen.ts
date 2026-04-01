@@ -22,7 +22,19 @@ export type BrandContext = {
   system_context: string;
 };
 
+export type JsonTaskMeta = {
+  provider: string | null;
+  model: string | null;
+  isFallback: boolean;
+  attempts: Array<{
+    provider: string;
+    status: "success" | "error";
+    message?: string;
+  }>;
+};
+
 const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const AI_GATEWAY_MODEL = "google/gemini-3-flash-preview";
 
 export const createServiceClient = () =>
   createClient(
@@ -151,7 +163,7 @@ const invokeGateway = async (systemPrompt: string, userPrompt: string) => {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "google/gemini-3-flash-preview",
+      model: AI_GATEWAY_MODEL,
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
@@ -251,19 +263,41 @@ const invokeGemini = async (key: WorkspaceApiKey, systemPrompt: string, userProm
   return payload?.candidates?.[0]?.content?.parts?.[0]?.text as string;
 };
 
-export const runJsonTask = async <T>(
+const getModelLabel = (provider: string | null) => {
+  if (provider === "lovable_gateway") return AI_GATEWAY_MODEL;
+  if (provider === "groq") return "llama-3.3-70b-versatile";
+  if (provider === "openrouter") return "meta-llama/llama-3.3-70b-instruct:free";
+  if (provider === "gemini") return "gemini-2.0-flash-exp";
+  return null;
+};
+
+export const runJsonTaskDetailed = async <T>(
   supabase: ReturnType<typeof createServiceClient>,
   workspaceId: string,
   systemPrompt: string,
   userPrompt: string,
   providers = ["groq", "openrouter", "gemini"],
   fallback?: T,
-): Promise<T> => {
+): Promise<{ result: T; meta: JsonTaskMeta }> => {
+  const attempts: JsonTaskMeta["attempts"] = [];
   const gatewayResponse = await invokeGateway(systemPrompt, userPrompt);
   if (gatewayResponse) {
     try {
-      return extractJson<T>(gatewayResponse);
+      return {
+        result: extractJson<T>(gatewayResponse),
+        meta: {
+          provider: "lovable_gateway",
+          model: getModelLabel("lovable_gateway"),
+          isFallback: false,
+          attempts: [{ provider: "lovable_gateway", status: "success" }],
+        },
+      };
     } catch (error) {
+      attempts.push({
+        provider: "lovable_gateway",
+        status: "error",
+        message: error instanceof Error ? error.message : String(error),
+      });
       console.error("Gateway JSON parse error:", error);
     }
   }
@@ -280,14 +314,57 @@ export const runJsonTask = async <T>(
           : await invokeGemini(key, systemPrompt, userPrompt);
 
       await markKeyUsage(supabase, key);
-      return extractJson<T>(content);
+      attempts.push({ provider: key.provider, status: "success" });
+      return {
+        result: extractJson<T>(content),
+        meta: {
+          provider: key.provider,
+          model: getModelLabel(key.provider),
+          isFallback: false,
+          attempts,
+        },
+      };
     } catch (error) {
+      attempts.push({
+        provider: key.provider,
+        status: "error",
+        message: error instanceof Error ? error.message : String(error),
+      });
       await markKeyUsage(supabase, key, { errorMessage: error instanceof Error ? error.message : String(error) });
     }
   }
 
-  if (fallback !== undefined) return fallback;
+  if (fallback !== undefined) {
+    return {
+      result: fallback,
+      meta: {
+        provider: null,
+        model: null,
+        isFallback: true,
+        attempts,
+      },
+    };
+  }
   throw new Error("Nenhuma chave de IA disponivel para executar a tarefa.");
+};
+
+export const runJsonTask = async <T>(
+  supabase: ReturnType<typeof createServiceClient>,
+  workspaceId: string,
+  systemPrompt: string,
+  userPrompt: string,
+  providers = ["groq", "openrouter", "gemini"],
+  fallback?: T,
+): Promise<T> => {
+  const { result } = await runJsonTaskDetailed(
+    supabase,
+    workspaceId,
+    systemPrompt,
+    userPrompt,
+    providers,
+    fallback,
+  );
+  return result;
 };
 
 export const callLLM = async <T>(
@@ -535,8 +612,6 @@ export const scrapeDomWithFirecrawl = async (
   }
 };
 
-export const uploadAsset = uploadBytesToAsset;
-
 export const uploadBytesToAsset = async (
   supabase: ReturnType<typeof createServiceClient>,
   params: {
@@ -580,6 +655,8 @@ export const uploadBytesToAsset = async (
   if (assetError) throw assetError;
   return asset;
 };
+
+export const uploadAsset = uploadBytesToAsset;
 
 export const decodeDataUrl = (dataUrl: string) => {
   const match = dataUrl.match(/^data:(.+);base64,(.+)$/);
