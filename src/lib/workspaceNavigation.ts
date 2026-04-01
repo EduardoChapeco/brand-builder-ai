@@ -24,41 +24,44 @@ export type WorkspaceNavItem = {
   label: string;
   path: string;
   icon: LucideIcon;
-  section: "Principal" | "Criacao" | "Workspace" | "Sistema";
+  section: "Painel" | "Estrategia" | "Inteligencia" | "Estudio Criativo" | "Gestao" | "Sistema";
   description?: string;
 };
 
 export const WORKSPACE_NAV_ITEMS: WorkspaceNavItem[] = [
-  { label: "Dashboard", path: "dashboard", icon: Grid2x2, section: "Principal", description: "Visao geral do workspace" },
-  { label: "News Portal", path: "news-portal", icon: Newspaper, section: "Principal", description: "Oportunidades editoriais e RSS" },
-  { label: "Blog Manager", path: "blog-manager", icon: BookText, section: "Principal", description: "Rascunhos e artigos do workspace" },
-  { label: "Biblioteca", path: "library", icon: Images, section: "Principal", description: "Posts, assets e historico" },
+  { label: "Dashboard", path: "dashboard", icon: Grid2x2, section: "Painel", description: "Visao geral do workspace" },
 
-  { label: "Post Rapido", path: "generator", icon: Wand2, section: "Criacao", description: "Gerador principal de posts" },
-  { label: "Carousel Builder", path: "carousel-builder", icon: Layers3, section: "Criacao", description: "Storyboards e carrosseis" },
-  { label: "Prompt Studio", path: "image-prompts", icon: Sparkles, section: "Criacao", description: "Prompts e geracao visual" },
-  { label: "Product Shots", path: "product-shots", icon: Aperture, section: "Criacao", description: "Fotos e composicoes de produto" },
-  { label: "Feed Preview", path: "feed-preview", icon: MonitorSmartphone, section: "Criacao", description: "Preview de feed e posts" },
-  { label: "Slides", path: "slides", icon: Presentation, section: "Criacao", description: "Apresentacoes e decks" },
-  { label: "Web Cloner", path: "web-cloner", icon: Globe, section: "Criacao", description: "Clonagem visual e estrutura de paginas" },
-  { label: "VibeCoder", path: "vibe-coder", icon: Bot, section: "Criacao", description: "Builder multi-file com preview live" },
+  { label: "Briefing", path: "briefing", icon: FileText, section: "Estrategia", description: "Contexto e estrategia da marca" },
+  { label: "Brand Kit", path: "brand-kit", icon: Palette, section: "Estrategia", description: "Cores, logo e identidade visual" },
+  { label: "DNA Competitivo", path: "brand-dna", icon: Activity, section: "Estrategia", description: "Templates e DNA competitivo" },
+  { label: "Personas (Character)", path: "brand-character", icon: Bot, section: "Estrategia", description: "Personagens e consistencia visual" },
+  { label: "Bio Link Integrado", path: "biolink", icon: Link2, section: "Estrategia", description: "Pagina publica de links e embeds" },
 
-  { label: "Briefing", path: "briefing", icon: FileText, section: "Workspace", description: "Contexto e estrategia da marca" },
-  { label: "Brand Kit", path: "brand-kit", icon: Palette, section: "Workspace", description: "Cores, logo e identidade visual" },
-  { label: "Brand DNA", path: "brand-dna", icon: Activity, section: "Workspace", description: "Templates e DNA competitivo" },
-  { label: "Brand Character", path: "brand-character", icon: Bot, section: "Workspace", description: "Personagens e consistencia visual" },
-  { label: "Bio Link", path: "biolink", icon: Link2, section: "Workspace", description: "Pagina publica de links e embeds" },
-  { label: "Viral Analyzer", path: "viral-analyzer", icon: Activity, section: "Workspace", description: "Padroes virais e referencias" },
+  { label: "News Portal RSS", path: "news-portal", icon: Newspaper, section: "Inteligencia", description: "Oportunidades editoriais e RSS" },
+  { label: "Viral Analyzer", path: "viral-analyzer", icon: Activity, section: "Inteligencia", description: "Padroes virais e referencias" },
+  { label: "Squad de IA (Chat)", path: "chat", icon: MessageSquare, section: "Inteligencia", description: "Chat de squad e criacao guiada" },
 
-  { label: "Chat IA", path: "chat", icon: MessageSquare, section: "Sistema", description: "Chat de squad e criacao guiada" },
-  { label: "Configuracoes", path: "settings", icon: Settings, section: "Sistema", description: "APIs, RSS e preferencias" },
+  { label: "Gerador de Posts", path: "generator", icon: Wand2, section: "Estudio Criativo", description: "Gerador principal de posts" },
+  { label: "Carousel Builder", path: "carousel-builder", icon: Layers3, section: "Estudio Criativo", description: "Storyboards e carrosseis" },
+  { label: "Slides & Decks", path: "slides", icon: Presentation, section: "Estudio Criativo", description: "Apresentacoes prontas" },
+  { label: "Image Studio", path: "image-prompts", icon: Sparkles, section: "Estudio Criativo", description: "Prompts e geracao visual" },
+  { label: "Product Shots", path: "product-shots", icon: Aperture, section: "Estudio Criativo", description: "Fotos de produto perfeitas" },
+  { label: "Web Cloner", path: "web-cloner", icon: Globe, section: "Estudio Criativo", description: "Clonagem de paginas" },
+  { label: "VibeCoder", path: "vibe-coder", icon: Bot, section: "Estudio Criativo", description: "Builder multi-file" },
+
+  { label: "Feed Preview", path: "feed-preview", icon: MonitorSmartphone, section: "Gestao", description: "Preview e mockups de feed" },
+  { label: "Blog Manager", path: "blog-manager", icon: BookText, section: "Gestao", description: "Artigos e SEO" },
+  { label: "Biblioteca Geral", path: "library", icon: Images, section: "Gestao", description: "Arquivos, imagens e posts gerados" },
+
+  { label: "Configuracoes", path: "settings", icon: Settings, section: "Sistema", description: "APIs e preferencias" },
 ];
 
 export const WORKSPACE_NAV_GROUPS = [
-  { label: "Principal", items: WORKSPACE_NAV_ITEMS.filter((item) => item.section === "Principal") },
-  { label: "Criacao", items: WORKSPACE_NAV_ITEMS.filter((item) => item.section === "Criacao") },
-  { label: "Workspace", items: WORKSPACE_NAV_ITEMS.filter((item) => item.section === "Workspace") },
-  { label: "Sistema", items: WORKSPACE_NAV_ITEMS.filter((item) => item.section === "Sistema") },
+  { label: "Painel", items: WORKSPACE_NAV_ITEMS.filter((item) => item.section === "Painel") },
+  { label: "Estrategia e DNA", items: WORKSPACE_NAV_ITEMS.filter((item) => item.section === "Estrategia") },
+  { label: "Inteligencia", items: WORKSPACE_NAV_ITEMS.filter((item) => item.section === "Inteligencia") },
+  { label: "Estudio Criativo", items: WORKSPACE_NAV_ITEMS.filter((item) => item.section === "Estudio Criativo") },
+  { label: "Recursos e Gestao", items: WORKSPACE_NAV_ITEMS.filter((item) => item.section === "Gestao") },
 ] as const;
 
 export const getWorkspaceRouteMeta = (pathname: string) => {

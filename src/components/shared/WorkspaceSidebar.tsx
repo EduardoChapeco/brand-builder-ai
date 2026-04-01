@@ -37,29 +37,29 @@ const WorkspaceSidebar = () => {
 
   return (
     <Sidebar collapsible="icon" className="border-r border-[var(--border)] bg-[var(--sidebar-background)]">
-      <SidebarHeader className="gap-4 px-3 py-4">
+      <SidebarHeader className="px-3 py-3 border-b border-[var(--border)] bg-[var(--sidebar-background)]">
         <button
           onClick={() => navigate("/workspaces")}
           className={cn(
-            "flex items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface-card)] px-3 py-3 text-left transition-colors hover:bg-[var(--surface-2)]",
+            "flex items-center gap-3 rounded-xl px-2 py-2 text-left transition-colors hover:bg-[var(--surface-2)]",
             collapsed && "justify-center px-0",
           )}
           title={workspace?.name || "Trocar workspace"}
         >
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--workspace-brand)] text-sm font-semibold text-white">
+          <div className="flex shrink-0 h-8 w-8 items-center justify-center rounded-lg bg-[var(--workspace-brand)] text-xs font-semibold text-white shadow-sm">
             {initials}
           </div>
-          {!collapsed ? (
+          {!collapsed && (
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-[var(--text-primary)]">{workspace?.name || "Workspace"}</p>
-              <p className="truncate text-xs text-[var(--text-muted)]">Trocar workspace</p>
+              <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{workspace?.name || "Workspace"}</p>
+              <p className="truncate text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Mudar workspace</p>
             </div>
-          ) : null}
-          {!collapsed ? <ChevronsUpDown size={16} className="text-[var(--text-muted)]" /> : null}
+          )}
+          {!collapsed && <ChevronsUpDown size={14} className="text-[var(--text-muted)] shrink-0" />}
         </button>
       </SidebarHeader>
 
-      <SidebarContent className="gap-4 px-2 pb-4">
+      <SidebarContent className="gap-3 px-2 py-3 overflow-y-auto scrollbar-thin">
         {WORKSPACE_NAV_GROUPS.map((group) => (
           <SidebarGroup key={group.label} className="px-1">
             <SidebarGroupLabel className="px-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
@@ -67,59 +67,62 @@ const WorkspaceSidebar = () => {
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {group.items.map((item) => (
-                  <SidebarMenuItem key={item.path}>
-                    <SidebarMenuButton
-                      asChild
-                      tooltip={item.label}
-                      isActive={location.pathname === `/workspace/${workspaceId}/${item.path}`}
-                      className={cn(
-                        "h-11 rounded-xl px-3 text-[14px] font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]",
-                        "data-[active=true]:border data-[active=true]:border-[var(--workspace-brand-border)] data-[active=true]:bg-[var(--workspace-brand-soft)] data-[active=true]:text-[var(--workspace-brand)]",
-                      )}
-                    >
-                      <NavLink to={`/workspace/${workspaceId}/${item.path}`} end className="flex items-center gap-3">
-                        <item.icon size={18} />
-                        <span>{item.label}</span>
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
+                {group.items.map((item) => {
+                  const isActive = location.pathname.includes(`/workspace/${workspaceId}/${item.path}`);
+                  return (
+                    <SidebarMenuItem key={item.path}>
+                      <SidebarMenuButton
+                        asChild
+                        tooltip={item.label}
+                        isActive={isActive}
+                        className={cn(
+                          "transition-all h-9 !px-2.5 font-medium rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-2)]",
+                          isActive && "bg-[var(--sidebar-accent)] text-[var(--workspace-brand)] font-semibold shadow-sm",
+                        )}
+                        style={{
+                          ...(isActive ? { backgroundColor: 'var(--workspace-brand-soft)', color: 'var(--workspace-brand)' } : {})
+                        }}
+                      >
+                        <NavLink to={`/workspace/${workspaceId}/${item.path}`} end>
+                          <item.icon className="!size-4" />
+                          <span>{item.label}</span>
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
         ))}
       </SidebarContent>
 
-      <SidebarFooter className="gap-3 px-3 py-4">
+      <SidebarFooter className="gap-3 px-3 py-3 border-t border-[var(--border)] bg-[var(--sidebar-background)]">
         <NavLink to={`/workspace/${workspaceId}/settings`} end>
           {({ isActive }) => (
             <div
               className={cn(
-                "flex items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface-card)] px-3 py-3 transition-colors hover:bg-[var(--surface-2)]",
+                "flex items-center gap-2.5 rounded-lg px-2 py-2 transition-colors hover:bg-[var(--surface-2)]",
                 collapsed && "justify-center px-0",
-                isActive && "border-[var(--workspace-brand-border)] bg-[var(--workspace-brand-soft)] text-[var(--workspace-brand)]",
+                isActive && "bg-[var(--workspace-brand-soft)] text-[var(--workspace-brand)] font-medium",
               )}
             >
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface-2)]">
-                <Settings2 size={16} />
-              </div>
-              {!collapsed ? (
+              <Settings2 size={16} className="shrink-0" />
+              {!collapsed && (
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-[var(--text-primary)]">Configuracoes</p>
-                  <p className="text-xs text-[var(--text-muted)]">API, RSS e preferencias</p>
+                  <p className="text-[13px] text-[var(--text-primary)]">Configuracoes</p>
                 </div>
-              ) : null}
+              )}
             </div>
           )}
         </NavLink>
 
-        {!collapsed ? (
-          <div className="flex items-center gap-2 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-xs text-[var(--text-muted)]">
-            <ArrowLeftRight size={14} />
-            <span>Sidebar recolhivel e responsiva</span>
+        {!collapsed && (
+          <div className="flex items-center gap-2 px-2 pb-1 text-[11px] text-[var(--text-muted)] opacity-60">
+            <ArrowLeftRight size={12} />
+            <span>Recolhivel [CTRL + B]</span>
           </div>
-        ) : null}
+        )}
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
