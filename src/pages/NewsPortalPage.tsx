@@ -1,7 +1,23 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ExternalLink, FileText, Layers, Loader2, Newspaper, RefreshCcw, Sparkles, Wand2 } from 'lucide-react';
+import {
+  ExternalLink,
+  FileText,
+  Layers,
+  Loader2,
+  Newspaper,
+  RefreshCcw,
+  Sparkles,
+  Wand2,
+} from 'lucide-react';
 import { toast } from 'sonner';
+import ActionBar from '@/components/shared/ActionBar';
+import AppSectionLabel from '@/components/shared/AppSectionLabel';
+import EmptyState from '@/components/shared/EmptyState';
+import MetricCard from '@/components/shared/MetricCard';
+import PageHeader from '@/components/shared/PageHeader';
+import SectionCard from '@/components/shared/SectionCard';
+import SubtleBadge from '@/components/shared/SubtleBadge';
 import { Button } from '@/components/ui/button';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -19,6 +35,7 @@ const NewsPortalPage = () => {
 
   const loadItems = useCallback(async () => {
     if (!workspace?.id) return;
+
     setLoading(true);
     const { data, error } = await supabase
       .from('news_items')
@@ -42,6 +59,7 @@ const NewsPortalPage = () => {
 
   const refreshNews = async () => {
     if (!workspace?.id) return;
+
     setSyncing(true);
     try {
       const { data, error } = await supabase.functions.invoke('news-fetch', {
@@ -60,6 +78,7 @@ const NewsPortalPage = () => {
 
   const extractContent = async (item: NewsItem) => {
     if (!workspace?.id) return;
+
     setBusyId(item.id);
     try {
       const { error } = await supabase.functions.invoke('news-extract-content', {
@@ -78,6 +97,7 @@ const NewsPortalPage = () => {
 
   const generateBlog = async (item: NewsItem) => {
     if (!workspace?.id) return;
+
     setBusyId(item.id);
     try {
       const { data, error } = await supabase.functions.invoke('blog-generate', {
@@ -94,126 +114,147 @@ const NewsPortalPage = () => {
     }
   };
 
-  const stats = useMemo(() => ({
-    high: items.filter((item) => (item.relevance_score || 0) >= 70).length,
-    extracted: items.filter((item) => item.content_extracted).length,
-  }), [items]);
+  const stats = useMemo(
+    () => ({
+      mapped: items.length,
+      high: items.filter((item) => (item.relevance_score || 0) >= 70).length,
+      extracted: items.filter((item) => item.content_extracted).length,
+    }),
+    [items],
+  );
 
   return (
     <div className="page-layout">
-      <div className="page-hero gradient-mesh">
-        <div className="relative z-10 flex items-start justify-between gap-6">
-          <div>
-            <p className="page-hero-eyebrow">RSS Squad Autonomo</p>
-            <h1 className="page-hero-title">News Portal</h1>
-            <p className="page-hero-description">
-              Cockpit de oportunidades editoriais para {briefing?.company_name || workspace?.name || 'o workspace'}.
-              O feed cruza frescor com aderencia ao briefing e abre blog, post ou carrossel em um clique.
-            </p>
-          </div>
-          <Button onClick={refreshNews} disabled={syncing} className="gap-2" style={{ background: 'var(--primary)', color: '#fff' }}>
-            {syncing ? <Loader2 size={16} className="animate-spin" /> : <RefreshCcw size={16} />}
-            {syncing ? 'Atualizando...' : 'Atualizar Feed'}
-          </Button>
-        </div>
-      </div>
-
       <div className="page-content no-scrollbar">
         <div className="page-inner space-y-6 py-6">
-          <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[
-              { label: 'Noticias mapeadas', value: items.length, icon: Newspaper },
-              { label: 'Alta relevancia', value: stats.high, icon: Sparkles },
-              { label: 'Artigos extraidos', value: stats.extracted, icon: FileText },
-            ].map((stat) => {
-              const Icon = stat.icon;
-              return (
-                <div key={stat.label} className="glass-card rounded-3xl p-5">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs uppercase tracking-[0.18em]" style={{ color: 'var(--text-3)' }}>{stat.label}</p>
-                    <Icon size={16} style={{ color: 'var(--primary)' }} />
-                  </div>
-                  <p className="mt-4 text-4xl font-display font-bold" style={{ color: 'var(--text-1)' }}>{stat.value}</p>
-                </div>
-              );
-            })}
+          <PageHeader
+            eyebrow="News Portal"
+            title="Cockpit editorial do workspace"
+            description={
+              `Monitore noticias relevantes para ${briefing?.company_name || workspace?.name || 'o workspace'}, extraia contexto e abra blog, post ou carrossel sem mudar de modulo.`
+            }
+            action={
+              <Button onClick={refreshNews} disabled={syncing} className="h-11 rounded-xl px-5">
+                {syncing ? <Loader2 size={16} className="animate-spin" /> : <RefreshCcw size={16} />}
+                {syncing ? 'Atualizando...' : 'Atualizar feed'}
+              </Button>
+            }
+          />
+
+          <section className="grid gap-4 md:grid-cols-3">
+            <MetricCard label="Noticias mapeadas" value={stats.mapped} icon={Newspaper} />
+            <MetricCard label="Alta relevancia" value={stats.high} icon={Sparkles} />
+            <MetricCard label="Artigos extraidos" value={stats.extracted} icon={FileText} />
           </section>
 
-          <section className="glass-card rounded-3xl p-6 space-y-4">
+          <ActionBar>
+            <div>
+              <AppSectionLabel>Curadoria automatizada</AppSectionLabel>
+              <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                O portal prioriza frescor, relevancia ao briefing e potencial de derivacao editorial.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <SubtleBadge>Briefing: {briefing?.segment || 'Nao definido'}</SubtleBadge>
+              <SubtleBadge variant="outline">1 clique para blog/post/carrossel</SubtleBadge>
+            </div>
+          </ActionBar>
+
+          <SectionCard className="space-y-4">
             {loading ? (
-              <div className="text-sm" style={{ color: 'var(--text-3)' }}>Carregando noticias...</div>
-            ) : items.length === 0 ? (
-              <div className="rounded-2xl p-6 text-sm" style={{ background: 'var(--bg-card)', color: 'var(--text-3)' }}>
-                Nenhuma noticia no workspace. Rode a sincronizacao inicial para popular o portal.
+              <div className="flex min-h-[220px] items-center justify-center text-sm text-[var(--text-secondary)]">
+                Carregando noticias...
               </div>
+            ) : items.length === 0 ? (
+              <EmptyState
+                title="Nenhuma noticia no workspace"
+                description="Rode a sincronizacao inicial para popular o portal com oportunidades de conteudo."
+                icon={Newspaper}
+                action={
+                  <Button onClick={refreshNews} disabled={syncing} className="rounded-xl">
+                    Atualizar feed
+                  </Button>
+                }
+              />
             ) : (
-              items.map((item) => (
-                <article key={item.id} className="rounded-3xl p-5" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="badge badge-primary">Score {item.relevance_score || 0}</span>
-                    {item.status && <span className="badge">{item.status}</span>}
-                    {item.categories?.slice(0, 2).map((category) => (
-                      <span key={`${item.id}-${category}`} className="badge">{category}</span>
-                    ))}
-                  </div>
+              items.map((item) => {
+                const isBusy = busyId === item.id;
+                return (
+                  <article
+                    key={item.id}
+                    className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-5"
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <SubtleBadge variant="brand">Score {item.relevance_score || 0}</SubtleBadge>
+                      {item.status ? <SubtleBadge>{item.status}</SubtleBadge> : null}
+                      {item.categories?.slice(0, 2).map((category) => (
+                        <SubtleBadge key={`${item.id}-${category}`} variant="outline">
+                          {category}
+                        </SubtleBadge>
+                      ))}
+                    </div>
 
-                  <h2 className="mt-4 text-xl font-display font-bold" style={{ color: 'var(--text-1)' }}>{item.title}</h2>
-                  <p className="mt-3 text-sm leading-6" style={{ color: 'var(--text-2)' }}>{item.description}</p>
-                  {item.relevance_reason && (
-                    <p className="mt-3 text-xs leading-5" style={{ color: 'var(--text-3)' }}>{item.relevance_reason}</p>
-                  )}
+                    <h2 className="mt-4 text-2xl font-semibold tracking-[-0.04em] text-[var(--text-primary)]">
+                      {item.title}
+                    </h2>
+                    <p className="mt-3 max-w-[860px] text-sm leading-7 text-[var(--text-secondary)]">
+                      {item.description}
+                    </p>
+                    {item.relevance_reason ? (
+                      <p className="mt-3 text-sm leading-6 text-[var(--text-muted)]">{item.relevance_reason}</p>
+                    ) : null}
 
-                  <div className="mt-5 flex flex-wrap items-center gap-3">
-                    <Button
-                      onClick={() => generateBlog(item)}
-                      disabled={busyId === item.id}
-                      className="gap-2"
-                      style={{ background: 'var(--primary)', color: '#fff' }}
-                    >
-                      {busyId === item.id ? <Loader2 size={14} className="animate-spin" /> : <FileText size={14} />}
-                      Gerar Blog
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="gap-2"
-                      onClick={() => navigate('../generator', {
-                        state: {
-                          topic: item.title,
-                          recommendedTemplate: 'editorial-magazine',
-                          sourceUrl: item.source_url,
-                        },
-                      })}
-                    >
-                      <Wand2 size={14} />
-                      Gerar Post
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="gap-2"
-                      onClick={() => navigate('../carousel-builder', {
-                        state: {
-                          topic: item.title,
-                          recommendedTemplate: 'data-insight',
-                          arcType: 'educational_thread',
-                        },
-                      })}
-                    >
-                      <Layers size={14} />
-                      Gerar Carrossel
-                    </Button>
-                    <Button variant="outline" className="gap-2" onClick={() => extractContent(item)}>
-                      <Sparkles size={14} />
-                      Extrair Conteudo
-                    </Button>
-                    <Button variant="outline" className="gap-2" onClick={() => window.open(item.source_url, '_blank')}>
-                      <ExternalLink size={14} />
-                      Fonte
-                    </Button>
-                  </div>
-                </article>
-              ))
+                    <div className="mt-5 flex flex-wrap items-center gap-3">
+                      <Button onClick={() => generateBlog(item)} disabled={isBusy} className="rounded-xl">
+                        {isBusy ? <Loader2 size={14} className="animate-spin" /> : <FileText size={14} />}
+                        Gerar blog
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="rounded-xl"
+                        onClick={() =>
+                          navigate('../generator', {
+                            state: {
+                              topic: item.title,
+                              recommendedTemplate: 'editorial-magazine',
+                              sourceUrl: item.source_url,
+                            },
+                          })
+                        }
+                      >
+                        <Wand2 size={14} />
+                        Gerar post
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="rounded-xl"
+                        onClick={() =>
+                          navigate('../carousel-builder', {
+                            state: {
+                              topic: item.title,
+                              recommendedTemplate: 'data-insight',
+                              arcType: 'educational_thread',
+                            },
+                          })
+                        }
+                      >
+                        <Layers size={14} />
+                        Gerar carrossel
+                      </Button>
+                      <Button variant="ghost" className="rounded-xl" onClick={() => extractContent(item)}>
+                        <Sparkles size={14} />
+                        Extrair conteudo
+                      </Button>
+                      <Button variant="ghost" className="rounded-xl" onClick={() => window.open(item.source_url, '_blank')}>
+                        <ExternalLink size={14} />
+                        Fonte
+                      </Button>
+                    </div>
+                  </article>
+                );
+              })
             )}
-          </section>
+          </SectionCard>
         </div>
       </div>
     </div>

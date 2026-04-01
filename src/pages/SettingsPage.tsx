@@ -1,8 +1,15 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Eye, EyeOff, Key, Plus, Rss, Settings, Trash2 } from 'lucide-react';
-import { toast } from 'sonner';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useSearchParams } from 'react-router-dom';
+import { toast } from 'sonner';
+import AppSectionLabel from '@/components/shared/AppSectionLabel';
+import MetricCard from '@/components/shared/MetricCard';
+import PageHeader from '@/components/shared/PageHeader';
+import SectionCard from '@/components/shared/SectionCard';
+import SubtleBadge from '@/components/shared/SubtleBadge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -49,47 +56,46 @@ const PROVIDERS: Array<{
   {
     id: 'groq',
     name: 'Groq',
-    description: 'Llama 3.3 70B e Mixtral gratuitos.',
+    description: 'Texto de alta velocidade para operacoes frequentes.',
     link: 'https://console.groq.com',
-    helper: 'Use para geracao de texto com alta velocidade.',
+    helper: 'Ideal para geracao principal e tarefas com latencia baixa.',
     defaultLimit: 14400,
   },
   {
     id: 'openrouter',
     name: 'OpenRouter',
-    description: 'Fallback gratuito para varios modelos.',
+    description: 'Fallback de modelos quando o provider principal falhar.',
     link: 'https://openrouter.ai',
-    helper: 'Bom fallback quando Groq ou Gemini baterem limite.',
+    helper: 'Bom para redundancia entre modelos gratuitos ou alternativos.',
     defaultLimit: 50,
   },
   {
     id: 'gemini',
     name: 'Gemini',
-    description: 'Texto e imagem com modelos gratuitos.',
+    description: 'Texto e imagem em um provider unificado.',
     link: 'https://aistudio.google.com',
-    helper: 'Usado para texto e para geracao de background.',
+    helper: 'Usado para composicao de conteudo e fundos gerados.',
     defaultLimit: 1500,
   },
   {
     id: 'firecrawl',
     name: 'Firecrawl',
-    description: 'Raspagem de artigos e analise de URLs.',
+    description: 'Coleta de paginas e artigos estruturados.',
     link: 'https://www.firecrawl.dev',
-    helper: 'Necessario para enriquecer posts a partir de source_url.',
+    helper: 'Necessario para extraoes editoriais e scraping contextual.',
     defaultLimit: 500,
   },
   {
     id: 'steel',
     name: 'Steel',
-    description: 'Navegador na nuvem (Puppeteer/Playwright).',
+    description: 'Runtime de navegador remoto para captura visual.',
     link: 'https://steel.dev',
-    helper: 'Usado para clonagem profunda de identidade visual.',
+    helper: 'Usado em Web Cloner e fluxos que exigem screenshot real.',
     defaultLimit: 100,
   },
 ];
 
 const RSS_CATEGORIES = ['Tecnologia', 'Marketing', 'Negocios', 'Geral', 'Saude', 'Educacao'];
-
 const MODEL_OPTIONS = [
   'llama-3.3-70b-versatile',
   'mixtral-8x7b-32768',
@@ -102,7 +108,7 @@ const MODEL_OPTIONS = [
 const createDraft = (provider: ProviderId): KeyDraft => ({
   alias: '',
   key_value: '',
-  daily_limit: PROVIDERS.find(item => item.id === provider)?.defaultLimit || 100,
+  daily_limit: PROVIDERS.find((item) => item.id === provider)?.defaultLimit || 100,
 });
 
 const createPreferenceKey = (workspaceId?: string) =>
@@ -137,13 +143,6 @@ const SettingsPage = () => {
       ? 'preferences'
       : 'keys';
 
-  const inputClass = 'w-full px-3 py-2 rounded-xl text-sm outline-none transition-colors';
-  const inputStyle = {
-    background: 'var(--bg-card)',
-    border: '1px solid var(--border)',
-    color: 'var(--text-1)',
-  } as const;
-
   const loadData = useCallback(async () => {
     if (!workspace?.id) return;
 
@@ -177,10 +176,9 @@ const SettingsPage = () => {
 
     try {
       const parsed = JSON.parse(raw) as Partial<GenerationPreferences>;
-      setPreferences(current => ({
+      setPreferences((current) => ({
         preferred_model: parsed.preferred_model || current.preferred_model,
-        export_quality:
-          parsed.export_quality === '2160px' ? '2160px' : current.export_quality,
+        export_quality: parsed.export_quality === '2160px' ? '2160px' : current.export_quality,
         language:
           parsed.language === 'en-US' || parsed.language === 'es-ES' ? parsed.language : current.language,
       }));
@@ -190,7 +188,7 @@ const SettingsPage = () => {
   }, [preferenceStorageKey]);
 
   const setKeyDraft = (provider: ProviderId, patch: Partial<KeyDraft>) => {
-    setKeyDrafts(current => ({
+    setKeyDrafts((current) => ({
       ...current,
       [provider]: { ...current[provider], ...patch },
     }));
@@ -222,8 +220,8 @@ const SettingsPage = () => {
       return;
     }
 
-    setApiKeys(current => [...current, data as ApiKeyRecord]);
-    setKeyDrafts(current => ({ ...current, [provider]: createDraft(provider) }));
+    setApiKeys((current) => [...current, data as ApiKeyRecord]);
+    setKeyDrafts((current) => ({ ...current, [provider]: createDraft(provider) }));
     toast.success(`Chave ${provider} adicionada`);
   };
 
@@ -236,7 +234,7 @@ const SettingsPage = () => {
       return;
     }
 
-    setApiKeys(current => current.filter(item => item.id !== id));
+    setApiKeys((current) => current.filter((item) => item.id !== id));
     toast.success('Chave removida');
   };
 
@@ -247,7 +245,7 @@ const SettingsPage = () => {
       return;
     }
 
-    setApiKeys(current => current.map(item => (item.id === id ? { ...item, is_active: nextValue } : item)));
+    setApiKeys((current) => current.map((item) => (item.id === id ? { ...item, is_active: nextValue } : item)));
   };
 
   const addFeed = async () => {
@@ -273,7 +271,7 @@ const SettingsPage = () => {
       return;
     }
 
-    setRssFeeds(current => [...current, data as RssFeedRecord]);
+    setRssFeeds((current) => [...current, data as RssFeedRecord]);
     setNewFeed({ name: '', url: '', category: 'Tecnologia' });
     toast.success('Feed RSS adicionado');
   };
@@ -285,7 +283,7 @@ const SettingsPage = () => {
       return;
     }
 
-    setRssFeeds(current => current.filter(feed => feed.id !== id));
+    setRssFeeds((current) => current.filter((feed) => feed.id !== id));
     toast.success('Feed removido');
   };
 
@@ -296,7 +294,7 @@ const SettingsPage = () => {
       return;
     }
 
-    setRssFeeds(current => current.map(feed => (feed.id === id ? { ...feed, is_active: nextValue } : feed)));
+    setRssFeeds((current) => current.map((feed) => (feed.id === id ? { ...feed, is_active: nextValue } : feed)));
   };
 
   const savePreferences = () => {
@@ -311,63 +309,73 @@ const SettingsPage = () => {
     { name: 'MIT Technology Review', url: 'https://www.technologyreview.com/topnews.rss' },
   ];
 
+  const stats = useMemo(
+    () => ({
+      keys: apiKeys.length,
+      activeKeys: apiKeys.filter((item) => item.is_active).length,
+      feeds: rssFeeds.length,
+    }),
+    [apiKeys, rssFeeds],
+  );
+
+  const renderKeyValue = (key: ApiKeyRecord) => {
+    if (showValues[key.id]) return key.key_value;
+    return `${'*'.repeat(16)}${key.key_value.slice(-6)}`;
+  };
+
   return (
     <div className="page-layout">
-      <div className="page-hero">
-        <div className="relative z-10">
-          <p className="page-hero-eyebrow">Intelligence Suite • Configurações</p>
-          <h1 className="page-hero-title" style={{ fontSize: '2rem' }}>Configurações</h1>
-          <p className="text-sm mt-2" style={{ color: 'var(--text-3)' }}>
-            Chaves de API, Feeds RSS e preferências de geração do workspace
-          </p>
-        </div>
-      </div>
-
       <div className="page-content no-scrollbar">
-        <div className="p-6">
-          <div className="max-w-4xl mx-auto">
+        <div className="page-inner space-y-6 py-6">
+          <PageHeader
+            eyebrow="Configuracoes"
+            title="Providers, feeds e preferencias do workspace"
+            description="Concentre credenciais, fontes RSS e defaults operacionais em um unico painel limpo."
+          />
+
+          <section className="grid gap-4 md:grid-cols-3">
+            <MetricCard label="Chaves cadastradas" value={stats.keys} icon={Key} />
+            <MetricCard label="Chaves ativas" value={stats.activeKeys} icon={Settings} />
+            <MetricCard label="Feeds RSS" value={stats.feeds} icon={Rss} />
+          </section>
+
           <Tabs
             value={activeTab}
             onValueChange={(value) => setSearchParams(value === 'keys' ? {} : { tab: value })}
+            className="space-y-6"
           >
-            <TabsList
-              className="mb-6"
-              style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
-            >
-              <TabsTrigger value="keys">
-                <Key size={14} className="mr-1" />
+            <TabsList className="h-auto flex-wrap justify-start gap-2 rounded-2xl border border-[var(--border)] bg-[var(--surface-card)] p-2">
+              <TabsTrigger value="keys" className="rounded-xl px-4 py-2 data-[state=active]:bg-[var(--surface-2)]">
+                <Key size={14} className="mr-2" />
                 Chaves de API
               </TabsTrigger>
-              <TabsTrigger value="rss">
-                <Rss size={14} className="mr-1" />
+              <TabsTrigger value="rss" className="rounded-xl px-4 py-2 data-[state=active]:bg-[var(--surface-2)]">
+                <Rss size={14} className="mr-2" />
                 Feeds RSS
               </TabsTrigger>
-              <TabsTrigger value="preferences">
-                <Settings size={14} className="mr-1" />
+              <TabsTrigger
+                value="preferences"
+                className="rounded-xl px-4 py-2 data-[state=active]:bg-[var(--surface-2)]"
+              >
+                <Settings size={14} className="mr-2" />
                 Preferencias
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="keys" className="space-y-6">
-              {PROVIDERS.map(provider => {
-                const providerKeys = apiKeys.filter(item => item.provider === provider.id);
+            <TabsContent value="keys" className="space-y-4">
+              {PROVIDERS.map((provider) => {
+                const providerKeys = apiKeys.filter((item) => item.provider === provider.id);
                 const draft = keyDrafts[provider.id];
 
                 return (
-                  <div
-                    key={provider.id}
-                    className="rounded-2xl p-5 space-y-4"
-                    style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
-                  >
-                    <div className="flex items-center justify-between gap-4">
+                  <SectionCard key={provider.id} className="space-y-4">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                       <div>
-                        <h3 className="font-semibold font-display" style={{ color: 'var(--text-1)' }}>
-                          {provider.name}
-                        </h3>
-                        <p className="text-xs" style={{ color: 'var(--text-3)' }}>
+                        <AppSectionLabel>{provider.name}</AppSectionLabel>
+                        <h2 className="mt-2 text-xl font-semibold tracking-[-0.03em] text-[var(--text-primary)]">
                           {provider.description}
-                        </p>
-                        <p className="text-[11px] mt-1" style={{ color: 'var(--text-3)' }}>
+                        </h2>
+                        <p className="mt-2 max-w-[720px] text-sm leading-6 text-[var(--text-secondary)]">
                           {provider.helper}
                         </p>
                       </div>
@@ -375,277 +383,239 @@ const SettingsPage = () => {
                         href={provider.link}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-xs"
-                        style={{ color: 'var(--primary)' }}
+                        className="text-sm font-medium text-[var(--workspace-brand)]"
                       >
-                        Como obter chave gratis
+                        Como obter chave
                       </a>
                     </div>
 
                     {providerKeys.length > 0 ? (
-                      <div className="space-y-2">
-                        {providerKeys.map(key => (
+                      <div className="space-y-3">
+                        {providerKeys.map((key) => (
                           <div
                             key={key.id}
-                            className="flex items-center gap-3 p-3 rounded-xl"
-                            style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}
+                            className="flex flex-col gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4 md:flex-row md:items-center"
                           >
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-medium truncate" style={{ color: 'var(--text-1)' }}>
-                                {key.alias || `${provider.name} key`}
-                              </p>
-                              <p className="text-[10px] font-mono" style={{ color: 'var(--text-3)' }}>
-                                {showValues[key.id]
-                                  ? key.key_value
-                                  : `${'*'.repeat(16)}${key.key_value.slice(-6)}`}
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="text-sm font-semibold text-[var(--text-primary)]">
+                                  {key.alias || `${provider.name} key`}
+                                </p>
+                                <SubtleBadge variant={key.is_active ? 'brand' : 'outline'}>
+                                  {key.is_active ? 'Ativa' : 'Pausada'}
+                                </SubtleBadge>
+                              </div>
+                              <p className="mt-2 break-all font-mono text-xs text-[var(--text-muted)]">
+                                {renderKeyValue(key)}
                               </p>
                             </div>
 
-                            <span
-                              className="text-[10px] font-mono shrink-0"
-                              style={{
-                                color:
-                                  (key.calls_today || 0) >= (key.daily_limit || 0)
-                                    ? '#EF4444'
-                                    : 'var(--text-3)',
-                              }}
-                            >
-                              {key.calls_today || 0}/{key.daily_limit || 0}
-                            </span>
-
-                            <div
-                              className="w-8 h-4 rounded-full cursor-pointer transition-colors shrink-0"
-                              style={{
-                                background: key.is_active ? 'var(--primary)' : 'var(--bg-card)',
-                                border: '1px solid var(--border)',
-                              }}
-                              onClick={() => toggleKey(key.id, !key.is_active)}
-                            >
-                              <div
-                                className="w-3 h-3 rounded-full bg-white transition-transform mt-0.5"
-                                style={{
-                                  transform: key.is_active ? 'translateX(18px)' : 'translateX(1px)',
-                                }}
-                              />
+                            <div className="flex items-center gap-3">
+                              <span className="text-xs font-mono text-[var(--text-muted)]">
+                                {key.calls_today || 0}/{key.daily_limit || 0}
+                              </span>
+                              <Button variant="ghost" size="icon" onClick={() => setShowValues((current) => ({ ...current, [key.id]: !current[key.id] }))}>
+                                {showValues[key.id] ? <EyeOff size={16} /> : <Eye size={16} />}
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => toggleKey(key.id, !key.is_active)}>
+                                <Settings size={16} />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => deleteKey(key.id)}>
+                                <Trash2 size={16} className="text-red-600" />
+                              </Button>
                             </div>
-
-                            <button onClick={() => setShowValues(current => ({ ...current, [key.id]: !current[key.id] }))}>
-                              {showValues[key.id] ? (
-                                <EyeOff size={14} style={{ color: 'var(--text-3)' }} />
-                              ) : (
-                                <Eye size={14} style={{ color: 'var(--text-3)' }} />
-                              )}
-                            </button>
-
-                            <button onClick={() => deleteKey(key.id)}>
-                              <Trash2 size={14} style={{ color: '#EF4444' }} />
-                            </button>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <div
-                        className="rounded-xl px-4 py-3 text-sm"
-                        style={{ background: 'var(--bg-elevated)', border: '1px dashed var(--border)', color: 'var(--text-3)' }}
-                      >
+                      <div className="rounded-2xl border border-dashed border-[var(--border-strong)] bg-[var(--surface-2)] px-4 py-4 text-sm text-[var(--text-secondary)]">
                         Nenhuma chave configurada para {provider.name}.
                       </div>
                     )}
 
-                    <div className="grid grid-cols-4 gap-2">
-                      <input
+                    <div className="grid gap-3 xl:grid-cols-[1fr_1.4fr_160px_160px]">
+                      <Input
                         value={draft.alias}
-                        onChange={event => setKeyDraft(provider.id, { alias: event.target.value })}
+                        onChange={(event) => setKeyDraft(provider.id, { alias: event.target.value })}
                         placeholder="Alias"
-                        className={inputClass}
-                        style={inputStyle}
+                        className="h-11 rounded-xl bg-[var(--surface-2)]"
                       />
-                      <input
+                      <Input
                         type="password"
                         value={draft.key_value}
-                        onChange={event => setKeyDraft(provider.id, { key_value: event.target.value })}
+                        onChange={(event) => setKeyDraft(provider.id, { key_value: event.target.value })}
                         placeholder="API key"
-                        className={inputClass}
-                        style={inputStyle}
+                        className="h-11 rounded-xl bg-[var(--surface-2)]"
                       />
-                      <input
+                      <Input
                         type="number"
                         min={1}
                         value={draft.daily_limit}
-                        onChange={event =>
+                        onChange={(event) =>
                           setKeyDraft(provider.id, { daily_limit: Math.max(1, Number(event.target.value) || 1) })
                         }
                         placeholder="Limite diario"
-                        className={inputClass}
-                        style={inputStyle}
+                        className="h-11 rounded-xl bg-[var(--surface-2)]"
                       />
-                      <button
-                        onClick={() => addKey(provider.id)}
-                        className="flex items-center justify-center gap-1 py-2 rounded-xl text-sm font-medium transition-all"
-                        style={{ background: 'var(--primary-muted)', border: '1px solid var(--primary)', color: 'var(--primary)' }}
-                      >
+                      <Button onClick={() => addKey(provider.id)} className="h-11 rounded-xl">
                         <Plus size={14} />
                         Adicionar
-                      </button>
+                      </Button>
                     </div>
-                  </div>
+                  </SectionCard>
                 );
               })}
             </TabsContent>
 
             <TabsContent value="rss" className="space-y-4">
-              <div className="rounded-2xl p-5" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-                <h3 className="font-semibold font-display mb-4" style={{ color: 'var(--text-1)' }}>
-                  Sugestoes populares
-                </h3>
+              <SectionCard className="space-y-4">
+                <div>
+                  <AppSectionLabel>Sugestoes populares</AppSectionLabel>
+                  <h2 className="mt-2 text-xl font-semibold tracking-[-0.03em] text-[var(--text-primary)]">
+                    Seeds de feed para comecar rapido
+                  </h2>
+                </div>
                 <div className="flex flex-wrap gap-2">
-                  {feedSuggestions.map(feed => (
+                  {feedSuggestions.map((feed) => (
                     <button
                       key={feed.name}
                       onClick={() => setNewFeed({ name: feed.name, url: feed.url, category: 'Tecnologia' })}
-                      className="chip text-xs"
+                      className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-card)]"
                     >
                       + {feed.name}
                     </button>
                   ))}
                 </div>
-              </div>
+              </SectionCard>
 
-              <div className="rounded-2xl p-5 space-y-3" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-                <h3 className="font-semibold font-display" style={{ color: 'var(--text-1)' }}>
-                  Adicionar feed
-                </h3>
+              <SectionCard className="space-y-4">
+                <div>
+                  <AppSectionLabel>Novo feed</AppSectionLabel>
+                  <h2 className="mt-2 text-xl font-semibold tracking-[-0.03em] text-[var(--text-primary)]">
+                    Adicionar fonte RSS ao workspace
+                  </h2>
+                </div>
 
-                <div className="grid grid-cols-2 gap-2">
-                  <input
+                <div className="grid gap-3 md:grid-cols-2">
+                  <Input
                     value={newFeed.name}
-                    onChange={event => setNewFeed(current => ({ ...current, name: event.target.value }))}
+                    onChange={(event) => setNewFeed((current) => ({ ...current, name: event.target.value }))}
                     placeholder="Nome do feed"
-                    className={inputClass}
-                    style={inputStyle}
+                    className="h-11 rounded-xl bg-[var(--surface-2)]"
                   />
                   <select
                     value={newFeed.category}
-                    onChange={event => setNewFeed(current => ({ ...current, category: event.target.value }))}
-                    className={inputClass}
-                    style={{ ...inputStyle, cursor: 'pointer' }}
+                    onChange={(event) => setNewFeed((current) => ({ ...current, category: event.target.value }))}
+                    className="h-11 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 text-sm text-[var(--text-primary)]"
                   >
-                    {RSS_CATEGORIES.map(category => (
+                    {RSS_CATEGORIES.map((category) => (
                       <option key={category}>{category}</option>
                     ))}
                   </select>
                 </div>
 
-                <div className="flex gap-2">
-                  <input
+                <div className="flex flex-col gap-3 md:flex-row">
+                  <Input
                     value={newFeed.url}
-                    onChange={event => setNewFeed(current => ({ ...current, url: event.target.value }))}
+                    onChange={(event) => setNewFeed((current) => ({ ...current, url: event.target.value }))}
                     placeholder="URL do feed RSS"
-                    className={`${inputClass} flex-1`}
-                    style={inputStyle}
+                    className="h-11 rounded-xl bg-[var(--surface-2)]"
                   />
-                  <button
-                    onClick={addFeed}
-                    className="flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-medium"
-                    style={{ background: 'var(--primary)', color: 'white' }}
-                  >
+                  <Button onClick={addFeed} className="h-11 rounded-xl px-5">
                     <Plus size={14} />
                     Adicionar
-                  </button>
+                  </Button>
                 </div>
-              </div>
+              </SectionCard>
 
-              {rssFeeds.length > 0 && (
-                <div className="space-y-2">
-                  {rssFeeds.map(feed => (
+              <SectionCard className="space-y-3">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <AppSectionLabel>Feeds ativos</AppSectionLabel>
+                    <h2 className="mt-2 text-xl font-semibold tracking-[-0.03em] text-[var(--text-primary)]">
+                      Fontes cadastradas
+                    </h2>
+                  </div>
+                  <SubtleBadge>{rssFeeds.length} fontes</SubtleBadge>
+                </div>
+
+                {rssFeeds.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-[var(--border-strong)] bg-[var(--surface-2)] px-4 py-4 text-sm text-[var(--text-secondary)]">
+                    Nenhum feed cadastrado ainda.
+                  </div>
+                ) : (
+                  rssFeeds.map((feed) => (
                     <div
                       key={feed.id}
-                      className="flex items-center gap-3 p-3 rounded-xl"
-                      style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
+                      className="flex flex-col gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4 md:flex-row md:items-center"
                     >
-                      <Rss size={14} style={{ color: 'var(--accent)', flexShrink: 0 }} />
-
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate" style={{ color: 'var(--text-1)' }}>
-                          {feed.name || feed.url}
-                        </p>
-                        <p className="text-[10px] truncate" style={{ color: 'var(--text-3)' }}>
-                          {feed.url}
-                        </p>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-sm font-semibold text-[var(--text-primary)]">{feed.name || feed.url}</p>
+                          <SubtleBadge variant={feed.is_active ? 'brand' : 'outline'}>
+                            {feed.is_active ? 'Ativo' : 'Pausado'}
+                          </SubtleBadge>
+                          <SubtleBadge variant="outline">{feed.category || 'Geral'}</SubtleBadge>
+                        </div>
+                        <p className="mt-2 truncate text-xs text-[var(--text-muted)]">{feed.url}</p>
                       </div>
-
-                      <span className="chip text-[10px]">{feed.category || 'Geral'}</span>
-
-                      <div
-                        className="w-8 h-4 rounded-full cursor-pointer transition-colors shrink-0"
-                        style={{
-                          background: feed.is_active ? 'var(--primary)' : 'var(--bg-card)',
-                          border: '1px solid var(--border)',
-                        }}
-                        onClick={() => toggleFeed(feed.id, !feed.is_active)}
-                      >
-                        <div
-                          className="w-3 h-3 rounded-full bg-white transition-transform mt-0.5"
-                          style={{ transform: feed.is_active ? 'translateX(18px)' : 'translateX(1px)' }}
-                        />
+                      <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="icon" onClick={() => toggleFeed(feed.id, !feed.is_active)}>
+                          <Settings size={16} />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => deleteFeed(feed.id)}>
+                          <Trash2 size={16} className="text-red-600" />
+                        </Button>
                       </div>
-
-                      <button onClick={() => deleteFeed(feed.id)}>
-                        <Trash2 size={14} style={{ color: '#EF4444' }} />
-                      </button>
                     </div>
-                  ))}
-                </div>
-              )}
+                  ))
+                )}
+              </SectionCard>
             </TabsContent>
 
             <TabsContent value="preferences" className="space-y-4">
-              <div className="rounded-2xl p-5 space-y-4" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+              <SectionCard className="space-y-5">
                 <div>
-                  <h3 className="font-semibold font-display" style={{ color: 'var(--text-1)' }}>
+                  <AppSectionLabel>Defaults locais</AppSectionLabel>
+                  <h2 className="mt-2 text-xl font-semibold tracking-[-0.03em] text-[var(--text-primary)]">
                     Preferencias de geracao
-                  </h3>
-                  <p className="text-xs mt-1" style={{ color: 'var(--text-3)' }}>
-                    Estas preferencias ficam salvas localmente neste navegador ate existir tabela dedicada no schema.
+                  </h2>
+                  <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                    Esses defaults ficam salvos no navegador atual ate existir tabela dedicada no schema.
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 gap-4">
-                  <label className="space-y-1">
-                    <span className="text-xs" style={{ color: 'var(--text-3)' }}>
-                      Modelo preferido para textos
-                    </span>
+                <div className="grid gap-5">
+                  <label className="space-y-2">
+                    <span className="text-sm font-medium text-[var(--text-primary)]">Modelo preferido para textos</span>
                     <select
                       value={preferences.preferred_model}
-                      onChange={event =>
-                        setPreferences(current => ({ ...current, preferred_model: event.target.value }))
+                      onChange={(event) =>
+                        setPreferences((current) => ({ ...current, preferred_model: event.target.value }))
                       }
-                      className={inputClass}
-                      style={{ ...inputStyle, cursor: 'pointer' }}
+                      className="h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 text-sm text-[var(--text-primary)]"
                     >
-                      {MODEL_OPTIONS.map(model => (
+                      {MODEL_OPTIONS.map((model) => (
                         <option key={model}>{model}</option>
                       ))}
                     </select>
                   </label>
 
-                  <label className="space-y-1">
-                    <span className="text-xs" style={{ color: 'var(--text-3)' }}>
-                      Qualidade de exportacao
-                    </span>
-                    <div className="flex gap-2">
-                      {(['1080px', '2160px'] as const).map(option => (
+                  <label className="space-y-2">
+                    <span className="text-sm font-medium text-[var(--text-primary)]">Qualidade de exportacao</span>
+                    <div className="flex flex-wrap gap-2">
+                      {(['1080px', '2160px'] as const).map((option) => (
                         <button
                           key={option}
-                          onClick={() => setPreferences(current => ({ ...current, export_quality: option }))}
-                          className="chip"
+                          onClick={() => setPreferences((current) => ({ ...current, export_quality: option }))}
+                          className="rounded-lg border px-3 py-2 text-sm transition-colors"
                           style={{
                             background:
-                              preferences.export_quality === option ? 'var(--primary-muted)' : 'var(--bg-elevated)',
+                              preferences.export_quality === option ? 'var(--workspace-brand-soft)' : 'var(--surface-2)',
                             borderColor:
-                              preferences.export_quality === option ? 'var(--primary)' : 'var(--border)',
+                              preferences.export_quality === option ? 'var(--workspace-brand-border)' : 'var(--border)',
                             color:
-                              preferences.export_quality === option ? 'var(--primary)' : 'var(--text-2)',
+                              preferences.export_quality === option ? 'var(--workspace-brand)' : 'var(--text-secondary)',
                           }}
                         >
                           {option}
@@ -654,20 +624,17 @@ const SettingsPage = () => {
                     </div>
                   </label>
 
-                  <label className="space-y-1">
-                    <span className="text-xs" style={{ color: 'var(--text-3)' }}>
-                      Idioma padrao
-                    </span>
+                  <label className="space-y-2">
+                    <span className="text-sm font-medium text-[var(--text-primary)]">Idioma padrao</span>
                     <select
                       value={preferences.language}
-                      onChange={event =>
-                        setPreferences(current => ({
+                      onChange={(event) =>
+                        setPreferences((current) => ({
                           ...current,
                           language: event.target.value as GenerationPreferences['language'],
                         }))
                       }
-                      className={inputClass}
-                      style={{ ...inputStyle, cursor: 'pointer' }}
+                      className="h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 text-sm text-[var(--text-primary)]"
                     >
                       <option value="pt-BR">Portugues BR</option>
                       <option value="en-US">English</option>
@@ -676,23 +643,18 @@ const SettingsPage = () => {
                   </label>
                 </div>
 
-                <button
-                  onClick={savePreferences}
-                  className="px-4 py-2 rounded-xl text-sm font-semibold"
-                  style={{ background: 'var(--primary)', color: 'white' }}
-                >
-                  Salvar preferencias
-                </button>
-              </div>
+                <div className="flex justify-end">
+                  <Button onClick={savePreferences} className="rounded-xl px-5">
+                    Salvar preferencias
+                  </Button>
+                </div>
+              </SectionCard>
             </TabsContent>
           </Tabs>
 
-          {isLoading && (
-            <div className="mt-4 text-sm" style={{ color: 'var(--text-3)' }}>
-              Carregando configuracoes...
-            </div>
-          )}
-          </div>
+          {isLoading ? (
+            <div className="text-sm text-[var(--text-secondary)]">Carregando configuracoes...</div>
+          ) : null}
         </div>
       </div>
     </div>

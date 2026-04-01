@@ -10,6 +10,11 @@ import {
 import JSZip from 'jszip';
 import { Download, FileCode2, Loader2, MessageSquare, Plus, Send, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
+import AppSectionLabel from '@/components/shared/AppSectionLabel';
+import EmptyState from '@/components/shared/EmptyState';
+import PageHeader from '@/components/shared/PageHeader';
+import SectionCard from '@/components/shared/SectionCard';
+import SubtleBadge from '@/components/shared/SubtleBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -23,6 +28,7 @@ type Conversation = Tables<'platform_conversations'>;
 
 const adaptFilesForSandpack = (files: Record<string, string>) => {
   const next: Record<string, string> = {};
+
   for (const [path, content] of Object.entries(files)) {
     if (path.startsWith('/src/')) {
       next[path.replace('/src', '')] = content;
@@ -64,8 +70,11 @@ const VibeCoderPage = () => {
     [projects, selectedProjectId],
   );
 
+  const projectSummary = useMemo(() => buildProjectSummary(sourceFiles), [sourceFiles]);
+
   const loadProjects = useCallback(async () => {
     if (!workspace?.id) return;
+
     const { data, error } = await supabase
       .from('projects')
       .select('*')
@@ -97,6 +106,7 @@ const VibeCoderPage = () => {
 
   const loadConversations = useCallback(async (projectId: string) => {
     if (!workspace?.id) return;
+
     const { data } = await supabase
       .from('platform_conversations')
       .select('*')
@@ -104,6 +114,7 @@ const VibeCoderPage = () => {
       .eq('project_id', projectId)
       .order('created_at', { ascending: false })
       .limit(20);
+
     setConversations((data || []) as Conversation[]);
   }, [workspace?.id]);
 
@@ -124,6 +135,7 @@ const VibeCoderPage = () => {
       toast.error('Defina um nome para o projeto');
       return;
     }
+
     setCreating(true);
     try {
       const payload = {
@@ -154,6 +166,7 @@ const VibeCoderPage = () => {
       toast.error('Selecione um projeto e descreva a alteracao');
       return;
     }
+
     setSending(true);
     try {
       const { data, error } = await supabase.functions.invoke('project-chat-build', {
@@ -196,6 +209,7 @@ const VibeCoderPage = () => {
 
   const exportHtml = async () => {
     if (!workspace?.id || !selectedProjectId) return;
+
     setExportingHtml(true);
     try {
       const { data, error } = await supabase.functions.invoke('project-export', {
@@ -206,7 +220,11 @@ const VibeCoderPage = () => {
         },
       });
       if (error) throw error;
-      downloadFile(`${(data?.title || selectedProject?.name || 'project').replace(/\s+/g, '-').toLowerCase()}.html`, data?.html || '', 'text/html;charset=utf-8');
+      downloadFile(
+        `${(data?.title || selectedProject?.name || 'project').replace(/\s+/g, '-').toLowerCase()}.html`,
+        data?.html || '',
+        'text/html;charset=utf-8',
+      );
       toast.success('HTML exportado');
     } catch (error) {
       console.error(error);
@@ -217,126 +235,228 @@ const VibeCoderPage = () => {
   };
 
   return (
-    <div className="flex h-full w-full overflow-hidden" style={{ background: 'var(--bg-app)' }}>
-      <aside className="w-[360px] shrink-0 border-r overflow-y-auto no-scrollbar" style={{ borderColor: 'var(--border)', background: 'var(--bg-surface)' }}>
-        <div className="p-6 border-b" style={{ borderColor: 'var(--border)' }}>
-          <p className="text-xs uppercase tracking-[0.24em]" style={{ color: 'var(--text-3)' }}>VibeCoder</p>
-          <h1 className="mt-2 text-2xl font-display font-bold" style={{ color: 'var(--text-1)' }}>Builder multi-file</h1>
-          <p className="mt-2 text-sm leading-6" style={{ color: 'var(--text-3)' }}>
-            Chat de constru��o com preview React em tempo real e VFS persistido em `projects.source_files_json`.
-          </p>
-        </div>
-
-        <div className="p-6 space-y-4">
-          <Input value={projectName} onChange={(event) => setProjectName(event.target.value)} placeholder="Nome do projeto" />
-          <Button onClick={createProject} disabled={creating} className="w-full gap-2" style={{ background: 'var(--primary)', color: '#fff' }}>
-            {creating ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
-            {creating ? 'Criando...' : 'Novo projeto'}
-          </Button>
-
-          <div className="space-y-2">
-            {projects.map((project) => (
-              <button
-                key={project.id}
-                onClick={() => {
-                  setSelectedProjectId(project.id);
-                  if (project.source_files_json && typeof project.source_files_json === 'object') {
-                    setSourceFiles(project.source_files_json as Record<string, string>);
-                  }
-                }}
-                className="w-full rounded-2xl p-4 text-left transition-all"
-                style={{
-                  background: selectedProjectId === project.id ? 'var(--primary-muted)' : 'var(--bg-card)',
-                  border: `1px solid ${selectedProjectId === project.id ? 'var(--primary)' : 'var(--border)'}`,
-                }}
-              >
-                <p className="text-xs uppercase tracking-[0.2em]" style={{ color: 'var(--text-3)' }}>{project.status || 'draft'}</p>
-                <p className="mt-1 font-semibold" style={{ color: 'var(--text-1)' }}>{project.name}</p>
-              </button>
-            ))}
-          </div>
-
-          <div className="rounded-3xl p-4 space-y-3" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-            <div className="flex items-center gap-2">
-              <MessageSquare size={14} style={{ color: 'var(--primary)' }} />
-              <p className="text-xs uppercase tracking-[0.2em]" style={{ color: 'var(--text-3)' }}>Chat vibe</p>
-            </div>
-            <Textarea
-              value={prompt}
-              onChange={(event) => setPrompt(event.target.value)}
-              className="min-h-[140px] resize-none"
-              placeholder="Ex: crie uma hero com prova social, CTA forte e cards de benefícios"
-            />
-            <Button onClick={sendPrompt} disabled={sending || !selectedProjectId} className="w-full gap-2" style={{ background: 'var(--primary)', color: '#fff' }}>
-              {sending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-              {sending ? 'Aplicando...' : 'Enviar instru��o'}
-            </Button>
-          </div>
-
-          <div className="rounded-3xl p-4 space-y-3" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-            <div className="flex items-center gap-2">
-              <FileCode2 size={14} style={{ color: 'var(--primary)' }} />
-              <p className="text-xs uppercase tracking-[0.2em]" style={{ color: 'var(--text-3)' }}>Exportacao</p>
-            </div>
-            <Button variant="outline" onClick={exportZip} className="w-full gap-2" disabled={!selectedProjectId}>
-              <Download size={14} />
-              Baixar ZIP
-            </Button>
-            <Button variant="outline" onClick={exportHtml} className="w-full gap-2" disabled={!selectedProjectId || exportingHtml}>
-              {exportingHtml ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-              HTML unico
-            </Button>
-          </div>
-        </div>
-      </aside>
-
-      <div className="flex-1 min-w-0 overflow-hidden">
-        <div className="px-8 py-6 border-b flex items-center justify-between" style={{ borderColor: 'var(--border)', background: 'var(--bg-surface)' }}>
-          <div>
-            <p className="text-xs uppercase tracking-[0.2em]" style={{ color: 'var(--text-3)' }}>Preview Runtime</p>
-            <h2 className="mt-2 text-2xl font-display font-bold" style={{ color: 'var(--text-1)' }}>{selectedProject?.name || 'Selecione um projeto'}</h2>
-          </div>
-          {selectedProject && (
-            <div className="text-right">
-              <p className="text-xs uppercase tracking-[0.2em]" style={{ color: 'var(--text-3)' }}>Resumo</p>
-              <p className="mt-1 text-sm" style={{ color: 'var(--text-2)' }}>
-                {buildProjectSummary(sourceFiles).fileCount} arquivos · {buildProjectSummary(sourceFiles).totalChars} chars
-              </p>
-            </div>
-          )}
-        </div>
-
-        <div className="grid grid-cols-1 xl:grid-cols-[1.4fr_0.6fr] h-[calc(100%-89px)]">
-          <div className="min-w-0 border-r" style={{ borderColor: 'var(--border)' }}>
-            <SandpackProvider template="react-ts" files={adaptFilesForSandpack(sourceFiles)} theme="dark">
-              <SandpackLayout style={{ height: '100%' }}>
-                <SandpackFileExplorer style={{ minWidth: 220, maxWidth: 260 }} />
-                <SandpackCodeEditor style={{ height: '100%' }} showTabs showLineNumbers />
-                <SandpackPreview style={{ height: '100%' }} showOpenInCodeSandbox={false} />
-              </SandpackLayout>
-            </SandpackProvider>
-          </div>
-
-          <div className="overflow-y-auto no-scrollbar p-6 space-y-3">
-            <p className="text-xs uppercase tracking-[0.2em]" style={{ color: 'var(--text-3)' }}>Historico</p>
-            {conversations.length === 0 ? (
-              <div className="rounded-2xl p-4 text-sm" style={{ background: 'var(--bg-card)', color: 'var(--text-3)' }}>
-                Ainda nao ha interacoes. Envie a primeira instru��o para modificar o app.
+    <div className="page-layout overflow-hidden">
+      <div className="page-content no-scrollbar">
+        <div className="page-inner flex h-full max-w-none flex-col gap-6 py-6">
+          <PageHeader
+            eyebrow="VibeCoder"
+            title="Builder multi-file com preview vivo"
+            description="Converse com o projeto, persista o VFS no banco e exporte o artefato final sem sair do workspace."
+            action={
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" className="rounded-xl" disabled={!selectedProjectId} onClick={exportZip}>
+                  <Download size={14} />
+                  ZIP
+                </Button>
+                <Button variant="outline" className="rounded-xl" disabled={!selectedProjectId || exportingHtml} onClick={exportHtml}>
+                  {exportingHtml ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                  HTML unico
+                </Button>
               </div>
-            ) : (
-              conversations.map((conversation) => (
-                <article key={conversation.id} className="rounded-2xl p-4" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-                  <p className="text-xs uppercase tracking-[0.2em]" style={{ color: 'var(--text-3)' }}>{conversation.mode || 'chat'}</p>
-                  <p className="mt-2 text-sm font-semibold" style={{ color: 'var(--text-1)' }}>{conversation.user_message}</p>
-                  {conversation.assistant_response && (
-                    <p className="mt-3 text-sm leading-6" style={{ color: 'var(--text-2)' }}>{conversation.assistant_response}</p>
+            }
+          />
+
+          <div className="grid min-h-0 flex-1 gap-6 xl:grid-cols-[320px_minmax(0,1fr)_320px]">
+            <div className="flex min-h-0 flex-col gap-6">
+              <SectionCard className="space-y-4">
+                <div>
+                  <AppSectionLabel>Novo projeto</AppSectionLabel>
+                  <h2 className="mt-2 text-xl font-semibold tracking-[-0.03em] text-[var(--text-primary)]">
+                    Abrir um novo playground
+                  </h2>
+                </div>
+                <Input
+                  value={projectName}
+                  onChange={(event) => setProjectName(event.target.value)}
+                  placeholder="Nome do projeto"
+                  className="h-11 rounded-xl bg-[var(--surface-2)]"
+                />
+                <Button onClick={createProject} disabled={creating} className="h-11 w-full rounded-xl">
+                  {creating ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                  {creating ? 'Criando...' : 'Novo projeto'}
+                </Button>
+              </SectionCard>
+
+              <SectionCard className="flex min-h-0 flex-1 flex-col gap-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <AppSectionLabel>Projetos</AppSectionLabel>
+                    <h2 className="mt-2 text-xl font-semibold tracking-[-0.03em] text-[var(--text-primary)]">
+                      Biblioteca ativa
+                    </h2>
+                  </div>
+                  <SubtleBadge>{projects.length}</SubtleBadge>
+                </div>
+
+                <div className="min-h-0 space-y-3 overflow-y-auto pr-1">
+                  {projects.length === 0 ? (
+                    <EmptyState
+                      title="Nenhum projeto ainda"
+                      description="Crie o primeiro projeto para abrir o editor com preview React."
+                      icon={FileCode2}
+                      className="min-h-[180px]"
+                    />
+                  ) : (
+                    projects.map((project) => (
+                      <button
+                        key={project.id}
+                        onClick={() => {
+                          setSelectedProjectId(project.id);
+                          if (project.source_files_json && typeof project.source_files_json === 'object') {
+                            setSourceFiles(project.source_files_json as Record<string, string>);
+                          }
+                        }}
+                        className="w-full rounded-2xl border p-4 text-left transition-colors"
+                        style={{
+                          background:
+                            selectedProjectId === project.id ? 'var(--workspace-brand-soft)' : 'var(--surface-2)',
+                          borderColor:
+                            selectedProjectId === project.id ? 'var(--workspace-brand-border)' : 'var(--border)',
+                        }}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-sm font-semibold text-[var(--text-primary)]">{project.name}</p>
+                          <SubtleBadge variant={selectedProjectId === project.id ? 'brand' : 'outline'}>
+                            {project.status || 'draft'}
+                          </SubtleBadge>
+                        </div>
+                        <p className="mt-2 text-xs text-[var(--text-muted)]">
+                          {project.description || 'Projeto iniciado pelo builder'}
+                        </p>
+                      </button>
+                    ))
                   )}
-                  {conversation.diff_summary && (
-                    <p className="mt-3 text-xs leading-5" style={{ color: 'var(--text-3)' }}>{conversation.diff_summary}</p>
+                </div>
+              </SectionCard>
+
+              <SectionCard className="space-y-4">
+                <div>
+                  <AppSectionLabel>Chat vibe</AppSectionLabel>
+                  <h2 className="mt-2 text-xl font-semibold tracking-[-0.03em] text-[var(--text-primary)]">
+                    Instrucao de edicao
+                  </h2>
+                </div>
+                <Textarea
+                  value={prompt}
+                  onChange={(event) => setPrompt(event.target.value)}
+                  className="min-h-[160px] resize-none rounded-xl bg-[var(--surface-2)]"
+                  placeholder="Ex: crie uma hero com prova social, CTA forte e cards de beneficios"
+                />
+                <Button onClick={sendPrompt} disabled={sending || !selectedProjectId} className="h-11 w-full rounded-xl">
+                  {sending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                  {sending ? 'Aplicando...' : 'Enviar instrucao'}
+                </Button>
+              </SectionCard>
+            </div>
+
+            <SectionCard className="flex min-h-[680px] min-w-0 flex-col overflow-hidden p-0">
+              <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--border)] px-6 py-5">
+                <div>
+                  <AppSectionLabel>Preview runtime</AppSectionLabel>
+                  <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-[var(--text-primary)]">
+                    {selectedProject?.name || 'Selecione um projeto'}
+                  </h2>
+                </div>
+                {selectedProject ? (
+                  <div className="flex flex-wrap gap-2">
+                    <SubtleBadge>{projectSummary.fileCount} arquivos</SubtleBadge>
+                    <SubtleBadge variant="outline">{projectSummary.totalChars} chars</SubtleBadge>
+                  </div>
+                ) : null}
+              </div>
+
+              {selectedProjectId ? (
+                <div className="min-h-0 flex-1 overflow-hidden bg-[#0B0B0C]">
+                  <SandpackProvider template="react-ts" files={adaptFilesForSandpack(sourceFiles)} theme="dark">
+                    <SandpackLayout style={{ height: '100%' }}>
+                      <SandpackFileExplorer style={{ minWidth: 220, maxWidth: 260 }} />
+                      <SandpackCodeEditor style={{ height: '100%' }} showTabs showLineNumbers />
+                      <SandpackPreview style={{ height: '100%' }} showOpenInCodeSandbox={false} />
+                    </SandpackLayout>
+                  </SandpackProvider>
+                </div>
+              ) : (
+                <div className="flex flex-1 items-center justify-center p-8">
+                  <EmptyState
+                    title="Nenhum projeto selecionado"
+                    description="Escolha um projeto na lateral ou crie um novo playground para abrir o preview."
+                    icon={FileCode2}
+                  />
+                </div>
+              )}
+            </SectionCard>
+
+            <div className="flex min-h-0 flex-col gap-6">
+              <SectionCard className="space-y-4">
+                <div>
+                  <AppSectionLabel>Exportacao</AppSectionLabel>
+                  <h2 className="mt-2 text-xl font-semibold tracking-[-0.03em] text-[var(--text-primary)]">
+                    Artefatos do projeto
+                  </h2>
+                </div>
+                <Button variant="outline" onClick={exportZip} className="h-11 w-full rounded-xl" disabled={!selectedProjectId}>
+                  <Download size={14} />
+                  Baixar ZIP
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={exportHtml}
+                  className="h-11 w-full rounded-xl"
+                  disabled={!selectedProjectId || exportingHtml}
+                >
+                  {exportingHtml ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                  HTML unico
+                </Button>
+              </SectionCard>
+
+              <SectionCard className="flex min-h-0 flex-1 flex-col gap-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <AppSectionLabel>Historico</AppSectionLabel>
+                    <h2 className="mt-2 text-xl font-semibold tracking-[-0.03em] text-[var(--text-primary)]">
+                      Conversas do projeto
+                    </h2>
+                  </div>
+                  <SubtleBadge variant="outline">
+                    <MessageSquare size={12} />
+                    {conversations.length}
+                  </SubtleBadge>
+                </div>
+
+                <div className="min-h-0 space-y-3 overflow-y-auto pr-1">
+                  {conversations.length === 0 ? (
+                    <EmptyState
+                      title="Sem interacoes ainda"
+                      description="Envie a primeira instrucao para registrar alteracoes neste projeto."
+                      icon={MessageSquare}
+                      className="min-h-[220px]"
+                    />
+                  ) : (
+                    conversations.map((conversation) => (
+                      <article
+                        key={conversation.id}
+                        className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4"
+                      >
+                        <div className="flex flex-wrap items-center gap-2">
+                          <SubtleBadge variant="outline">{conversation.mode || 'chat'}</SubtleBadge>
+                        </div>
+                        <p className="mt-3 text-sm font-semibold text-[var(--text-primary)]">
+                          {conversation.user_message}
+                        </p>
+                        {conversation.assistant_response ? (
+                          <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
+                            {conversation.assistant_response}
+                          </p>
+                        ) : null}
+                        {conversation.diff_summary ? (
+                          <p className="mt-3 text-xs leading-5 text-[var(--text-muted)]">{conversation.diff_summary}</p>
+                        ) : null}
+                      </article>
+                    ))
                   )}
-                </article>
-              ))
-            )}
+                </div>
+              </SectionCard>
+            </div>
           </div>
         </div>
       </div>
