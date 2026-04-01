@@ -25,6 +25,11 @@ import BrandCharacter from "@/pages/BrandCharacter";
 import ChatPage from "@/pages/ChatPage";
 import FeedSimulatorPage from "@/pages/FeedSimulatorPage";
 import BioLinkPage from "@/pages/BioLinkPage";
+import PublicBioLink from "@/pages/PublicBioLink";
+import NewsPortalPage from "@/pages/NewsPortalPage";
+import BlogManagerPage from "@/pages/BlogManagerPage";
+import WebClonerPage from "@/pages/WebClonerPage";
+import VibeCoderPage from "@/pages/VibeCoderPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -41,6 +46,7 @@ const App = () => (
           <Route path="/" element={<Navigate to="/workspaces" replace />} />
           <Route path="/workspaces" element={<WorkspacesPage />} />
           <Route path="/onboarding" element={<OnboardingPage />} />
+          <Route path="/b/:slug" element={<PublicBioLink />} />
           <Route
             path="/workspace/:workspaceId/*"
             element={
@@ -56,6 +62,10 @@ const App = () => (
             <Route path="image-prompts"   element={<PromptStudio />} />
             <Route path="product-shots"   element={<ProductShots />} />
             <Route path="viral-analyzer"  element={<ViralAnalyzer />} />
+            <Route path="news-portal"     element={<NewsPortalPage />} />
+            <Route path="blog-manager"    element={<BlogManagerPage />} />
+            <Route path="web-cloner"      element={<WebClonerPage />} />
+            <Route path="vibe-coder"      element={<VibeCoderPage />} />
             <Route path="brand-character" element={<BrandCharacter />} />
             <Route path="chat"            element={<ChatPage />} />
             <Route path="feed-preview"    element={<FeedSimulatorPage />} />

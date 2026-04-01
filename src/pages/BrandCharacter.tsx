@@ -36,6 +36,7 @@ const BrandCharacterPage = () => {
   const [characters, setCharacters] = useState<BrandCharacter[]>([]);
   const [assets, setAssets] = useState<MediaAsset[]>([]);
   const [isGeneratingSeed, setIsGeneratingSeed] = useState(false);
+  const [generatingFacesFor, setGeneratingFacesFor] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   const loadData = useCallback(async () => {
@@ -116,6 +117,51 @@ const BrandCharacterPage = () => {
       toast.error('Nao foi possivel gerar o seed prompt');
     } finally {
       setIsGeneratingSeed(false);
+    }
+  };
+
+  const handleGenerateFaces = async (character: BrandCharacter) => {
+    if (!workspace?.id || !character.seed_prompt) {
+      toast.error('O personagem precisa de um Seed Prompt gerado para forjar o rosto.');
+      return;
+    }
+    setGeneratingFacesFor(character.id);
+    const prompts = [
+      `Front profile portrait, highly detailed face, symmetrical, straight on, looking directly at camera. Face consistency reference shot. ${character.seed_prompt}`,
+      `Side profile portrait, highly detailed face, looking away, 90 degree angle. Face consistency reference shot. ${character.seed_prompt}`,
+      `Front profile portrait, highly detailed face, natural expressive smile, engaging. Face consistency reference shot. ${character.seed_prompt}`
+    ];
+
+    try {
+      toast.info('Forjando faces de ancoragem (isso pode demorar).');
+      const promises = prompts.map(prompt => 
+        supabase.functions.invoke('generate-image', {
+          body: {
+            workspace_id: workspace.id,
+            prompt,
+            aspect_ratio: '1:1',
+            purpose: 'brand-character',
+            character_id: character.id
+          }
+        })
+      );
+      
+      const results = await Promise.all(promises);
+      const errors = results.filter(r => r.error || (r.data && r.data.error)).map(r => r.error || (r.data && r.data.error));
+      
+      if (errors.length > 0) {
+        console.error('Errors generating faces:', errors);
+        toast.warning(`Algumas faces falharam (${errors.length}/3).`);
+      } else {
+        toast.success('Rostos de consistência forjados com sucesso!');
+      }
+      
+      await loadData();
+    } catch (err) {
+      console.error(err);
+      toast.error('Falha crítica ao forjar rostos.');
+    } finally {
+      setGeneratingFacesFor(null);
     }
   };
 
@@ -424,21 +470,34 @@ const BrandCharacterPage = () => {
                           {character.seed_prompt || 'Seed técnico ainda não parametrizado, atualize a entidade.'}
                         </p>
 
-                        {gallery[0] && (
-                          <div className="relative aspect-[4/3] rounded-xl overflow-hidden mb-5 border" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
-                            <img
-                              src={gallery[0].public_url}
-                              alt={character.name}
-                              className="w-full h-full object-cover transition-transform duration-700 hover:scale-110"
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none"></div>
-                            <span className="absolute bottom-3 left-3 px-2 py-1 rounded text-[9px] font-bold uppercase tracking-widest bg-black/50 backdrop-blur-md text-white border border-white/20">Última Foto</span>
+                        {gallery.length > 0 ? (
+                          <div className="grid grid-cols-3 gap-2 mb-5">
+                            {gallery.slice(0, 3).map((img, i) => (
+                              <div key={img.id} className="relative aspect-square rounded-xl overflow-hidden border" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+                                <img
+                                  src={img.public_url}
+                                  alt={`${character.name} face ${i}`}
+                                  className="w-full h-full object-cover transition-transform duration-700 hover:scale-110"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none"></div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="w-full aspect-[3/1] rounded-xl flex items-center justify-center mb-5 border border-dashed border-white/10 bg-white/5 text-[10px] text-white/40">
+                            Nenhuma Face Âncora
                           </div>
                         )}
 
                         <div className="grid grid-cols-2 gap-2 mt-auto">
-                          <Button className="h-9 px-3 rounded-lg text-xs font-semibold col-span-2 shadow-primary/30" style={{ background: 'var(--primary)', color: '#fff' }} onClick={() => navigate('../image-prompts', { state: { character } })}>
+                          <Button className="h-9 px-3 rounded-lg text-xs font-semibold shadow-primary/30" style={{ background: 'var(--primary)', color: '#fff' }} onClick={() => navigate('../image-prompts', { state: { character } })}>
                             Usar no Studio
+                          </Button>
+                          <Button variant="outline" className="h-9 px-2 rounded-lg text-xs font-semibold shadow-primary/30"
+                            style={{ background: 'var(--primary)', color: '#fff' }}
+                            onClick={() => handleGenerateFaces(character)}
+                            disabled={generatingFacesFor === character.id || !character.seed_prompt}>
+                            {generatingFacesFor === character.id ? <Loader2 className="animate-spin w-4 h-4" /> : 'Gerar Rostos'}
                           </Button>
                           <Button variant="outline" className="h-9 px-2 rounded-lg text-[11px] font-medium border-white/10 bg-white/5 hover:bg-white/10" onClick={() => handleEdit(character)}>
                             Editar

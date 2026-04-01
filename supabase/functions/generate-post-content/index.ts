@@ -9,6 +9,7 @@ const corsHeaders = {
 
 const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const FIRECRAWL_API = "https://api.firecrawl.dev/v1/scrape";
+type SupabaseClient = ReturnType<typeof createClient>;
 
 type ArticleContext = {
   markdown: string;
@@ -92,7 +93,7 @@ function extractJson<T>(text: string): T {
 }
 
 const fetchArticleContext = async (
-  supabase: any,
+  supabase: SupabaseClient,
   workspaceId: string,
   sourceUrl?: string | null,
 ): Promise<ArticleContext | null> => {
@@ -191,7 +192,7 @@ serve(async (req: Request) => {
 
     const articleContext = await fetchArticleContext(supabase, workspace_id, source_url);
     const recentCaptions = (recentPosts || [])
-      .map((post: any) => post.caption)
+      .map((post: { caption?: string | null }) => post.caption)
       .filter(Boolean)
       .join("\n---\n");
     const recentPatterns = Array.isArray((briefing?.viral_patterns_cache as { recent_patterns?: unknown[] } | null)?.recent_patterns)

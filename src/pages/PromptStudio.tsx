@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { supabase } from '@/integrations/supabase/client';
-import type { Json } from '@/integrations/supabase/types';
+import type { Json, TablesInsert } from '@/integrations/supabase/types';
 import {
   BrandCharacterRecord,
   compilePrompt,
@@ -148,7 +148,7 @@ const PromptStudio = () => {
     const isExistingWorkspaceTemplate = selectedTemplate.workspace_id === workspace.id && !selectedTemplate.is_system;
     const query = isExistingWorkspaceTemplate
       ? supabase.from('image_prompt_templates').update(payload).eq('id', selectedTemplate.id)
-      : supabase.from('image_prompt_templates').insert(payload as unknown as any);
+      : supabase.from('image_prompt_templates').insert(payload as TablesInsert<'image_prompt_templates'>);
 
     const { error } = await query;
     if (error) {

@@ -12,6 +12,7 @@ import type { Tables } from '@/integrations/supabase/types';
 import { PHASE2_PROMPT_PLATFORMS, PLATFORM_PARAM_SUFFIX, PRODUCT_SHOT_PRESETS, PromptPlatform } from '@/lib/postgenPhase2';
 
 type MediaAsset = Tables<'media_assets'>;
+type PaletteColor = [number, number, number] | { r?: number; g?: number; b?: number; 0?: number; 1?: number; 2?: number };
 
 const lightingPresets = ['Clean Softbox', 'Dramatic Studio', 'Golden Backlit', 'Minimal'];
 
@@ -90,7 +91,11 @@ const ProductShots = () => {
     image.onload = async () => {
       try {
         const extractedPalette = await getPalette(image, { colorCount: 5, quality: 8 });
-        const extracted = (extractedPalette || []).map((color: any) => rgbToHex(Array.isArray(color) ? color : [color.r ?? color[0], color.g ?? color[1], color.b ?? color[2]]));
+        const extracted = (extractedPalette || []).map((color: PaletteColor) => rgbToHex(
+          Array.isArray(color)
+            ? color
+            : [color.r ?? color[0] ?? 0, color.g ?? color[1] ?? 0, color.b ?? color[2] ?? 0],
+        ));
         setPalette(extracted);
         setBackgroundColor(extracted[0] || '#1a1a1a');
 

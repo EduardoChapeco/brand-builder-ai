@@ -9,10 +9,27 @@ const corsHeaders = {
 
 const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const FIRECRAWL_API = "https://api.firecrawl.dev/v1/scrape";
+type SupabaseClient = ReturnType<typeof createClient>;
 
 type ArticleContext = {
   markdown: string;
   title?: string | null;
+};
+
+type ViralAnalysisPayload = {
+  pattern_name?: string;
+  archetype?: string;
+  hook_structure?: string;
+  narrative_arc?: string[];
+  visual_cues?: string[];
+  why_it_works?: string;
+  suggestions?: Array<{
+    topic?: string;
+    hook?: string;
+    template_recommendation?: string;
+    route?: string;
+    arc_type?: string;
+  }>;
 };
 
 function extractJson<T>(text: string): T {
@@ -22,7 +39,7 @@ function extractJson<T>(text: string): T {
 }
 
 const fetchArticleContext = async (
-  supabase: any,
+  supabase: SupabaseClient,
   workspaceId: string,
   sourceUrl?: string | null,
 ): Promise<ArticleContext | null> => {
@@ -161,7 +178,7 @@ Extraia o padrão viral em formato JSON e crie 3 sugestões de posts derivadas d
 
     const aiData = await res.json();
     const rawContent = aiData.choices[0]?.message?.content;
-    const parsedData = extractJson<any>(rawContent || "{}");
+    const parsedData = extractJson<ViralAnalysisPayload>(rawContent || "{}");
 
     // Insert into database
     const { error: insertError } = await supabase.from('viral_analyses').insert({

@@ -82,6 +82,7 @@ interface GeneratorLocationState {
   post?: EditablePost;
   dnaTemplate?: { id: string; html_template: string; source_name: string | null; brand_dna?: Record<string, unknown> };
   topic?: string;
+  sourceUrl?: string;
   recommendedTemplate?: string;
   funnel?: Funnel;
   character?: BrandCharacterRecord | null;
@@ -380,6 +381,7 @@ const GeneratorPage = () => {
 
     const signature = JSON.stringify({
       topic: state.topic || '',
+      sourceUrl: state.sourceUrl || '',
       recommendedTemplate: state.recommendedTemplate || '',
       funnel: state.funnel || '',
       storyboardId: state.storyboard?.id || '',
@@ -394,6 +396,10 @@ const GeneratorPage = () => {
     if (state.topic) {
       setTopic(state.topic);
       setPostTitle(current => current || state.topic || '');
+    }
+
+    if (state.sourceUrl) {
+      setSelectedSourceUrl(state.sourceUrl);
     }
 
     if (state.recommendedTemplate) {

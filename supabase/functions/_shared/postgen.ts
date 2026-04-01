@@ -9,10 +9,17 @@ export const corsHeaders = {
 export type WorkspaceApiKey = {
   id: string;
   provider: string;
+  alias?: string | null;
   key_value: string;
   calls_today: number | null;
   daily_limit: number | null;
   is_active: boolean | null;
+};
+
+export type BrandContext = {
+  briefing: Record<string, unknown> | null;
+  brandKit: Record<string, unknown> | null;
+  system_context: string;
 };
 
 const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
@@ -52,6 +59,15 @@ export const listWorkspaceKeys = async (
   return (data || []) as WorkspaceApiKey[];
 };
 
+export const selectWorkspaceKey = async (
+  supabase: ReturnType<typeof createServiceClient>,
+  workspaceId: string,
+  providers: string[],
+) => {
+  const keys = await listWorkspaceKeys(supabase, workspaceId, providers);
+  return keys.find((key) => (key.calls_today || 0) < (key.daily_limit || 0)) || null;
+};
+
 export const markKeyUsage = async (
   supabase: ReturnType<typeof createServiceClient>,
   key: WorkspaceApiKey,
@@ -66,6 +82,62 @@ export const markKeyUsage = async (
       last_error: options.errorMessage || null,
     })
     .eq("id", key.id);
+};
+
+const buildSystemContext = (
+  briefing: Record<string, unknown> | null,
+  brandKit: Record<string, unknown> | null,
+) => {
+  const keywords = Array.isArray(briefing?.keywords) ? briefing?.keywords.join(", ") : "";
+  const pillars = Array.isArray(briefing?.content_pillars) ? JSON.stringify(briefing?.content_pillars) : "[]";
+  const competitors = Array.isArray(briefing?.main_competitors) ? JSON.stringify(briefing?.main_competitors) : "[]";
+  const palette = [
+    brandKit?.color_primary,
+    brandKit?.color_secondary,
+    brandKit?.color_accent,
+  ].filter(Boolean).join(", ");
+
+  return `
+## BRAND CONTEXT
+Company: ${briefing?.company_name || "Workspace sem nome"}
+Segment: ${briefing?.segment || "Nao informado"}
+Audience: ${briefing?.target_audience || "Nao informado"}
+Tone of voice: ${briefing?.tone_of_voice || "Nao informado"}
+Main differentials: ${briefing?.main_differentials || "Nao informado"}
+Pain points: ${briefing?.pain_points || "Nao informado"}
+Avoid topics: ${briefing?.avoid_topics || "Nenhum"}
+Keywords: ${keywords || "Nenhuma"}
+Content pillars: ${pillars}
+Competitors: ${competitors}
+Brand DNA summary: ${briefing?.brand_dna || "Nao informado"}
+Brand palette: ${palette || "Nao informada"}
+Headline font: ${brandKit?.font_headline || "Nao informada"}
+Body font: ${brandKit?.font_body || "Nao informada"}
+
+RULES:
+- Responder em Portugues do Brasil.
+- Manter consistencia com o tom do workspace.
+- Nunca inventar dados factuais quando houver URL ou artigo de referencia.
+`.trim();
+};
+
+export const getBrandContext = async (
+  supabase: ReturnType<typeof createServiceClient>,
+  workspaceId: string,
+): Promise<BrandContext> => {
+  const [{ data: briefing }, { data: brandKit }] = await Promise.all([
+    supabase.from("briefings").select("*").eq("workspace_id", workspaceId).maybeSingle(),
+    supabase.from("brand_kits").select("*").eq("workspace_id", workspaceId).maybeSingle(),
+  ]);
+
+  return {
+    briefing: (briefing as Record<string, unknown> | null) || null,
+    brandKit: (brandKit as Record<string, unknown> | null) || null,
+    system_context: buildSystemContext(
+      (briefing as Record<string, unknown> | null) || null,
+      (brandKit as Record<string, unknown> | null) || null,
+    ),
+  };
 };
 
 const invokeGateway = async (systemPrompt: string, userPrompt: string) => {
@@ -217,6 +289,253 @@ export const runJsonTask = async <T>(
   if (fallback !== undefined) return fallback;
   throw new Error("Nenhuma chave de IA disponivel para executar a tarefa.");
 };
+
+export const callLLM = async <T>(
+  supabase: ReturnType<typeof createServiceClient>,
+  workspaceId: string,
+  systemPrompt: string,
+  userPrompt: string,
+  fallback?: T,
+) => runJsonTask<T>(
+  supabase,
+  workspaceId,
+  systemPrompt,
+  userPrompt,
+  ["groq", "openrouter", "gemini"],
+  fallback,
+);
+
+const replaceCaptureTokens = (
+  input: unknown,
+  tokens: Record<string, string>,
+): unknown => {
+  if (typeof input === "string") {
+    return input.replace(/\{(\w+)\}/g, (_, key) => tokens[key] || "");
+  }
+  if (Array.isArray(input)) {
+    return input.map((item) => replaceCaptureTokens(item, tokens));
+  }
+  if (input && typeof input === "object") {
+    return Object.fromEntries(
+      Object.entries(input as Record<string, unknown>).map(([key, value]) => [
+        key,
+        replaceCaptureTokens(value, tokens),
+      ]),
+    );
+  }
+  return input;
+};
+
+const getByPath = (value: unknown, path: string) => {
+  return path.split(".").reduce<unknown>((acc, key) => {
+    if (!acc || typeof acc !== "object") return undefined;
+    return (acc as Record<string, unknown>)[key];
+  }, value);
+};
+
+const tryParseKeyConfig = (raw: string) => {
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed as Record<string, unknown> : null;
+  } catch {
+    return null;
+  }
+};
+
+export const callImageGen = async (
+  prompt: string,
+  aspectRatio = "1:1",
+) => {
+  const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
+  if (!lovableApiKey) {
+    throw new Error("LOVABLE_API_KEY nao configurada para gerar imagem.");
+  }
+
+  const response = await fetch(AI_GATEWAY, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${lovableApiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-3.1-flash-image-preview",
+      aspectRatio,
+      messages: [{ role: "user", content: prompt }],
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Falha na geracao de imagem: ${await response.text()}`);
+  }
+
+  const payload = await response.json();
+  const imageUrl = payload?.choices?.[0]?.message?.images?.[0]?.image_url?.url as string | undefined;
+  if (!imageUrl) {
+    throw new Error("O provedor nao retornou imagem valida.");
+  }
+
+  return imageUrl;
+};
+
+export const capturePageVisual = async (
+  supabase: ReturnType<typeof createServiceClient>,
+  workspaceId: string,
+  targetUrl: string,
+) => {
+  const key = await selectWorkspaceKey(supabase, workspaceId, [
+    "steel",
+    "screenshot_api",
+    "browserless",
+    "browserless_io",
+    "apify",
+  ]);
+
+  if (!key) {
+    throw new Error("Nenhum provider visual configurado. Cadastre steel, screenshot_api ou browserless/apify nas API Keys.");
+  }
+
+  const captureWithScreenshotApi = async () => {
+    const devices = [
+      { device: "desktop", width: "1440", height: "2200" },
+      { device: "mobile", width: "390", height: "2200" },
+    ];
+
+    const screenshots = [];
+    for (const device of devices) {
+      const params = new URLSearchParams({
+        token: key.key_value,
+        url: targetUrl,
+        output: "json",
+        file_type: "png",
+        full_page: "true",
+        width: device.width,
+        height: device.height,
+      });
+      const response = await fetch(`https://shot.screenshotapi.net/screenshot?${params.toString()}`);
+      if (!response.ok) {
+        throw new Error(`ScreenshotAPI ${response.status}: ${await response.text()}`);
+      }
+      const payload = await response.json();
+      const screenshotUrl = payload?.screenshot || payload?.screenshot_url || payload?.url;
+      if (!screenshotUrl) {
+        throw new Error("ScreenshotAPI nao retornou URL de captura.");
+      }
+      screenshots.push({ device: device.device, url: screenshotUrl });
+    }
+
+    return {
+      provider: key.provider,
+      screenshots,
+      visual_description: `Capturas geradas via ${key.provider} em desktop e mobile para ${targetUrl}.`,
+    };
+  };
+
+  const captureWithConfigProvider = async () => {
+    const config = tryParseKeyConfig(key.key_value);
+    if (!config?.endpoint || typeof config.endpoint !== "string") {
+      throw new Error(`Provider ${key.provider} exige key_value em JSON com "endpoint".`);
+    }
+
+    const devices = ["desktop", "mobile"];
+    const screenshots = [];
+    for (const device of devices) {
+      const tokens = {
+        url: targetUrl,
+        device,
+        token: typeof config.token === "string" ? config.token : key.key_value,
+      };
+      const endpoint = replaceCaptureTokens(config.endpoint, tokens) as string;
+      const method = (typeof config.method === "string" ? config.method : "POST").toUpperCase();
+      const headers = {
+        "Content-Type": "application/json",
+        ...(config.headers && typeof config.headers === "object" ? replaceCaptureTokens(config.headers, tokens) as Record<string, string> : {}),
+      };
+
+      const rawBody = config.body ? replaceCaptureTokens(config.body, tokens) : {
+        url: targetUrl,
+        device,
+        fullPage: true,
+      };
+
+      const response = await fetch(endpoint, {
+        method,
+        headers,
+        body: method === "GET" ? undefined : JSON.stringify(rawBody),
+      });
+
+      if (!response.ok) {
+        throw new Error(`${key.provider} ${response.status}: ${await response.text()}`);
+      }
+
+      const payload = await response.json();
+      const resultPath = typeof config.result_path === "string" ? config.result_path : "data.url";
+      const screenshotUrl = getByPath(payload, resultPath);
+      if (typeof screenshotUrl !== "string" || !screenshotUrl) {
+        throw new Error(`Provider ${key.provider} nao retornou screenshot em ${resultPath}.`);
+      }
+      screenshots.push({ device, url: screenshotUrl });
+    }
+
+    return {
+      provider: key.provider,
+      screenshots,
+      visual_description: `Capturas geradas via ${key.provider} para ${targetUrl}.`,
+    };
+  };
+
+  try {
+    const result = key.provider === "screenshot_api"
+      ? await captureWithScreenshotApi()
+      : await captureWithConfigProvider();
+    await markKeyUsage(supabase, key);
+    return result;
+  } catch (error) {
+    await markKeyUsage(supabase, key, { errorMessage: error instanceof Error ? error.message : String(error) });
+    throw error;
+  }
+};
+
+export const scrapeDomWithFirecrawl = async (
+  supabase: ReturnType<typeof createServiceClient>,
+  workspaceId: string,
+  targetUrl: string,
+) => {
+  const key = await selectWorkspaceKey(supabase, workspaceId, ["firecrawl"]);
+  if (!key) {
+    throw new Error("Nenhuma chave Firecrawl ativa encontrada no workspace.");
+  }
+
+  try {
+    const response = await fetch("https://api.firecrawl.dev/v1/scrape", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${key.key_value}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        url: targetUrl,
+        formats: ["markdown", "html"],
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Firecrawl ${response.status}: ${await response.text()}`);
+    }
+
+    const payload = await response.json();
+    await markKeyUsage(supabase, key);
+    return {
+      markdown: payload?.data?.markdown as string | undefined,
+      html: payload?.data?.html as string | undefined,
+      metadata: payload?.data?.metadata || payload?.metadata || null,
+    };
+  } catch (error) {
+    await markKeyUsage(supabase, key, { errorMessage: error instanceof Error ? error.message : String(error) });
+    throw error;
+  }
+};
+
+export const uploadAsset = uploadBytesToAsset;
 
 export const uploadBytesToAsset = async (
   supabase: ReturnType<typeof createServiceClient>,

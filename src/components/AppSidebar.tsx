@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { NavLink, useParams, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useParams } from 'react-router-dom';
 import {
   Activity,
   Aperture,
@@ -7,12 +7,14 @@ import {
   ChevronUp,
   Dna,
   FileText,
+  Globe,
   Grid2x2,
   Images,
   Layers,
   Link2,
   MessageSquare,
   MonitorSmartphone,
+  Newspaper,
   Palette,
   Presentation,
   Settings,
@@ -23,26 +25,30 @@ import {
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 
 const primaryItems = [
-  { icon: Grid2x2,    label: 'Dashboard',       path: 'dashboard' },
-  { icon: Wand2,      label: 'Post Rápido',      path: 'generator' },
-  { icon: Layers,     label: 'Carousel Builder', path: 'carousel-builder' },
-  { icon: Sparkles,   label: 'Prompt Studio',   path: 'image-prompts' },
-  { icon: Activity,   label: 'Viral Analyzer',  path: 'viral-analyzer' },
-  { icon: Images,     label: 'Biblioteca',       path: 'library' },
-  { icon: MonitorSmartphone, label: 'Feed Preview', path: 'feed-preview' },
-];
+  { icon: Grid2x2, label: 'Dashboard', path: 'dashboard' },
+  { icon: Wand2, label: 'Post Rapido', path: 'generator' },
+  { icon: Layers, label: 'Carousel Builder', path: 'carousel-builder' },
+  { icon: Sparkles, label: 'Prompt Studio', path: 'image-prompts' },
+  { icon: Activity, label: 'Viral Analyzer', path: 'viral-analyzer' },
+  { icon: Newspaper, label: 'News Portal', path: 'news-portal' },
+  { icon: Globe, label: 'Web Cloner', path: 'web-cloner' },
+  { icon: MonitorSmartphone, label: 'VibeCoder', path: 'vibe-coder' },
+  { icon: Images, label: 'Biblioteca', path: 'library' },
+] as const;
 
 const secondaryItems = [
-  { icon: Aperture,   label: 'Product Shots',   path: 'product-shots' },
-  { icon: UserCircle2,label: 'Brand Character', path: 'brand-character' },
-  { icon: Dna,        label: 'DNA Cloner',       path: 'brand-dna' },
-  { icon: Link2,      label: 'Bio Link',         path: 'biolink' },
-  { icon: MessageSquare, label: 'Chat IA',       path: 'chat' },
-  { icon: Presentation,label: 'Slides',          path: 'slides' },
-  { icon: Palette,    label: 'Brand Kit',        path: 'brand-kit' },
-  { icon: FileText,   label: 'Briefing',         path: 'briefing' },
-  { icon: Settings,   label: 'Configurações',    path: 'settings' },
-];
+  { icon: Aperture, label: 'Product Shots', path: 'product-shots' },
+  { icon: UserCircle2, label: 'Brand Character', path: 'brand-character' },
+  { icon: Dna, label: 'Brand DNA', path: 'brand-dna' },
+  { icon: Link2, label: 'Bio Link', path: 'biolink' },
+  { icon: MonitorSmartphone, label: 'Feed Preview', path: 'feed-preview' },
+  { icon: Presentation, label: 'Slides', path: 'slides' },
+  { icon: FileText, label: 'Blog Manager', path: 'blog-manager' },
+  { icon: Palette, label: 'Brand Kit', path: 'brand-kit' },
+  { icon: FileText, label: 'Briefing', path: 'briefing' },
+  { icon: MessageSquare, label: 'Chat IA', path: 'chat' },
+  { icon: Settings, label: 'Configuracoes', path: 'settings' },
+] as const;
 
 const SidebarLink = ({
   label,
@@ -77,8 +83,10 @@ const SidebarLink = ({
       {({ isActive }) => (
         <>
           {!isActive && (
-            <span className="absolute inset-0 rounded-xl opacity-0 group-hover/link:opacity-100 transition-opacity duration-150"
-              style={{ background: 'rgba(255,255,255,0.05)' }} />
+            <span
+              className="absolute inset-0 rounded-xl opacity-0 group-hover/link:opacity-100 transition-opacity duration-150"
+              style={{ background: 'rgba(255,255,255,0.05)' }}
+            />
           )}
           <Icon size={18} strokeWidth={isActive ? 2 : 1.7} />
         </>
@@ -95,7 +103,7 @@ const AppSidebar = () => {
 
   const initials = workspace?.name
     ? workspace.name.split(' ').map((word) => word[0]).join('').slice(0, 2).toUpperCase()
-    : 'P';
+    : 'PG';
 
   const primaryColor = brandKit?.color_primary || '#7C3AED';
 
@@ -109,7 +117,6 @@ const AppSidebar = () => {
         zIndex: 50,
       }}
     >
-      {/* Logo / Workspace Avatar */}
       <button
         onClick={() => navigate('/workspaces')}
         title={workspace?.name || 'Trocar Workspace'}
@@ -119,21 +126,15 @@ const AppSidebar = () => {
         <span className="text-white font-display font-bold text-base">{initials}</span>
       </button>
 
-      {/* Divider */}
       <div className="w-8 h-px shrink-0 mb-1" style={{ background: 'var(--border)' }} />
 
-      {/* Primary Nav — scrollable */}
-      <nav
-        className="flex flex-col gap-1 flex-1 min-h-0 overflow-y-auto w-full items-center no-scrollbar pb-2"
-      >
+      <nav className="flex flex-col gap-1 flex-1 min-h-0 overflow-y-auto w-full items-center no-scrollbar pb-2">
         {primaryItems.map((item) => (
           <SidebarLink key={item.path} {...item} primaryColor={primaryColor} />
         ))}
 
-        {/* Divider */}
         <div className="my-1 w-8 h-px shrink-0" style={{ background: 'var(--border)' }} />
 
-        {/* Toggle for secondary */}
         <button
           onClick={() => setShowSecondary((current) => !current)}
           title={showSecondary ? 'Recolher' : 'Mais Ferramentas'}
@@ -156,11 +157,10 @@ const AppSidebar = () => {
         )}
       </nav>
 
-      {/* Bottom: Settings shortcut */}
       <div className="shrink-0 mt-1">
         <NavLink
           to={`/workspace/${workspaceId}/settings`}
-          title={workspace?.name}
+          title={workspace?.name || 'Configuracoes'}
           className={({ isActive }) =>
             `w-8 h-8 rounded-lg flex items-center justify-center transition-all text-[10px] font-bold text-white ${
               isActive ? 'opacity-100' : 'opacity-60 hover:opacity-90'

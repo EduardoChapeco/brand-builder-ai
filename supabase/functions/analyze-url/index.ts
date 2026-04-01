@@ -7,6 +7,7 @@ const corsHeaders = {
 };
 
 const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
+type SupabaseClient = ReturnType<typeof createClient>;
 
 type ApiKeyRow = {
   id: string;
@@ -22,7 +23,7 @@ type ScrapeResult = {
 };
 
 const markKeyError = async (
-  supabase: any,
+  supabase: SupabaseClient,
   keyId: string,
   message: string,
   exhausted = false,
@@ -37,7 +38,7 @@ const markKeyError = async (
 };
 
 const incrementKeyUsage = async (
-  supabase: any,
+  supabase: SupabaseClient,
   key: ApiKeyRow,
 ) => {
   await supabase
@@ -51,7 +52,7 @@ const incrementKeyUsage = async (
 };
 
 const scrapeUrl = async (
-  supabase: any,
+  supabase: SupabaseClient,
   workspaceId: string,
   url: string,
 ): Promise<ScrapeResult> => {
