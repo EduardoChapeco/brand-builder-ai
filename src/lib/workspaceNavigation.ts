@@ -28,6 +28,8 @@ export type WorkspaceNavItem = {
   description?: string;
 };
 
+export const WORKSPACE_NAV_ITEMS: WorkspaceNavItem[] = [
+
   { label: "Dashboard", path: "dashboard", icon: Grid2x2, section: "Painel", description: "Visao geral do workspace" },
 
   { label: "Site Institucional", path: "site-builder", icon: Globe, section: "Publicacoes", description: "Construtor de sites multiplas paginas" },
