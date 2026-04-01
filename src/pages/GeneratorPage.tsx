@@ -183,7 +183,7 @@ const GeneratorPage = () => {
   const [funnel, setFunnel] = useState<Funnel>('Awareness');
   const [globalImageMethod, setGlobalImageMethod] = useState<BgSource>('ai');
   const [globalVisMode, setGlobalVisMode] = useState<VisMod>('dark');
-  const [globalTemplate, setGlobalTemplate] = useState('minimal-dark');
+  const [globalTemplate, setGlobalTemplate] = useState('auto');
 
   // Generation Loading State
   const [isGenerating, setIsGenerating] = useState(false);
@@ -525,15 +525,28 @@ const GeneratorPage = () => {
       setCaption(data.caption || '');
       setHashtags((data.hashtags || '').split(/[\s,]+/).filter((h: string) => h.startsWith('#')));
 
-      let configs: SlideConfig[] = data.slides.map((s, idx) => createSlideConfig({
-        templateId: globalTemplate,
-        bgSource: globalImageMethod,
-        visualMode: globalVisMode,
-        headline: s.headline,
-        body: s.body,
-        cta: s.cta,
-        bgPromptHint: s.bg_prompt_hint || data.bg_prompt_hint || `${topic} slide ${idx+1}`
-      }));
+      let configs: SlideConfig[] = data.slides.map((s, idx) => {
+        let appliedTemplate = globalTemplate;
+        if (appliedTemplate === 'auto') {
+           if (data.slides.length === 1) {
+              appliedTemplate = recommendedTemplateId || 'clean-white';
+           } else {
+              if (idx === 0) appliedTemplate = 'viral-hook';
+              else if (idx === data.slides.length - 1) appliedTemplate = 'minimal-dark';
+              else appliedTemplate = 'data-insight'; 
+           }
+        }
+        
+        return createSlideConfig({
+          templateId: appliedTemplate,
+          bgSource: globalImageMethod,
+          visualMode: globalVisMode,
+          headline: s.headline,
+          body: s.body,
+          cta: s.cta,
+          bgPromptHint: s.bg_prompt_hint || data.bg_prompt_hint || `${topic} slide ${idx+1}`
+        });
+      });
 
       if (preloadedMediaAsset?.public_url) {
         configs = configs.map(cfg => ({
@@ -825,6 +838,7 @@ const GeneratorPage = () => {
                 <div>
                    <p className="text-sm font-semibold mb-2">Design Master (Para Todos)</p>
                    <select value={globalTemplate} onChange={e => setGlobalTemplate(e.target.value)} className="w-full p-2.5 rounded-lg border text-sm outline-none" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+                      <option value="auto">🪄 Modo Automático (Mix Inteligente IA)</option>
                       {clonedDna && <option value="dna-clone">DNA CLONADO ({clonedDna.name})</option>}
                       {TEMPLATE_REGISTRY.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                    </select>
@@ -897,15 +911,15 @@ const GeneratorPage = () => {
             <p className="text-[10px] uppercase font-bold tracking-widest opacity-60 mb-3">Visão Geral (Slides)</p>
             <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-3">
                {slideConfigs.map((cfg, idx) => {
-                 // scale the preview to fit nicely
-                 const thumbHeight = 80;
-                 const thumbScale = thumbHeight / height;
+                 // Sidebar width is ~220. Button padding ~8px. Container width ~ 200px.
+                 const thumbContainerWidth = 200;
+                 const thumbScale = thumbContainerWidth / width;
                  return (
-                 <button key={cfg.id} onClick={() => setActiveSlideIdx(idx)} className="relative group text-left w-full rounded-xl overflow-hidden transition-all"
+                 <button key={cfg.id} onClick={() => setActiveSlideIdx(idx)} className="relative group text-left w-full rounded-xl overflow-hidden transition-all shrink-0"
                          style={{ border: `2px solid ${activeSlideIdx === idx ? 'var(--primary)' : 'var(--border)'}`, padding: '2px', background: activeSlideIdx === idx ? 'var(--primary-muted)' : 'transparent' }}>
-                    <div className="w-full aspect-[4/5] bg-black rounded-lg overflow-hidden flex items-center justify-center relative pointer-events-none">
+                    <div className="w-full bg-black rounded-lg overflow-hidden relative pointer-events-none" style={{ aspectRatio: `${width}/${height}` }}>
                         {cfg.html && (
-                           <div style={{ position: 'absolute', transform: `scale(${thumbScale})`, transformOrigin: 'center', pointerEvents: 'none' }}>
+                           <div style={{ position: 'absolute', transform: `scale(${thumbScale})`, transformOrigin: 'top left', pointerEvents: 'none', width: `${width}px`, height: `${height}px`, top: 0, left: 0 }}>
                               <SlideFrame slideHtml={cfg.html} width={width} height={height} />
                            </div>
                         )}

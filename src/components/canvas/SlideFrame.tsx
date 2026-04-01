@@ -15,6 +15,19 @@ const wrapHtml = (html: string) => {
   // Add a global inline style to highlight selections and configure DND
   const canvasStyle = `
     <style id="postgen-canvas-core">
+      /* Strict container bounds to prevent templates from extrapolating the post frame */
+      html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        overflow: hidden !important;
+        box-sizing: border-box !important;
+      }
+      *, *::before, *::after {
+        box-sizing: border-box !important;
+      }
+      /* Editor highlights */
       [data-node-selected="true"] { outline: 2px solid var(--primary, #7C3AED) !important; outline-offset: 4px; border-radius: 4px; position: relative; z-index: 50; }
       .postgen-editable { transition: outline 0.1s; user-select: none; }
       .postgen-editable[contenteditable="true"] { user-select: text; cursor: text !important; outline: none !important; border-bottom: 2px dashed #7C3AED; }
