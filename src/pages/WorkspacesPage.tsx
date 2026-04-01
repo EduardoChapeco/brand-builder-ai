@@ -173,7 +173,7 @@ const WorkspacesPage = () => {
 
                       {/* CTA */}
                       <button
-                        onClick={() => navigate(`/workspace/${ws.id}/generator`)}
+                        onClick={() => navigate(`/workspace/${ws.id}/dashboard`)}
                         className="flex items-center justify-center gap-2 w-full py-2 rounded-lg text-sm font-medium transition-all duration-150"
                         style={{ background: `${color}18`, color: color, border: `1px solid ${color}40` }}
                         onMouseEnter={e => { e.currentTarget.style.background = color; e.currentTarget.style.color = 'white'; }}
