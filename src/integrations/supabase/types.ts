@@ -268,6 +268,833 @@ export type Database = {
           },
         ]
       }
+      bio_link_blocks: {
+        Row: {
+          bio_link_id: string
+          block_type: string
+          config: Json
+          created_at: string
+          draft_only: boolean
+          id: string
+          is_visible: boolean
+          layout_slot: string | null
+          position: number
+          size: string
+          updated_at: string
+          visibility_rules: Json
+          workspace_id: string
+        }
+        Insert: {
+          bio_link_id: string
+          block_type: string
+          config?: Json
+          created_at?: string
+          draft_only?: boolean
+          id?: string
+          is_visible?: boolean
+          layout_slot?: string | null
+          position?: number
+          size?: string
+          updated_at?: string
+          visibility_rules?: Json
+          workspace_id: string
+        }
+        Update: {
+          bio_link_id?: string
+          block_type?: string
+          config?: Json
+          created_at?: string
+          draft_only?: boolean
+          id?: string
+          is_visible?: boolean
+          layout_slot?: string | null
+          position?: number
+          size?: string
+          updated_at?: string
+          visibility_rules?: Json
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bio_link_blocks_bio_link_id_fkey"
+            columns: ["bio_link_id"]
+            isOneToOne: false
+            referencedRelation: "bio_links"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bio_link_blocks_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bio_link_versions: {
+        Row: {
+          bio_link_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          snapshot: Json
+          status: string
+          summary: string | null
+          version_number: number
+          workspace_id: string
+        }
+        Insert: {
+          bio_link_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          snapshot?: Json
+          status?: string
+          summary?: string | null
+          version_number: number
+          workspace_id: string
+        }
+        Update: {
+          bio_link_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          snapshot?: Json
+          status?: string
+          summary?: string | null
+          version_number?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bio_link_versions_bio_link_id_fkey"
+            columns: ["bio_link_id"]
+            isOneToOne: false
+            referencedRelation: "bio_links"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bio_link_versions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bio_links: {
+        Row: {
+          avatar_url: string | null
+          background_config: Json
+          bio_text: string | null
+          blocks: Json | null
+          created_at: string
+          cta_enabled: boolean
+          cta_text: string | null
+          cta_url: string | null
+          display_name: string | null
+          ga4_measurement_id: string | null
+          gtm_id: string | null
+          header_config: Json
+          id: string
+          is_published: boolean | null
+          latest_simlab_run_id: string | null
+          latest_version_number: number
+          layout_template_key: string
+          links: Json | null
+          meta_pixel_id: string | null
+          profile: Json | null
+          public_domain_id: string | null
+          published_at: string | null
+          published_html: string | null
+          published_version_id: string | null
+          scheduled_publish_at: string | null
+          seo_config: Json | null
+          seo_description: string | null
+          seo_image_url: string | null
+          seo_title: string | null
+          slug: string
+          social_links: Json
+          status: string
+          theme_config: Json | null
+          theme_id: string | null
+          theme_key: string
+          theme_tokens: Json
+          tiktok_pixel_id: string | null
+          total_clicks: number
+          total_views: number
+          updated_at: string
+          username: string | null
+          workspace_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          background_config?: Json
+          bio_text?: string | null
+          blocks?: Json | null
+          created_at?: string
+          cta_enabled?: boolean
+          cta_text?: string | null
+          cta_url?: string | null
+          display_name?: string | null
+          ga4_measurement_id?: string | null
+          gtm_id?: string | null
+          header_config?: Json
+          id?: string
+          is_published?: boolean | null
+          latest_simlab_run_id?: string | null
+          latest_version_number?: number
+          layout_template_key?: string
+          links?: Json | null
+          meta_pixel_id?: string | null
+          profile?: Json | null
+          public_domain_id?: string | null
+          published_at?: string | null
+          published_html?: string | null
+          published_version_id?: string | null
+          scheduled_publish_at?: string | null
+          seo_config?: Json | null
+          seo_description?: string | null
+          seo_image_url?: string | null
+          seo_title?: string | null
+          slug: string
+          social_links?: Json
+          status?: string
+          theme_config?: Json | null
+          theme_id?: string | null
+          theme_key?: string
+          theme_tokens?: Json
+          tiktok_pixel_id?: string | null
+          total_clicks?: number
+          total_views?: number
+          updated_at?: string
+          username?: string | null
+          workspace_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          background_config?: Json
+          bio_text?: string | null
+          blocks?: Json | null
+          created_at?: string
+          cta_enabled?: boolean
+          cta_text?: string | null
+          cta_url?: string | null
+          display_name?: string | null
+          ga4_measurement_id?: string | null
+          gtm_id?: string | null
+          header_config?: Json
+          id?: string
+          is_published?: boolean | null
+          latest_simlab_run_id?: string | null
+          latest_version_number?: number
+          layout_template_key?: string
+          links?: Json | null
+          meta_pixel_id?: string | null
+          profile?: Json | null
+          public_domain_id?: string | null
+          published_at?: string | null
+          published_html?: string | null
+          published_version_id?: string | null
+          scheduled_publish_at?: string | null
+          seo_config?: Json | null
+          seo_description?: string | null
+          seo_image_url?: string | null
+          seo_title?: string | null
+          slug?: string
+          social_links?: Json
+          status?: string
+          theme_config?: Json | null
+          theme_id?: string | null
+          theme_key?: string
+          theme_tokens?: Json
+          tiktok_pixel_id?: string | null
+          total_clicks?: number
+          total_views?: number
+          updated_at?: string
+          username?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bio_links_public_domain_id_fkey"
+            columns: ["public_domain_id"]
+            isOneToOne: false
+            referencedRelation: "public_domains"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bio_links_published_version_id_fkey"
+            columns: ["published_version_id"]
+            isOneToOne: false
+            referencedRelation: "bio_link_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bio_links_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_bookings: {
+        Row: {
+          contact_id: string
+          created_at: string
+          id: string
+          metadata: Json
+          notes: string | null
+          scheduled_at: string | null
+          service_name: string | null
+          source_block_id: string | null
+          source_module: string
+          source_record_id: string | null
+          status: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          notes?: string | null
+          scheduled_at?: string | null
+          service_name?: string | null
+          source_block_id?: string | null
+          source_module?: string
+          source_record_id?: string | null
+          status?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          notes?: string | null
+          scheduled_at?: string | null
+          service_name?: string | null
+          source_block_id?: string | null
+          source_module?: string
+          source_record_id?: string | null
+          status?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_bookings_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "crm_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_bookings_source_record_id_fkey"
+            columns: ["source_record_id"]
+            isOneToOne: false
+            referencedRelation: "bio_links"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_bookings_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_campaign_events: {
+        Row: {
+          campaign_id: string
+          contact_id: string | null
+          created_at: string
+          event_type: string
+          id: string
+          metadata: Json
+          workspace_id: string
+        }
+        Insert: {
+          campaign_id: string
+          contact_id?: string | null
+          created_at?: string
+          event_type: string
+          id?: string
+          metadata?: Json
+          workspace_id: string
+        }
+        Update: {
+          campaign_id?: string
+          contact_id?: string | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          metadata?: Json
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_campaign_events_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "crm_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_campaign_events_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "crm_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_campaign_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_campaigns: {
+        Row: {
+          audience_filter: Json
+          body_html: string | null
+          created_at: string
+          id: string
+          name: string
+          sent_at: string | null
+          source_module: string
+          status: string
+          subject: string | null
+          total_recipients: number
+          total_sent: number
+          workspace_id: string
+        }
+        Insert: {
+          audience_filter?: Json
+          body_html?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          sent_at?: string | null
+          source_module?: string
+          status?: string
+          subject?: string | null
+          total_recipients?: number
+          total_sent?: number
+          workspace_id: string
+        }
+        Update: {
+          audience_filter?: Json
+          body_html?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          sent_at?: string | null
+          source_module?: string
+          status?: string
+          subject?: string | null
+          total_recipients?: number
+          total_sent?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_campaigns_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_contact_tags: {
+        Row: {
+          contact_id: string
+          created_at: string
+          tag_id: string
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string
+          tag_id: string
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_contact_tags_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "crm_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_contact_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "crm_tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_contacts: {
+        Row: {
+          created_at: string
+          id: string
+          last_interaction_at: string | null
+          metadata: Json
+          name: string | null
+          notes: string | null
+          phone: string | null
+          primary_email: string | null
+          source_block_id: string | null
+          source_module: string
+          source_record_id: string | null
+          status: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_interaction_at?: string | null
+          metadata?: Json
+          name?: string | null
+          notes?: string | null
+          phone?: string | null
+          primary_email?: string | null
+          source_block_id?: string | null
+          source_module?: string
+          source_record_id?: string | null
+          status?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_interaction_at?: string | null
+          metadata?: Json
+          name?: string | null
+          notes?: string | null
+          phone?: string | null
+          primary_email?: string | null
+          source_block_id?: string | null
+          source_module?: string
+          source_record_id?: string | null
+          status?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_contacts_source_record_id_fkey"
+            columns: ["source_record_id"]
+            isOneToOne: false
+            referencedRelation: "bio_links"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_contacts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_downloads: {
+        Row: {
+          asset_name: string | null
+          asset_url: string | null
+          contact_id: string
+          created_at: string
+          id: string
+          metadata: Json
+          source_block_id: string | null
+          source_module: string
+          source_record_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          asset_name?: string | null
+          asset_url?: string | null
+          contact_id: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          source_block_id?: string | null
+          source_module?: string
+          source_record_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          asset_name?: string | null
+          asset_url?: string | null
+          contact_id?: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          source_block_id?: string | null
+          source_module?: string
+          source_record_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_downloads_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "crm_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_downloads_source_record_id_fkey"
+            columns: ["source_record_id"]
+            isOneToOne: false
+            referencedRelation: "bio_links"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_downloads_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_event_registrations: {
+        Row: {
+          contact_id: string
+          created_at: string
+          event_date: string | null
+          event_name: string | null
+          id: string
+          metadata: Json
+          source_block_id: string | null
+          source_module: string
+          source_record_id: string | null
+          status: string
+          workspace_id: string
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string
+          event_date?: string | null
+          event_name?: string | null
+          id?: string
+          metadata?: Json
+          source_block_id?: string | null
+          source_module?: string
+          source_record_id?: string | null
+          status?: string
+          workspace_id: string
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string
+          event_date?: string | null
+          event_name?: string | null
+          id?: string
+          metadata?: Json
+          source_block_id?: string | null
+          source_module?: string
+          source_record_id?: string | null
+          status?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_event_registrations_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "crm_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_event_registrations_source_record_id_fkey"
+            columns: ["source_record_id"]
+            isOneToOne: false
+            referencedRelation: "bio_links"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_event_registrations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_interactions: {
+        Row: {
+          contact_id: string
+          created_at: string
+          id: string
+          interaction_type: string
+          payload: Json
+          source_block_id: string | null
+          source_module: string
+          source_record_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string
+          id?: string
+          interaction_type: string
+          payload?: Json
+          source_block_id?: string | null
+          source_module?: string
+          source_record_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string
+          id?: string
+          interaction_type?: string
+          payload?: Json
+          source_block_id?: string | null
+          source_module?: string
+          source_record_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_interactions_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "crm_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_interactions_source_record_id_fkey"
+            columns: ["source_record_id"]
+            isOneToOne: false
+            referencedRelation: "bio_links"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_interactions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_messages: {
+        Row: {
+          body: string | null
+          contact_id: string
+          created_at: string
+          fields: Json
+          id: string
+          replied_at: string | null
+          source_block_id: string | null
+          source_module: string
+          source_record_id: string | null
+          status: string
+          subject: string | null
+          workspace_id: string
+        }
+        Insert: {
+          body?: string | null
+          contact_id: string
+          created_at?: string
+          fields?: Json
+          id?: string
+          replied_at?: string | null
+          source_block_id?: string | null
+          source_module?: string
+          source_record_id?: string | null
+          status?: string
+          subject?: string | null
+          workspace_id: string
+        }
+        Update: {
+          body?: string | null
+          contact_id?: string
+          created_at?: string
+          fields?: Json
+          id?: string
+          replied_at?: string | null
+          source_block_id?: string | null
+          source_module?: string
+          source_record_id?: string | null
+          status?: string
+          subject?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_messages_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "crm_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_messages_source_record_id_fkey"
+            columns: ["source_record_id"]
+            isOneToOne: false
+            referencedRelation: "bio_links"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_messages_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_tags: {
+        Row: {
+          color: string | null
+          created_at: string
+          id: string
+          label: string
+          workspace_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          label: string
+          workspace_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          label?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_tags_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       briefing: {
         Row: {
           brand_dna: string | null
@@ -761,6 +1588,153 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "posts_v2_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      public_domains: {
+        Row: {
+          created_at: string
+          dns_status: string
+          domain: string
+          id: string
+          metadata: Json
+          module_type: string
+          record_id: string
+          updated_at: string
+          verified: boolean
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          dns_status?: string
+          domain: string
+          id?: string
+          metadata?: Json
+          module_type?: string
+          record_id: string
+          updated_at?: string
+          verified?: boolean
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          dns_status?: string
+          domain?: string
+          id?: string
+          metadata?: Json
+          module_type?: string
+          record_id?: string
+          updated_at?: string
+          verified?: boolean
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "public_domains_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      public_page_events: {
+        Row: {
+          block_id: string | null
+          block_type: string | null
+          city: string | null
+          country: string | null
+          created_at: string
+          device_type: string | null
+          event_type: string
+          id: string
+          metadata: Json
+          module_type: string
+          published_version_id: string | null
+          record_id: string
+          record_type: string
+          referrer: string | null
+          session_id: string | null
+          slug: string
+          target_url: string | null
+          user_agent: string | null
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          visitor_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          block_id?: string | null
+          block_type?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          device_type?: string | null
+          event_type: string
+          id?: string
+          metadata?: Json
+          module_type?: string
+          published_version_id?: string | null
+          record_id: string
+          record_type?: string
+          referrer?: string | null
+          session_id?: string | null
+          slug: string
+          target_url?: string | null
+          user_agent?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          visitor_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          block_id?: string | null
+          block_type?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          device_type?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json
+          module_type?: string
+          published_version_id?: string | null
+          record_id?: string
+          record_type?: string
+          referrer?: string | null
+          session_id?: string | null
+          slug?: string
+          target_url?: string | null
+          user_agent?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          visitor_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "public_page_events_published_version_id_fkey"
+            columns: ["published_version_id"]
+            isOneToOne: false
+            referencedRelation: "bio_link_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "public_page_events_record_id_fkey"
+            columns: ["record_id"]
+            isOneToOne: false
+            referencedRelation: "bio_links"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "public_page_events_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"

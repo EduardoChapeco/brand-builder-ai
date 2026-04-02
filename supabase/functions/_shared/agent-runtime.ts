@@ -1,6 +1,20 @@
 import { getContentTaskPlan } from "./agent-registry.ts";
 import { BrandContext, JsonTaskMeta, createServiceClient, getBrandContext } from "./postgen.ts";
 import { FinalPostOutput, runContentDesigner, runContentQa, runContentStrategist, runContentWriter, runSimlabValidator, runTrendResearcher } from "./content-squad.ts";
+import { assertReadyTemplateAgentsSupported, getAgentStatusLabel } from "./agent-capabilities.ts";
+import {
+  ensureApprovedWebsiteSpecForBuild,
+  runSiteBuilderExecutor,
+  runSiteCopyArchitect,
+  runSiteDataContractPlanner,
+  runSiteDesignSystemGuardian,
+  runSiteInformationArchitect,
+  runSiteQualityReviewer,
+  runSiteRepoPlanner,
+  runSiteSpecAnalyst,
+  type WebsiteBuildOutput,
+  type WebsiteQaOutput,
+} from "./website-squad.ts";
 
 type AgentRunRow = {
   id: string;
@@ -9,6 +23,7 @@ type AgentRunRow = {
   mode: string;
   original_prompt: string;
   status: string;
+  identification?: Record<string, unknown> | null;
   assembled_prd?: string | null;
   final_prompt?: string | null;
   specialist_results?: Record<string, unknown> | null;
@@ -64,28 +79,24 @@ type RuntimeContext = {
   workspaceSquad: WorkspaceSquadRow | null;
 };
 
-const SUPPORTED_AGENT_IDS = new Set([
-  "content_strategist",
-  "content_writer",
-  "content_designer",
-  "simlab_validator",
-  "content_qa",
-  "trend_researcher",
-]);
+type AgentArtifactRow = {
+  id: string;
+  prd_id: string;
+  workspace_id: string;
+  source_task_id?: string | null;
+  artifact_kind: string;
+  version_number: number;
+  payload: Record<string, unknown> | null;
+  summary?: string | null;
+  status: string;
+  created_at: string;
+  approved_at?: string | null;
+};
 
 export const getStatusLabel = (task: AgentTaskRow) => {
   const custom = typeof task.input_payload?.role_label === "string" ? task.input_payload.role_label.trim() : "";
   if (custom) return custom;
-
-  const labels: Record<string, string> = {
-    trend_researcher: "Radar de tendencias",
-    content_strategist: "Definindo estrategia",
-    content_writer: "Escrevendo copy",
-    content_designer: "Montando layout HTML",
-    simlab_validator: "Validando com SimLab",
-    content_qa: "Revisando e montando payload final",
-  };
-  return labels[task.agent_id] || task.agent_id;
+  return getAgentStatusLabel(task.agent_id);
 };
 
 const toRecord = (value: unknown) =>
@@ -127,6 +138,97 @@ const persistExecutionLog = async (
   });
 };
 
+const loadLatestArtifacts = async (
+  supabase: ReturnType<typeof createServiceClient>,
+  prdId: string,
+) => {
+  const { data, error } = await supabase
+    .from("agent_artifacts")
+    .select("*")
+    .eq("prd_id", prdId)
+    .order("artifact_kind")
+    .order("version_number", { ascending: false });
+
+  if (error) throw error;
+  return (data || []) as AgentArtifactRow[];
+};
+
+const persistArtifact = async (
+  supabase: ReturnType<typeof createServiceClient>,
+  params: {
+    prdId: string;
+    workspaceId: string;
+    sourceTaskId?: string | null;
+    artifactKind: string;
+    payload: Record<string, unknown>;
+    summary?: string | null;
+    status?: string;
+  },
+) => {
+  const { data: latest, error: latestError } = await supabase
+    .from("agent_artifacts")
+    .select("version_number")
+    .eq("prd_id", params.prdId)
+    .eq("artifact_kind", params.artifactKind)
+    .order("version_number", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (latestError) throw latestError;
+
+  const { error } = await supabase.from("agent_artifacts").insert({
+    prd_id: params.prdId,
+    workspace_id: params.workspaceId,
+    source_task_id: params.sourceTaskId || null,
+    artifact_kind: params.artifactKind,
+    version_number: (latest?.version_number || 0) + 1,
+    payload: params.payload,
+    summary: params.summary || null,
+    status: params.status || "generated",
+  });
+
+  if (error) throw error;
+};
+
+const getArtifactSpecsForTask = (
+  run: AgentRunRow,
+  task: AgentTaskRow,
+  result: Record<string, unknown>,
+) => {
+  if (run.module_type === "website_spec" && task.agent_id === "site_spec_analyst") {
+    return [
+      {
+        artifactKind: "spec",
+        payload: result,
+        summary: typeof result.goal === "string" ? result.goal : "Spec do site gerada.",
+        status: "pending_approval",
+      },
+    ];
+  }
+
+  if (run.module_type === "website_build") {
+    if (task.agent_id === "site_information_architect") {
+      return [{ artifactKind: "plan", payload: result, summary: typeof result.summary === "string" ? result.summary : "Plano do site." }];
+    }
+    if (task.agent_id === "site_design_system_guardian") {
+      return [{ artifactKind: "design_constitution", payload: result, summary: typeof result.summary === "string" ? result.summary : "Constituicao visual do site." }];
+    }
+    if (task.agent_id === "site_repo_planner") {
+      return [{ artifactKind: "task_graph", payload: result, summary: "Grafo de tarefas do site." }];
+    }
+    if (task.agent_id === "site_quality_reviewer") {
+      const qaSummary = typeof result.summary === "string" ? result.summary : "QA do site.";
+      const handoffSummary = typeof result.handoff_summary === "string" ? result.handoff_summary : qaSummary;
+      return [
+        { artifactKind: "qa_report", payload: result, summary: qaSummary, status: (result.approved === true ? "approved" : "rejected") },
+        { artifactKind: "handoff_summary", payload: { summary: handoffSummary }, summary: handoffSummary, status: (result.approved === true ? "approved" : "rejected") },
+      ];
+    }
+  }
+
+  return [];
+};
+
 const resolveTemplateExecution = async (
   supabase: ReturnType<typeof createServiceClient>,
   params: { workspaceId: string; moduleType: string; prompt: string; config?: Record<string, unknown>; squadTemplateId?: string; workspaceSquadId?: string },
@@ -142,15 +244,47 @@ const resolveTemplateExecution = async (
       .maybeSingle();
 
     if (defaultSquadError) throw defaultSquadError;
-    if (!defaultSquad) {
-      return { moduleType: null, squadTemplateId: null, workspaceSquadId: null, tasks: [] as Array<Record<string, unknown>> };
-    }
+    const defaultTemplate = defaultSquad
+      ? await supabase
+          .from("squad_templates")
+          .select("module_type,runtime_status")
+          .eq("id", defaultSquad.squad_template_id)
+          .maybeSingle()
+      : { data: null, error: null };
 
-    params = {
-      ...params,
-      workspaceSquadId: defaultSquad.id,
-      squadTemplateId: defaultSquad.squad_template_id,
-    };
+    if (defaultTemplate.error) throw defaultTemplate.error;
+    if (
+      defaultSquad &&
+      defaultTemplate.data?.module_type === params.moduleType &&
+      defaultTemplate.data?.runtime_status === "ready"
+    ) {
+      params = {
+        ...params,
+        workspaceSquadId: defaultSquad.id,
+        squadTemplateId: defaultSquad.squad_template_id,
+      };
+    } else {
+      const { data: systemTemplate, error: systemTemplateError } = await supabase
+        .from("squad_templates")
+        .select("id")
+        .eq("module_type", params.moduleType)
+        .eq("runtime_status", "ready")
+        .eq("is_active", true)
+        .order("is_system", { ascending: false })
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (systemTemplateError) throw systemTemplateError;
+      if (!systemTemplate) {
+        return { moduleType: null, squadTemplateId: null, workspaceSquadId: null, tasks: [] as Array<Record<string, unknown>> };
+      }
+
+      params = {
+        ...params,
+        squadTemplateId: systemTemplate.id,
+      };
+    }
   }
 
   const workspaceSquad = params.workspaceSquadId
@@ -212,10 +346,7 @@ const resolveTemplateExecution = async (
     }
   }
 
-  const unsupported = runtimeAgents.find((agent) => !SUPPORTED_AGENT_IDS.has(agent.agent_id));
-  if (unsupported) {
-    throw new Error(`O agente ${unsupported.agent_id} ainda nao possui handler real de execucao.`);
-  }
+  assertReadyTemplateAgentsSupported(template.name, template.runtime_status, runtimeAgents.map((agent) => agent.agent_id));
 
   const taskIds = new Map<string, string>();
   for (const row of runtimeAgents) {
@@ -245,6 +376,12 @@ export const createAgentRun = async (
   supabase: ReturnType<typeof createServiceClient>,
   params: { workspaceId: string; moduleType: string; prompt: string; mode?: string; identification?: Record<string, unknown>; config?: Record<string, unknown>; squadTemplateId?: string; workspaceSquadId?: string },
 ) => {
+  if (params.moduleType === "website_build") {
+    const config = toRecord(params.config);
+    const sourcePrdId = typeof config.source_prd_id === "string" ? config.source_prd_id : null;
+    await ensureApprovedWebsiteSpecForBuild(supabase, params.workspaceId, sourcePrdId);
+  }
+
   const templateExecution = await resolveTemplateExecution(supabase, {
     workspaceId: params.workspaceId,
     moduleType: params.moduleType,
@@ -362,6 +499,14 @@ const runTaskHandler = async (
   if (task.agent_id === "content_designer") return runContentDesigner(context);
   if (task.agent_id === "simlab_validator") return runSimlabValidator(context);
   if (task.agent_id === "content_qa") return runContentQa(context);
+  if (task.agent_id === "site_spec_analyst") return runSiteSpecAnalyst(context);
+  if (task.agent_id === "site_information_architect") return runSiteInformationArchitect(context);
+  if (task.agent_id === "site_design_system_guardian") return runSiteDesignSystemGuardian(context);
+  if (task.agent_id === "site_copy_architect") return runSiteCopyArchitect(context);
+  if (task.agent_id === "site_data_contract_planner") return runSiteDataContractPlanner(context);
+  if (task.agent_id === "site_repo_planner") return runSiteRepoPlanner(context);
+  if (task.agent_id === "site_builder_executor") return runSiteBuilderExecutor(context);
+  if (task.agent_id === "site_quality_reviewer") return runSiteQualityReviewer(context);
 
   throw new Error(`Agent handler nao implementado para ${task.agent_id}.`);
 };
@@ -406,6 +551,61 @@ const persistContentArtifact = async (
   await supabase.from("posts_v2").insert(payload);
 };
 
+const getRunConfig = (run: AgentRunRow) => {
+  const identification = toRecord(run.identification);
+  return toRecord(identification.config);
+};
+
+const persistWebsiteProject = async (
+  supabase: ReturnType<typeof createServiceClient>,
+  run: AgentRunRow,
+  buildOutput: WebsiteBuildOutput,
+  qa: WebsiteQaOutput,
+) => {
+  const config = getRunConfig(run);
+  const projectId = typeof config.project_id === "string" ? config.project_id : null;
+  const websiteId = typeof config.website_id === "string" ? config.website_id : null;
+  const buildTarget = typeof config.build_target === "string" ? config.build_target : "project_vfs";
+  const nextPayload = {
+    workspace_id: run.workspace_id,
+    website_id: websiteId,
+    build_target: buildTarget,
+    name: typeof config.project_name === "string" && config.project_name.trim().length > 0
+      ? config.project_name.trim()
+      : `Projeto ${new Date().toISOString().slice(0, 10)}`,
+    description: qa.handoff_summary,
+    status: "draft",
+    entry_file: "/src/App.tsx",
+    source_files_json: buildOutput.files,
+    preview_meta: {
+      last_summary: buildOutput.summary,
+      last_updated_at: new Date().toISOString(),
+      qa_summary: qa.summary,
+      qa_approved: qa.approved,
+    },
+  };
+
+  if (projectId) {
+    const { error } = await supabase
+      .from("projects")
+      .update(nextPayload)
+      .eq("id", projectId)
+      .eq("workspace_id", run.workspace_id);
+
+    if (error) throw error;
+    return projectId;
+  }
+
+  const { data, error } = await supabase
+    .from("projects")
+    .insert(nextPayload)
+    .select("id")
+    .single();
+
+  if (error || !data) throw error || new Error("Nao foi possivel persistir o projeto do website.");
+  return data.id as string;
+};
+
 const finalizeRun = async (
   supabase: ReturnType<typeof createServiceClient>,
   run: AgentRunRow,
@@ -420,20 +620,41 @@ const finalizeRun = async (
   const finalPost = finalPostRecord && typeof finalPostRecord.title === "string"
     ? finalPostRecord as unknown as FinalPostOutput
     : null;
+  const websiteBuildOutput = run.module_type === "website_build"
+    ? outputs.site_builder_executor as WebsiteBuildOutput | undefined
+    : undefined;
+  const websiteQa = run.module_type === "website_build"
+    ? outputs.site_quality_reviewer as WebsiteQaOutput | undefined
+    : undefined;
 
   if (allCompleted && run.module_type === "content_post" && finalPost && qaApproved) {
     await persistContentArtifact(supabase, run, finalPost, qa);
   }
 
+  if (allCompleted && run.module_type === "website_build" && websiteBuildOutput && websiteQa?.approved) {
+    await persistWebsiteProject(supabase, run, websiteBuildOutput, websiteQa);
+  }
+
   const qaRejected = run.module_type === "content_post" && allCompleted && finalPost && !qaApproved;
+  const websiteRejected = run.module_type === "website_build" && allCompleted && websiteQa && !websiteQa.approved;
+  const buildSummary = typeof websiteBuildOutput?.summary === "string" ? websiteBuildOutput.summary : null;
+  const websiteQaSummary = typeof websiteQa?.summary === "string" ? websiteQa.summary : null;
 
   const payload = {
-    status: hasFailure || qaRejected ? "failed" : allCompleted ? "completed" : run.status,
+    status: hasFailure || qaRejected || websiteRejected ? "failed" : allCompleted ? "completed" : run.status,
     specialist_results: outputs,
     fragments: tasks.map((task) => ({ agent_id: task.agent_id, status: task.status, task_id: task.id })),
-    assembled_prd: typeof qa.summary === "string" ? qa.summary : null,
-    qa_score: typeof qa.approved === "boolean" ? (qa.approved ? 92 : 48) : null,
-    final_prompt: finalPost?.title || run.original_prompt,
+    assembled_prd:
+      typeof qa.summary === "string"
+        ? qa.summary
+        : websiteQaSummary || buildSummary,
+    qa_score:
+      typeof qa.approved === "boolean"
+        ? (qa.approved ? 92 : 48)
+        : typeof websiteQa?.approved === "boolean"
+          ? (websiteQa.approved ? 94 : 41)
+          : null,
+    final_prompt: finalPost?.title || buildSummary || run.original_prompt,
   };
 
   const { data: updated, error } = await supabase
@@ -486,16 +707,30 @@ export const processAgentRun = async (
     try {
       const previousOutputs = getCompletedOutputs(currentTasks);
       const { result, meta } = await runTaskHandler(nextTask, run, runtimeContext, previousOutputs);
+      const resultRecord = toRecord(result);
 
       await supabase
         .from("agent_tasks")
         .update({
           status: "completed",
-          output_payload: { result, meta },
+          output_payload: { result: resultRecord, meta },
           is_fallback: false,
           finished_at: new Date().toISOString(),
         })
         .eq("id", nextTask.id);
+
+      const artifactSpecs = getArtifactSpecsForTask(run, nextTask, resultRecord);
+      for (const artifact of artifactSpecs) {
+        await persistArtifact(supabase, {
+          prdId: run.id,
+          workspaceId: run.workspace_id,
+          sourceTaskId: nextTask.id,
+          artifactKind: artifact.artifactKind,
+          payload: artifact.payload,
+          summary: artifact.summary,
+          status: artifact.status,
+        });
+      }
 
       await persistExecutionLog(supabase, {
         workspaceId: run.workspace_id,
@@ -562,6 +797,7 @@ export const getAgentRunStatus = async (
   prdId: string,
 ) => {
   const { run, tasks } = await loadRunWithTasks(supabase, prdId);
+  const artifacts = await loadLatestArtifacts(supabase, prdId);
   const specialistResults = toRecord(run.specialist_results);
   return {
     prd_id: run.id,
@@ -571,6 +807,17 @@ export const getAgentRunStatus = async (
     assembled_prd: run.assembled_prd,
     final_prompt: run.final_prompt,
     specialist_results: specialistResults,
+    artifacts: artifacts.map((artifact) => ({
+      id: artifact.id,
+      prd_id: artifact.prd_id,
+      artifact_kind: artifact.artifact_kind,
+      payload: artifact.payload,
+      summary: artifact.summary || null,
+      status: artifact.status,
+      version_number: artifact.version_number,
+      created_at: artifact.created_at,
+      approved_at: artifact.approved_at || null,
+    })),
     tasks: tasks.map((task) => ({
       id: task.id,
       agent_id: task.agent_id,

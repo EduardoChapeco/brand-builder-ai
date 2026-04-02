@@ -25,7 +25,13 @@ import ProductShots from "@/pages/ProductShots";
 import BrandCharacter from "@/pages/BrandCharacter";
 import ChatPage from "@/pages/ChatPage";
 import FeedSimulatorPage from "@/pages/FeedSimulatorPage";
+import BioLinkModuleLayout from "@/components/biolink/BioLinkModuleLayout";
 import BioLinkPage from "@/pages/BioLinkPage";
+import BioLinkThemesPage from "@/pages/BioLinkThemesPage";
+import BioLinkCRMPage from "@/pages/BioLinkCRMPage";
+import BioLinkAnalyticsPage from "@/pages/BioLinkAnalyticsPage";
+import BioLinkSettingsPage from "@/pages/BioLinkSettingsPage";
+import BioLinkVersionsPage from "@/pages/BioLinkVersionsPage";
 import PublicBioLink from "@/pages/PublicBioLink";
 import NewsPortalPage from "@/pages/NewsPortalPage";
 import BlogManagerPage from "@/pages/BlogManagerPage";
@@ -56,6 +62,7 @@ const App = () => (
           <Route path="/workspaces" element={<WorkspacesPage />} />
           <Route path="/onboarding" element={<OnboardingPage />} />
           <Route path="/b/:slug" element={<PublicBioLink />} />
+          <Route path="/:slug" element={<PublicBioLink />} />
           <Route
             path="/workspace/:workspaceId/*"
             element={
@@ -87,7 +94,14 @@ const App = () => (
             <Route path="brand-character" element={<BrandCharacter />} />
             <Route path="chat"            element={<ChatPage />} />
             <Route path="feed-preview"    element={<FeedSimulatorPage />} />
-            <Route path="biolink"         element={<BioLinkPage />} />
+            <Route path="biolink"         element={<BioLinkModuleLayout />}>
+              <Route index element={<BioLinkPage />} />
+              <Route path="themes" element={<BioLinkThemesPage />} />
+              <Route path="crm" element={<BioLinkCRMPage />} />
+              <Route path="analytics" element={<BioLinkAnalyticsPage />} />
+              <Route path="settings" element={<BioLinkSettingsPage />} />
+              <Route path="versions" element={<BioLinkVersionsPage />} />
+            </Route>
             <Route path="slides"          element={<SlidesPage />} />
             <Route path="library"         element={<LibraryPage />} />
             <Route path="brand-kit"       element={<BrandKitPage />} />

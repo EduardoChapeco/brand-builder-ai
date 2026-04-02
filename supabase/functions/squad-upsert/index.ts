@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders, createServiceClient, safeJsonResponse } from "../_shared/postgen.ts";
+import { assertReadyTemplateAgentsSupported } from "../_shared/agent-capabilities.ts";
 
 const slugify = (value: string) =>
   value
@@ -102,6 +103,20 @@ serve(async (req: Request) => {
 
     if (templateError || !template) {
       return safeJsonResponse({ error: "Template de squad nao encontrado." }, 404);
+    }
+
+    if (template.runtime_status === "ready") {
+      const { data: templateAgents, error: templateAgentsError } = await supabase
+        .from("squad_template_agents")
+        .select("agent_id")
+        .eq("squad_template_id", template.id);
+
+      if (templateAgentsError) throw templateAgentsError;
+      assertReadyTemplateAgentsSupported(
+        template.name,
+        template.runtime_status,
+        (templateAgents || []).map((item) => item.agent_id),
+      );
     }
 
     const resolvedName = (body.name || "").trim() || `${template.name} ${workspace.name}`;

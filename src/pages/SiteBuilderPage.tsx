@@ -1,134 +1,224 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { supabase } from "@/integrations/supabase/client";
-import { LiquidGlassCard } from "@/components/ui/LiquidGlassCard";
+import { Bot, Globe, LayoutTemplate, Layers, Loader2, MousePointer2, Plus } from "lucide-react";
+import AppSectionLabel from "@/components/shared/AppSectionLabel";
+import EmptyState from "@/components/shared/EmptyState";
+import PageHeader from "@/components/shared/PageHeader";
+import SectionCard from "@/components/shared/SectionCard";
+import SubtleBadge from "@/components/shared/SubtleBadge";
 import { Button } from "@/components/ui/button";
-import { Clapperboard, Globe, Plus, LayoutTemplate, MousePointer2, Layers, Loader2 } from "lucide-react";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { fromTable } from "@/integrations/supabase/db-custom";
+
+type SiteRow = {
+  id: string;
+  name: string;
+  domain?: string | null;
+  status?: string | null;
+};
+
+type SitePageRow = {
+  website_id: string;
+};
 
 export default function SiteBuilderPage() {
   const { workspace } = useWorkspace();
   const navigate = useNavigate();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [sites, setSites] = useState<any[]>([]);
+  const [sites, setSites] = useState<SiteRow[]>([]);
+  const [sitePages, setSitePages] = useState<SitePageRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!workspace?.id) return;
-    const fetchSites = async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data } = await (supabase as any).from("websites").select("*").eq("workspace_id", workspace.id);
-      setSites(data || []);
+
+    const load = async () => {
+      setLoading(true);
+      const [{ data: siteRows, error: siteError }, { data: pageRows, error: pageError }] = await Promise.all([
+        fromTable("websites")
+          .select("id,name,domain,status")
+          .eq("workspace_id", workspace.id)
+          .order("updated_at", { ascending: false }),
+        fromTable("website_pages")
+          .select("website_id")
+          .in(
+            "website_id",
+            (
+              await fromTable("websites")
+                .select("id")
+                .eq("workspace_id", workspace.id)
+            ).data?.map((site: { id: string }) => site.id) || ["00000000-0000-0000-0000-000000000000"],
+          ),
+      ]);
+
+      if (!siteError) setSites((siteRows || []) as SiteRow[]);
+      if (!pageError) setSitePages((pageRows || []) as SitePageRow[]);
       setLoading(false);
     };
-    fetchSites();
+
+    void load();
   }, [workspace?.id]);
 
+  const pagesBuilt = useMemo(() => sitePages.length, [sitePages.length]);
+
   return (
-    <div className="flex h-full flex-col p-8">
-      <div className="flex w-full max-w-7xl mx-auto flex-col gap-8">
-        
-        {/* Header Hero */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-4xl font-light tracking-tighter">
-              <span className="font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-500">
-                Site
-              </span> Builder
-            </h1>
-            <p className="text-zinc-400 mt-2 text-lg">
-              Crie experiências na web em múltiplas páginas com efeitos glass e conversão premium.
-            </p>
+    <div className="page-layout">
+      <div className="page-content">
+        <div className="page-inner flex max-w-none flex-col gap-6 py-6">
+          <PageHeader
+            eyebrow="Site Builder"
+            title="Builder visual conectado ao squad de site"
+            description="O builder visual continua disponivel, mas agora pode disparar o fluxo spec-driven no chat para gerar projetos multi-arquivo vinculados ao site."
+            className="shadow-none"
+            action={
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" className="rounded-xl shadow-none" onClick={() => navigate("../vibe-coder")}>
+                  <Bot size={14} />
+                  Abrir chat spec-driven
+                </Button>
+                <Button className="rounded-xl shadow-none" onClick={() => navigate("new")}>
+                  <Plus size={14} />
+                  Novo site visual
+                </Button>
+              </div>
+            }
+          />
+
+          <div className="grid gap-6 md:grid-cols-3">
+            <SectionCard className="shadow-none">
+              <AppSectionLabel>Sites</AppSectionLabel>
+              <p className="mt-3 text-4xl font-semibold tracking-[-0.05em] text-[var(--text-primary)]">
+                {loading ? "-" : sites.length}
+              </p>
+              <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">Sites publicados ou em rascunho ligados ao workspace.</p>
+            </SectionCard>
+
+            <SectionCard className="shadow-none">
+              <AppSectionLabel>Paginas</AppSectionLabel>
+              <p className="mt-3 text-4xl font-semibold tracking-[-0.05em] text-[var(--text-primary)]">
+                {loading ? "-" : pagesBuilt}
+              </p>
+              <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">Paginas estruturadas dentro do builder visual.</p>
+            </SectionCard>
+
+            <SectionCard className="shadow-none">
+              <AppSectionLabel>Execucao</AppSectionLabel>
+              <p className="mt-3 text-4xl font-semibold tracking-[-0.05em] text-[var(--text-primary)]">
+                {loading ? "-" : sites.length > 0 ? "Ativa" : "Inicial"}
+              </p>
+              <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">Use o chat spec-driven para gerar a camada multi-arquivo vinculada a um site visual.</p>
+            </SectionCard>
           </div>
-          <div className="flex items-center gap-3">
-            <Button variant="outline" onClick={() => navigate("../video-studio/motion")} className="gap-2 rounded-xl border-white/10 bg-white/5 text-white hover:bg-white/10">
-              <Clapperboard className="w-4 h-4" />
-              Motion Sections
-            </Button>
-            <Button onClick={() => navigate("new")} className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-lg shadow-indigo-500/20">
-              <Plus className="w-4 h-4" />
-              Novo Site Institucional
-            </Button>
-          </div>
-        </div>
 
-        {/* Builder Analytics / Overview Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <LiquidGlassCard delay={0.1} className="p-6">
-            <div className="flex justify-between items-start">
+          <SectionCard className="shadow-none">
+            <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-sm text-zinc-400">Sites Publicados</p>
-                <h3 className="text-5xl font-bold mt-2">{loading ? "-" : sites.length}</h3>
+                <AppSectionLabel>Biblioteca</AppSectionLabel>
+                <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-[var(--text-primary)]">
+                  Sites do workspace
+                </h2>
               </div>
-              <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center">
-                <Globe className="w-6 h-6 text-blue-400" />
-              </div>
+              <SubtleBadge variant="outline">{sites.length} site(s)</SubtleBadge>
             </div>
-          </LiquidGlassCard>
 
-          <LiquidGlassCard delay={0.2} className="p-6">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-sm text-zinc-400">Páginas Construídas</p>
-                <h3 className="text-5xl font-bold mt-2">0</h3>
+            {loading ? (
+              <div className="flex min-h-[260px] items-center justify-center">
+                <Loader2 className="animate-spin text-[var(--text-muted)]" size={28} />
               </div>
-              <div className="w-12 h-12 rounded-full bg-indigo-500/10 flex items-center justify-center">
-                <Layers className="w-6 h-6 text-indigo-400" />
-              </div>
-            </div>
-          </LiquidGlassCard>
+            ) : sites.length === 0 ? (
+              <EmptyState
+                title="Nenhum site encontrado"
+                description="Crie o primeiro site visual ou inicie pelo chat spec-driven para gerar um projeto vinculado."
+                icon={LayoutTemplate}
+                action={
+                  <div className="flex flex-wrap justify-center gap-3">
+                    <Button variant="outline" className="rounded-xl shadow-none" onClick={() => navigate("../vibe-coder")}>
+                      <Bot size={14} />
+                      Chat spec-driven
+                    </Button>
+                    <Button className="rounded-xl shadow-none" onClick={() => navigate("new")}>
+                      <Plus size={14} />
+                      Novo site visual
+                    </Button>
+                  </div>
+                }
+              />
+            ) : (
+              <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {sites.map((site) => (
+                  <div
+                    key={site.id}
+                    className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-5"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-lg font-semibold tracking-[-0.03em] text-[var(--text-primary)]">{site.name}</p>
+                        <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                          {site.domain || "Sem dominio vinculado"}
+                        </p>
+                      </div>
+                      <SubtleBadge variant={site.status === "published" ? "brand" : "outline"}>
+                        {site.status || "draft"}
+                      </SubtleBadge>
+                    </div>
 
-          <LiquidGlassCard delay={0.3} className="p-6">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-sm text-zinc-400">Conversões Totais</p>
-                <h3 className="text-5xl font-bold mt-2">0</h3>
+                    <div className="mt-5 flex flex-wrap gap-2">
+                      <Button variant="outline" className="rounded-xl shadow-none" onClick={() => navigate(site.id)}>
+                        <LayoutTemplate size={14} />
+                        Editor visual
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="rounded-xl shadow-none"
+                        onClick={() => navigate("../vibe-coder", { state: { websiteId: site.id, websiteName: site.name } })}
+                      >
+                        <Bot size={14} />
+                        Abrir no chat
+                      </Button>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center">
-                <MousePointer2 className="w-6 h-6 text-green-400" />
-              </div>
-            </div>
-          </LiquidGlassCard>
-        </div>
+            )}
+          </SectionCard>
 
-        {/* Empty State / Site List Space */}
-        {loading ? (
-          <div className="flex items-center justify-center p-20">
-            <Loader2 className="w-8 h-8 animate-spin text-zinc-500" />
-          </div>
-        ) : sites.length === 0 ? (
-          <LiquidGlassCard delay={0.4} className="flex-1 mt-6 min-h-[400px] flex flex-col items-center justify-center border-dashed border-2 border-white/5">
-            <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mb-6">
-              <LayoutTemplate className="w-10 h-10 text-zinc-500" />
-            </div>
-            <h2 className="text-2xl font-semibold mb-2">Nenhum site encontrado</h2>
-            <p className="text-zinc-400 max-w-md text-center mb-8">
-              Você ainda não possui nenhum site institucional. Crie seu primeiro projeto para começar a desenhar interfaces imersivas utilizando nosso sistema de Liquid Glass.
-            </p>
-            <Button onClick={() => navigate("new")} variant="outline" className="border-white/10 bg-white/5 hover:bg-white/10 text-white gap-2">
-              <Plus className="w-4 h-4" /> Importar do Figma ou Criar do Zero
-            </Button>
-          </LiquidGlassCard>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
-            {sites.map((site, i) => (
-              <LiquidGlassCard key={site.id} delay={0.1 + (i * 0.05)} className="p-1">
-                <div className="bg-background/50 rounded-xl p-6 h-[220px] flex flex-col justify-between border border-border hover:bg-accent/50 transition-all cursor-pointer" onClick={() => navigate(site.id)}>
-                   <div>
-                     <h3 className="text-2xl font-bold mb-2">{site.name}</h3>
-                     <a href={`https://${site.domain || 'untitled.com'}`} target="_blank" rel="noreferrer" className="text-zinc-400 flex items-center gap-2 text-sm hover:text-indigo-400">
-                       <Globe className="w-4 h-4" /> {site.domain || "Sem domínio vinculado"}
-                     </a>
-                   </div>
-                   <Button variant="outline" className="w-full bg-transparent border-white/10 text-white mt-4 hover:bg-indigo-600 hover:border-indigo-600 hover:text-white justify-between">
-                     Abrir no Editor <LayoutTemplate className="w-4 h-4 ml-2" />
-                   </Button>
+          <div className="grid gap-6 md:grid-cols-3">
+            <SectionCard className="shadow-none">
+              <div className="flex items-center gap-3">
+                <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
+                  <Globe size={18} className="text-[var(--text-secondary)]" />
                 </div>
-              </LiquidGlassCard>
-            ))}
-          </div>
-        )}
+                <div>
+                  <p className="text-sm font-semibold text-[var(--text-primary)]">Site visual</p>
+                  <p className="text-sm text-[var(--text-secondary)]">Builder estruturado com paginas e blocos.</p>
+                </div>
+              </div>
+            </SectionCard>
 
+            <SectionCard className="shadow-none">
+              <div className="flex items-center gap-3">
+                <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
+                  <Layers size={18} className="text-[var(--text-secondary)]" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-[var(--text-primary)]">Projeto multi-arquivo</p>
+                  <p className="text-sm text-[var(--text-secondary)]">Executado no target `project_vfs` com preview ao vivo.</p>
+                </div>
+              </div>
+            </SectionCard>
+
+            <SectionCard className="shadow-none">
+              <div className="flex items-center gap-3">
+                <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
+                  <MousePointer2 size={18} className="text-[var(--text-secondary)]" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-[var(--text-primary)]">Aprovacao obrigatoria</p>
+                  <p className="text-sm text-[var(--text-secondary)]">Nenhum build sai sem spec validada e aprovada.</p>
+                </div>
+              </div>
+            </SectionCard>
+          </div>
+        </div>
       </div>
     </div>
   );
