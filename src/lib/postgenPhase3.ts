@@ -1,4 +1,4 @@
-import type { Json, Tables } from '@/integrations/supabase/types';
+import type { Json } from '@/integrations/supabase/types';
 
 export type BioLinkBlockType = 'link' | 'youtube' | 'spotify' | 'map' | 'newsletter' | 'spacer' | 'site_card' | 'blog_card';
 
@@ -98,13 +98,11 @@ export const BIOLINK_THEMES: BioLinkThemeDefinition[] = [
   },
 ];
 
-export type BioLinkRecord = Tables<'bio_links'>;
-export type BlogArticleRecord = Tables<'blog_articles'>;
-export type NewsItemRecord = Tables<'news_items'>;
-// @ts-expect-error Legacy Schema
-export type LandingPageRecord = Tables<'landing_pages'>;
-// @ts-expect-error Legacy Schema
-export type ProjectRecord = Tables<'projects'>;
+export type BioLinkRecord = { id: string; workspace_id: string; slug: string; theme_id?: string | null; profile?: unknown; blocks?: unknown; links?: unknown; theme_config?: unknown; seo_config?: unknown; is_published?: boolean; published_html?: string | null; latest_simlab_run_id?: string | null; created_at?: string; updated_at?: string; [key: string]: unknown };
+export type BlogArticleRecord = { id: string; workspace_id: string; title?: string; slug?: string; content?: string; layout?: string; status?: string; created_at?: string; [key: string]: unknown };
+export type NewsItemRecord = { id: string; workspace_id: string; title?: string; url?: string; source?: string; created_at?: string; [key: string]: unknown };
+export type LandingPageRecord = Record<string, unknown>;
+export type ProjectRecord = Record<string, unknown>;
 
 export const BLOG_LAYOUTS = [
   { id: 'medium_clean', name: 'Medium Style', description: 'Leitura confortável, com foco total no texto.' },
@@ -143,10 +141,10 @@ export const parseJsonObject = <T extends Record<string, unknown>>(value: Json |
   typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as T) : fallback;
 
 export const normalizeBioLinkBlocks = (record: Pick<BioLinkRecord, 'blocks' | 'links'> | null | undefined): BioLinkBlock[] => {
-  const blocks = parseJsonArray<BioLinkBlock>(record?.blocks ?? null);
+  const blocks = parseJsonArray<BioLinkBlock>((record?.blocks ?? null) as Json);
   if (blocks.length > 0) return blocks;
 
-  const legacyLinks = parseJsonArray<{ id?: string; label?: string; url?: string; emoji?: string }>(record?.links ?? null);
+  const legacyLinks = parseJsonArray<{ id?: string; label?: string; url?: string; emoji?: string }>((record?.links ?? null) as Json);
   return legacyLinks.map((link, index) => ({
     id: link.id || `legacy-link-${index + 1}`,
     type: 'link',

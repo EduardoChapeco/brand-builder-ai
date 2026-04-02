@@ -13,7 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client"
+import { fromTable } from "@/integrations/supabase/db-custom";
 import { createScrollSection, type ScrollSection, type VideoAsset } from "@/lib/video-studio";
 
 const EFFECTS = ["parallax", "sticky", "reveal", "horizontal", "video_scrub", "text_reveal", "scale_fade", "tilt_3d"];
@@ -51,16 +52,15 @@ export default function VideoStudioMotionPage() {
   const load = useCallback(async () => {
     if (!workspace?.id) return;
     const [sitesResult, pagesResult, assetsResult, sectionsResult] = await Promise.all([
-      supabase.from("websites").select("id,name").eq("workspace_id", workspace.id).order("created_at", { ascending: false }),
-      supabase.from("website_pages").select("id,title,website_id").order("created_at", { ascending: false }),
-      supabase
-        .from("video_assets")
+      fromTable('websites').select("id,name").eq("workspace_id", workspace.id).order("created_at", { ascending: false }),
+      fromTable('website_pages').select("id,title,website_id").order("created_at", { ascending: false }),
+      fromTable('video_assets')
         .select("*")
         .eq("workspace_id", workspace.id)
         .in("asset_type", ["generated_video", "generated_image", "video", "image"])
         .order("created_at", { ascending: false })
         .limit(16),
-      supabase.from("scroll_sections").select("*").eq("workspace_id", workspace.id).order("created_at", { ascending: false }).limit(12),
+      fromTable('scroll_sections').select("*").eq("workspace_id", workspace.id).order("created_at", { ascending: false }).limit(12),
     ]);
 
     setSites((sitesResult.data || []) as SiteRecord[]);

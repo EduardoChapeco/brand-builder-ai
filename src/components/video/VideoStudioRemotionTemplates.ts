@@ -93,7 +93,7 @@ type LayerSnapshot = {
   duration_in_frames: number;
 };
 
-type SequenceSnapshot = MotionStudioSequence & {
+type SequenceSnapshot = Omit<MotionStudioSequence, "kind"> & {
   kind: "sequence";
 };
 
@@ -689,8 +689,8 @@ export const buildMotionStudioLayers = (templateId: string, values: Record<strin
   };
 
   const sequenceSnapshots: SequenceSnapshot[] = template.buildSequences(values).map((sequence) => ({
-    kind: "sequence",
     ...sequence,
+    kind: "sequence" as const,
   }));
 
   return [snapshot, ...sequenceSnapshots];

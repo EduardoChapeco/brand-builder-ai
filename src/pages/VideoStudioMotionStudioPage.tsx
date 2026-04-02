@@ -31,14 +31,15 @@ import {
 import VideoStudioShell from "@/components/video/VideoStudioShell";
 import { Button } from "@/components/ui/button";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client"
+import { fromTable } from "@/integrations/supabase/db-custom";
 import type { Tables } from "@/integrations/supabase/types";
 import { createLayerComposition, requestRemotionRender } from "@/lib/video-studio";
 
-type VideoProjectRow = Tables<"video_projects">;
-type VideoAssetRow = Tables<"video_assets">;
-type LayerCompositionRow = Tables<"layer_compositions">;
-type VideoJobRow = Tables<"video_jobs">;
+type VideoProjectRow = any;
+type VideoAssetRow = any;
+type LayerCompositionRow = any;
+type VideoJobRow = any;
 
 type AssetOption = {
   id: string;
@@ -199,21 +200,18 @@ export default function VideoStudioMotionStudioPage() {
 
       try {
         const [projectsResult, assetsResult, compositionsResult] = await Promise.all([
-          supabase
-            .from("video_projects")
+          fromTable('video_projects')
             .select("*")
             .eq("workspace_id", workspace.id)
             .order("updated_at", { ascending: false })
             .limit(24),
-          supabase
-            .from("video_assets")
+          fromTable('video_assets')
             .select("*")
             .eq("workspace_id", workspace.id)
             .in("asset_type", ["video", "generated_video", "image", "generated_image"])
             .order("created_at", { ascending: false })
             .limit(48),
-          supabase
-            .from("layer_compositions")
+          fromTable('layer_compositions')
             .select("*")
             .eq("workspace_id", workspace.id)
             .order("created_at", { ascending: false })
@@ -266,8 +264,7 @@ export default function VideoStudioMotionStudioPage() {
       }
 
       try {
-        const { data: jobRow, error: jobError } = await supabase
-          .from("video_jobs")
+        const { data: jobRow, error: jobError } = await fromTable('video_jobs')
           .select("*")
           .eq("id", activeJobId)
           .maybeSingle();
@@ -278,8 +275,7 @@ export default function VideoStudioMotionStudioPage() {
         setRenderJob(nextJob);
 
         if (nextJob?.output_asset_id) {
-          const { data: assetRow, error: assetError } = await supabase
-            .from("video_assets")
+          const { data: assetRow, error: assetError } = await fromTable('video_assets')
             .select("*")
             .eq("id", nextJob.output_asset_id)
             .maybeSingle();
@@ -297,8 +293,7 @@ export default function VideoStudioMotionStudioPage() {
   );
 
   const fetchCompositionById = useCallback(async (compositionId: string) => {
-    const { data, error } = await supabase
-      .from("layer_compositions")
+    const { data, error } = await fromTable('layer_compositions')
       .select("*")
       .eq("id", compositionId)
       .maybeSingle();
@@ -375,8 +370,7 @@ export default function VideoStudioMotionStudioPage() {
     if (renderOutputAsset || !selectedComposition?.final_asset_id) return;
 
     const loadSelectedCompositionAsset = async () => {
-      const { data, error } = await supabase
-        .from("video_assets")
+      const { data, error } = await fromTable('video_assets')
         .select("*")
         .eq("id", selectedComposition.final_asset_id as string)
         .maybeSingle();

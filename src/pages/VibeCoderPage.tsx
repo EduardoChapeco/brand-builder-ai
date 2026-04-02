@@ -19,12 +19,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client'
+import { fromTable } from '@/integrations/supabase/db-custom';
 import type { Tables } from '@/integrations/supabase/types';
 import { buildProjectSummary, VIBECODER_STARTER_FILES } from '@/lib/postgenPhase3';
 
-type Project = Tables<'projects'>;
-type Conversation = Tables<'platform_conversations'>;
+type Project = { id: string; workspace_id: string; name: string; description?: string; files_json?: Record<string, string>; status?: string; created_at?: string; updated_at?: string; [key: string]: unknown };
+type Conversation = { id: string; project_id: string; workspace_id: string; user_message?: string; assistant_response?: string; mode?: string; diff_summary?: string; created_at?: string; [key: string]: unknown };
 
 const adaptFilesForSandpack = (files: Record<string, string>) => {
   const next: Record<string, string> = {};
@@ -107,8 +108,7 @@ const VibeCoderPage = () => {
   const loadConversations = useCallback(async (projectId: string) => {
     if (!workspace?.id) return;
 
-    const { data } = await supabase
-      .from('platform_conversations')
+    const { data } = await fromTable('platform_conversations')
       .select('*')
       .eq('workspace_id', workspace.id)
       .eq('project_id', projectId)

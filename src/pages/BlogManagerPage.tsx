@@ -10,14 +10,15 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client'
+import { fromTable } from '@/integrations/supabase/db-custom';
 import type { Tables } from '@/integrations/supabase/types';
 import { useVideoJobStatus } from '@/hooks/useVideoJobStatus';
 import { extractRemotionResultUrl, launchRemotionComposition } from '@/lib/remotion-entrypoints';
 import { BLOG_LAYOUTS } from '@/lib/postgenPhase3';
 import { awaitSimlabCompletion, type SimlabInsight, type SimlabRun, type SimlabVariant } from '@/lib/simlab';
 
-type BlogArticle = Tables<'blog_articles'>;
+type BlogArticle = any;
 
 const markdownToHtml = (markdown: string) => markdown
   .split(/\n{2,}/)
@@ -78,8 +79,7 @@ const BlogManagerPage = () => {
 
   const loadArticles = useCallback(async () => {
     if (!workspace?.id) return;
-    const { data, error } = await supabase
-      .from('blog_articles')
+    const { data, error } = await fromTable('blog_articles')
       .select('*')
       .eq('workspace_id', workspace.id)
       .order('created_at', { ascending: false })
@@ -214,8 +214,7 @@ const BlogManagerPage = () => {
           generated_at: new Date().toISOString(),
         },
       };
-      const { error } = await supabase
-        .from('blog_articles')
+      const { error } = await fromTable('blog_articles')
         .update(payload)
         .eq('id', selectedArticle.id);
       if (error) throw error;

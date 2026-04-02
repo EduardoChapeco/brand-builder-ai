@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client'
+import { fromTable } from '@/integrations/supabase/db-custom';
 import { BioLinkRenderer, BioLinkData } from '@/components/biolink/BioLinkRenderer';
 
 const PublicBioLink = () => {
@@ -14,8 +15,7 @@ const PublicBioLink = () => {
     const fetchLink = async () => {
       if (!slug) return;
       try {
-        const { data: dbData, error: dbError } = await supabase
-          .from('bio_links')
+        const { data: dbData, error: dbError } = await fromTable('bio_links')
           .select('*')
           .eq('slug', slug)
           .eq('is_published', true)

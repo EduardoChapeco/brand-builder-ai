@@ -10,7 +10,8 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { LiquidGlassCard } from "@/components/ui/LiquidGlassCard";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client"
+import { fromTable } from "@/integrations/supabase/db-custom";
 import type { Json } from "@/integrations/supabase/types";
 import { resolveScrollSectionMotionContract, type ScrollSection } from "@/lib/video-studio";
 
@@ -119,8 +120,7 @@ export default function SiteEditorPage() {
           setDomain("");
           setBlocks([]);
         } else {
-          const { data: websiteRow, error: websiteError } = await supabase
-            .from("websites")
+          const { data: websiteRow, error: websiteError } = await fromTable('websites')
             .select("name, domain")
             .eq("id", siteId)
             .single();
@@ -130,8 +130,7 @@ export default function SiteEditorPage() {
             setDomain(websiteRow.domain || "");
           }
 
-          const { data: pageRow } = await supabase
-            .from("website_pages")
+          const { data: pageRow } = await fromTable('website_pages')
             .select("content_blocks")
             .eq("website_id", siteId)
             .eq("is_home", true)
@@ -148,8 +147,7 @@ export default function SiteEditorPage() {
         }
 
         // Slim select — exclui content e preview_data (campos grandes, não usados na lista)
-        const { data: sectionRows } = await supabase
-          .from("scroll_sections")
+        const { data: sectionRows } = await fromTable('scroll_sections')
           .select("id,name,scroll_effect_type,status,renderer_config,background_video_asset_id,background_image_asset_id")
           .eq("workspace_id", workspace.id)
           .order("created_at", { ascending: false });
@@ -168,8 +166,7 @@ export default function SiteEditorPage() {
         );
 
         if (assetIds.length > 0) {
-          const { data: assetRows } = await supabase
-            .from("video_assets")
+          const { data: assetRows } = await fromTable('video_assets')
             .select("id, public_url")
             .in("id", assetIds);
 
@@ -280,8 +277,7 @@ export default function SiteEditorPage() {
       }
 
       if (!activeSiteId || activeSiteId === "new") {
-        const { data, error } = await supabase
-          .from("websites")
+        const { data, error } = await fromTable('websites')
           .insert({
             workspace_id: workspace.id,
             name: siteName,
@@ -312,11 +308,11 @@ export default function SiteEditorPage() {
         };
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (supabase.from("websites") as any)
+        await (fromTable('websites') as any)
           .update({ ccp_context: siteCCPCtx })
           .eq("id", activeSiteId);
 
-        await supabase.from("website_pages").insert({
+        await fromTable('website_pages').insert({
           website_id: activeSiteId,
           title: "Home",
           slug: "/",
@@ -327,16 +323,14 @@ export default function SiteEditorPage() {
         toast.success("Site criado com sucesso!");
         navigate(`../site-builder/${activeSiteId}`, { replace: true });
       } else {
-        await supabase
-          .from("websites")
+        await fromTable('websites')
           .update({
             name: siteName,
             domain: domain || null,
           })
           .eq("id", activeSiteId);
 
-        await supabase
-          .from("website_pages")
+        await fromTable('website_pages')
           .update({ content_blocks: nextBlocks as unknown as Json })
           .eq("website_id", activeSiteId)
           .eq("is_home", true);
@@ -347,7 +341,7 @@ export default function SiteEditorPage() {
           .map((b) => b.content.scroll_section_id as string);
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (supabase.from("websites") as any)
+        await (fromTable('websites') as any)
           .update({
             ccp_context: {
               type: "cerebro/site/v1",

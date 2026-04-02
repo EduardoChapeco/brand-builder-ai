@@ -91,7 +91,7 @@ const ProductShots = () => {
     image.onload = async () => {
       try {
         const extractedPalette = await getPalette(image, { colorCount: 5, quality: 8 });
-        const extracted = (extractedPalette || []).map((color: PaletteColor) => rgbToHex(
+        const extracted = (extractedPalette || []).map((color: any) => rgbToHex(
           Array.isArray(color)
             ? color
             : [color.r ?? color[0] ?? 0, color.g ?? color[1] ?? 0, color.b ?? color[2] ?? 0],
