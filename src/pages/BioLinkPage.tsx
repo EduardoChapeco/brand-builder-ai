@@ -15,6 +15,8 @@ import { awaitSimlabCompletion, dispatchSimlabValidation, submitSimlabFeedback, 
 
 const blockOptions: Array<{ id: BioLinkBlockType; label: string }> = [
   { id: 'link', label: 'Link CTA' },
+  { id: 'site_card', label: 'Site Oficial' },
+  { id: 'blog_card', label: 'Blog Posts' },
   { id: 'youtube', label: 'YouTube Embed' },
   { id: 'spotify', label: 'Spotify Embed' },
   { id: 'map', label: 'Google Maps Box' },
@@ -25,9 +27,9 @@ const blockOptions: Array<{ id: BioLinkBlockType; label: string }> = [
 const createBlock = (type: BioLinkBlockType): BioLinkBlock => ({
   id: crypto.randomUUID(),
   type,
-  title: type === 'newsletter' ? 'Receba atualizações' : 'Novo bloco',
+  title: type === 'newsletter' ? 'Receba atualizações' : type === 'site_card' ? 'Acesse nosso Site' : type === 'blog_card' ? 'Últimos Artigos' : 'Novo bloco',
   url: '',
-  emoji: type === 'link' ? '🔗' : undefined,
+  emoji: type === 'link' ? '🔗' : type === 'site_card' ? '🌐' : type === 'blog_card' ? '📰' : undefined,
   note: '',
   buttonLabel: type === 'newsletter' ? 'Inscrever-se' : undefined,
   placeholder: type === 'newsletter' ? 'Seu melhor e-mail' : undefined,
@@ -400,6 +402,8 @@ const BioLinkPage = () => {
             <div className="grid grid-cols-2 gap-2">
               {([
                 { type: 'link',       emoji: '🔗', label: 'Link CTA' },
+                { type: 'site_card',  emoji: '🌐', label: 'Ir p/ Site' },
+                { type: 'blog_card',  emoji: '📰', label: 'Ir p/ Blog' },
                 { type: 'youtube',    emoji: '▶️', label: 'YouTube' },
                 { type: 'spotify',    emoji: '🎵', label: 'Spotify' },
                 { type: 'map',        emoji: '📍', label: 'Mapa' },
@@ -485,7 +489,7 @@ const BioLinkPage = () => {
                 </>
               )}
 
-              {selectedBlock.type === 'link' && (
+              {(selectedBlock.type === 'link' || selectedBlock.type === 'site_card' || selectedBlock.type === 'blog_card') && (
                 <div className="grid grid-cols-[72px_1fr] gap-3">
                   <div className="space-y-2">
                     <Label>Emoji</Label>

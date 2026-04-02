@@ -1,6 +1,6 @@
 import type { Json, Tables } from '@/integrations/supabase/types';
 
-export type BioLinkBlockType = 'link' | 'youtube' | 'spotify' | 'map' | 'newsletter' | 'spacer';
+export type BioLinkBlockType = 'link' | 'youtube' | 'spotify' | 'map' | 'newsletter' | 'spacer' | 'site_card' | 'blog_card';
 
 export interface BioLinkBlock {
   id: string;
@@ -101,7 +101,9 @@ export const BIOLINK_THEMES: BioLinkThemeDefinition[] = [
 export type BioLinkRecord = Tables<'bio_links'>;
 export type BlogArticleRecord = Tables<'blog_articles'>;
 export type NewsItemRecord = Tables<'news_items'>;
+// @ts-expect-error Legacy Schema
 export type LandingPageRecord = Tables<'landing_pages'>;
+// @ts-expect-error Legacy Schema
 export type ProjectRecord = Tables<'projects'>;
 
 export const BLOG_LAYOUTS = [
