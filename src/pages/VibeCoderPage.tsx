@@ -19,7 +19,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client'
+import { fromTable } from '@/integrations/supabase/db-custom';
 import type { Tables } from '@/integrations/supabase/types';
 import { buildProjectSummary, VIBECODER_STARTER_FILES } from '@/lib/postgenPhase3';
 
@@ -107,8 +108,7 @@ const VibeCoderPage = () => {
   const loadConversations = useCallback(async (projectId: string) => {
     if (!workspace?.id) return;
 
-    const { data } = await supabase
-      .from('platform_conversations')
+    const { data } = await fromTable('platform_conversations')
       .select('*')
       .eq('workspace_id', workspace.id)
       .eq('project_id', projectId)

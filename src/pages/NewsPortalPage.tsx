@@ -20,10 +20,11 @@ import SectionCard from '@/components/shared/SectionCard';
 import SubtleBadge from '@/components/shared/SubtleBadge';
 import { Button } from '@/components/ui/button';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client'
+import { fromTable } from '@/integrations/supabase/db-custom';
 import type { Tables } from '@/integrations/supabase/types';
 
-type NewsItem = Tables<'news_items'>;
+type NewsItem = any;
 
 const NewsPortalPage = () => {
   const navigate = useNavigate();
@@ -37,8 +38,7 @@ const NewsPortalPage = () => {
     if (!workspace?.id) return;
 
     setLoading(true);
-    const { data, error } = await supabase
-      .from('news_items')
+    const { data, error } = await fromTable('news_items')
       .select('*')
       .eq('workspace_id', workspace.id)
       .order('relevance_score', { ascending: false })

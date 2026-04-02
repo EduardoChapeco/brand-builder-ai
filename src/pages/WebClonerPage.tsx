@@ -5,7 +5,8 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client'
+import { fromTable } from '@/integrations/supabase/db-custom';
 type LandingPage = { id: string; workspace_id: string; name?: string; source_url?: string; status?: string; screenshots_json?: unknown[]; sections_analysis?: unknown[]; full_html?: string; full_css?: string; created_at?: string; [key: string]: unknown };
 
 const WebClonerPage = () => {
@@ -24,8 +25,7 @@ const WebClonerPage = () => {
 
   const loadLandings = useCallback(async () => {
     if (!workspace?.id) return;
-    const { data, error } = await supabase
-      .from('landing_pages')
+    const { data, error } = await fromTable('landing_pages')
       .select('*')
       .eq('workspace_id', workspace.id)
       .order('created_at', { ascending: false })

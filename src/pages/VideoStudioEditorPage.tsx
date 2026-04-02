@@ -12,7 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client"
+import { fromTable } from "@/integrations/supabase/db-custom";
 import {
   confirmVideoUpload,
   createVideoUploadSession,
@@ -83,11 +84,11 @@ export default function VideoStudioEditorPage() {
     setLoading(true);
     try {
       const [projectResult, assetsResult, subtitleResult, exportsResult, jobsResult] = await Promise.all([
-        supabase.from("video_projects").select("*").eq("id", activeProjectId).eq("workspace_id", workspace.id).single(),
-        supabase.from("video_assets").select("*").eq("video_project_id", activeProjectId).order("created_at", { ascending: false }),
-        supabase.from("video_subtitle_tracks").select("*").eq("video_project_id", activeProjectId).order("created_at", { ascending: false }),
-        supabase.from("video_exports").select("*").eq("video_project_id", activeProjectId).order("created_at", { ascending: false }),
-        supabase.from("video_jobs").select("*").eq("video_project_id", activeProjectId).order("created_at", { ascending: false }).limit(1),
+        fromTable('video_projects').select("*").eq("id", activeProjectId).eq("workspace_id", workspace.id).single(),
+        fromTable('video_assets').select("*").eq("video_project_id", activeProjectId).order("created_at", { ascending: false }),
+        fromTable('video_subtitle_tracks').select("*").eq("video_project_id", activeProjectId).order("created_at", { ascending: false }),
+        fromTable('video_exports').select("*").eq("video_project_id", activeProjectId).order("created_at", { ascending: false }),
+        fromTable('video_jobs').select("*").eq("video_project_id", activeProjectId).order("created_at", { ascending: false }).limit(1),
       ]);
 
       const nextProject = (projectResult.data || null) as VideoProject | null;
@@ -99,8 +100,7 @@ export default function VideoStudioEditorPage() {
       setLatestJobId(((jobsResult.data || [])[0] || null)?.id || null);
 
       if (nextProject?.active_timeline_version_id) {
-        const { data: timelineRow } = await supabase
-          .from("video_timeline_versions")
+        const { data: timelineRow } = await fromTable('video_timeline_versions')
           .select("*")
           .eq("id", nextProject.active_timeline_version_id)
           .single();

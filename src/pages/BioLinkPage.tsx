@@ -9,7 +9,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client'
+import { fromTable } from '@/integrations/supabase/db-custom';
 import type { Json } from '@/integrations/supabase/types';
 import { BIOLINK_THEMES, BioLinkBlock, type BioLinkBlockType, normalizeBioLinkBlocks, slugify } from '@/lib/postgenPhase3';
 import { awaitSimlabCompletion, dispatchSimlabValidation, submitSimlabFeedback, type SimlabInsight, type SimlabRun, type SimlabVariant } from '@/lib/simlab';
@@ -227,8 +228,8 @@ const BioLinkPage = () => {
     };
 
     const query = bioLinkId
-      ? supabase.from('bio_links').update(payload).eq('id', bioLinkId).select('*').single()
-      : supabase.from('bio_links').insert(payload).select('*').single();
+      ? fromTable('bio_links').update(payload).eq('id', bioLinkId).select('*').single()
+      : fromTable('bio_links').insert(payload).select('*').single();
 
     const { data, error } = await query;
     if (error) {

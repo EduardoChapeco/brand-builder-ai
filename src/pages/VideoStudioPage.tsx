@@ -6,7 +6,8 @@ import SectionCard from "@/components/shared/SectionCard";
 import VideoStudioShell from "@/components/video/VideoStudioShell";
 import { Button } from "@/components/ui/button";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client"
+import { fromTable } from "@/integrations/supabase/db-custom";
 import type {
   AIGeneratedVideo,
   ScrollSection,
@@ -37,12 +38,11 @@ export default function VideoStudioPage() {
     setLoading(true);
     try {
       const [projectsResult, jobsResult, generationsResult, sectionsResult, templatesResult] = await Promise.all([
-        supabase.from("video_projects").select("*").eq("workspace_id", workspace.id).order("updated_at", { ascending: false }).limit(12),
-        supabase.from("video_jobs").select("*").eq("workspace_id", workspace.id).order("created_at", { ascending: false }).limit(8),
-        supabase.from("ai_generated_videos").select("*").eq("workspace_id", workspace.id).order("created_at", { ascending: false }).limit(6),
-        supabase.from("scroll_sections").select("*").eq("workspace_id", workspace.id).order("created_at", { ascending: false }).limit(6),
-        supabase
-          .from("video_templates")
+        fromTable('video_projects').select("*").eq("workspace_id", workspace.id).order("updated_at", { ascending: false }).limit(12),
+        fromTable('video_jobs').select("*").eq("workspace_id", workspace.id).order("created_at", { ascending: false }).limit(8),
+        fromTable('ai_generated_videos').select("*").eq("workspace_id", workspace.id).order("created_at", { ascending: false }).limit(6),
+        fromTable('scroll_sections').select("*").eq("workspace_id", workspace.id).order("created_at", { ascending: false }).limit(6),
+        fromTable('video_templates')
           .select("*")
           .or(`is_system.eq.true,workspace_id.eq.${workspace.id}`)
           .order("is_system", { ascending: false })

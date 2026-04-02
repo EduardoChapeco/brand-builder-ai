@@ -11,7 +11,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client"
+import { fromTable } from "@/integrations/supabase/db-custom";
 import {
   attachVideoKeyframe,
   composeVideoPrompt,
@@ -61,14 +62,12 @@ export default function VideoStudioGeneratePage() {
   const load = useCallback(async () => {
     if (!workspace?.id) return;
     const [{ data: templateRows }, { data: generationRows }] = await Promise.all([
-      supabase
-        .from("video_templates")
+      fromTable('video_templates')
         .select("*")
         .or(`is_system.eq.true,workspace_id.eq.${workspace.id}`)
         .order("is_system", { ascending: false })
         .order("created_at", { ascending: false }),
-      supabase
-        .from("ai_generated_videos")
+      fromTable('ai_generated_videos')
         .select("*")
         .eq("workspace_id", workspace.id)
         .order("created_at", { ascending: false })
