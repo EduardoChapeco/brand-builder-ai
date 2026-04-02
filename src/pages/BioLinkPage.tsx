@@ -85,10 +85,10 @@ const BioLinkPage = () => {
 
     const load = async () => {
       const { data, error } = await supabase
-        .from('bio_links')
+        .from('bio_links' as any)
         .select('*')
         .eq('workspace_id', workspace.id)
-        .maybeSingle();
+        .maybeSingle() as { data: any; error: any };
 
       if (!mounted) return;
       if (error) {

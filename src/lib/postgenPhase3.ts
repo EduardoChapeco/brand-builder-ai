@@ -144,7 +144,7 @@ export const normalizeBioLinkBlocks = (record: Pick<BioLinkRecord, 'blocks' | 'l
   const blocks = parseJsonArray<BioLinkBlock>((record?.blocks ?? null) as Json);
   if (blocks.length > 0) return blocks;
 
-  const legacyLinks = parseJsonArray<{ id?: string; label?: string; url?: string; emoji?: string }>(record?.links ?? null);
+  const legacyLinks = parseJsonArray<{ id?: string; label?: string; url?: string; emoji?: string }>((record?.links ?? null) as Json);
   return legacyLinks.map((link, index) => ({
     id: link.id || `legacy-link-${index + 1}`,
     type: 'link',
