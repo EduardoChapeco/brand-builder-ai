@@ -26,9 +26,9 @@ const formatDateTime = (value?: string | null) => {
 };
 
 const statusTone = (status?: string | null) => {
-  if (status === "completed") return "brand";
-  if (status === "failed" || status === "cancelled") return "destructive";
-  return "outline";
+  if (status === "completed") return "brand" as const;
+  if (status === "failed" || status === "cancelled") return "outline" as const;
+  return "outline" as const;
 };
 
 const SimLabPage = () => {
@@ -90,9 +90,9 @@ const SimLabPage = () => {
       <div className="page-content no-scrollbar">
         <div className="page-inner space-y-6 py-6">
           <PageHeader
-            eyebrow="SimLab v2"
-            title="Laboratorio canonico de validacao"
-            description={`Acompanhe personas, politicas e runs do SimLab para ${briefing?.company_name || workspace.name}. Todas as leituras abaixo vem das edge functions reais do workspace.`}
+            eyebrow="SimLab — Persona Engine"
+            title="Simulação real da sua audiência"
+            description={`Nossos agentes SimLab simulam personas reais com psicologia, vieses e heurísticas de decisão. Eles avaliam posts, Bio Links e artigos como seus clientes fariam — antes de você publicar. Workspace ativo: ${briefing?.company_name || workspace.name}.`}
             action={
               <>
                 <Button
@@ -119,11 +119,11 @@ const SimLabPage = () => {
 
           <ActionBar>
             <div>
-              <AppSectionLabel>Estado do runtime</AppSectionLabel>
+              <AppSectionLabel>Motor de Validação Ativo</AppSectionLabel>
               <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
                 {selectedRun
-                  ? `Run selecionado: ${selectedRun.module_type} em ${selectedRun.status}.`
-                  : "Selecione um run para inspecionar insight, variantes e trilha de decisao."}
+                  ? `Analisando: ${selectedRun.module_type} — status ${selectedRun.status}. Selecione para ver o parecer completo das personas.`
+                  : "Selecione uma simulação no histórico para ver o parecer das personas, variantes vencedoras e scores de impacto."}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -142,9 +142,9 @@ const SimLabPage = () => {
 
           <Tabs defaultValue="runs" className="space-y-4">
             <TabsList className="h-auto w-full flex-wrap justify-start rounded-2xl bg-[var(--surface-card)] p-1">
-              <TabsTrigger value="runs" className="rounded-xl px-4 py-2">Runs</TabsTrigger>
-              <TabsTrigger value="personas" className="rounded-xl px-4 py-2">Personas</TabsTrigger>
-              <TabsTrigger value="policies" className="rounded-xl px-4 py-2">Policies</TabsTrigger>
+              <TabsTrigger value="runs" className="rounded-xl px-4 py-2">Simulações</TabsTrigger>
+              <TabsTrigger value="personas" className="rounded-xl px-4 py-2">Personas (Banco)</TabsTrigger>
+              <TabsTrigger value="policies" className="rounded-xl px-4 py-2">Políticas de Validação</TabsTrigger>
             </TabsList>
 
             <TabsContent value="runs" className="space-y-4">
@@ -155,8 +155,8 @@ const SimLabPage = () => {
               ) : runs.length === 0 ? (
                 <SectionCard>
                   <EmptyState
-                    title="Nenhum run encontrado"
-                    description="Dispare uma validacao de post, blog, biolink, trend ou personagem para popular o historico do SimLab."
+                    title="Nenhuma simulação ainda"
+                    description="Publique um Bio Link, salve um artigo no Blog Manager ou gere um post para o SimLab analisar automaticamente. As personas irão simular a reação do seu público antes da publicação."
                     icon={Sparkles}
                   />
                 </SectionCard>
@@ -164,7 +164,7 @@ const SimLabPage = () => {
                 <div className="grid gap-4 xl:grid-cols-[320px,minmax(0,1fr)]">
                   <SectionCard className="overflow-hidden p-0">
                     <div className="border-b border-[var(--border)] px-5 py-4">
-                      <AppSectionLabel>Historico</AppSectionLabel>
+                      <AppSectionLabel>Histórico de Simulações</AppSectionLabel>
                     </div>
                     <ScrollArea className="h-[620px]">
                       <div className="space-y-3 p-4">
@@ -278,8 +278,8 @@ const SimLabPage = () => {
                       </>
                     ) : (
                       <EmptyState
-                        title="Selecione um run"
-                        description="Escolha um item do historico para inspecionar insight, variantes e scores."
+                        title="Selecione uma simulação"
+                        description="Escolha uma simulação no histórico à esquerda para ver o parecer detalhado: quais personas aprovaram, quais rejeitaram e por quê."
                         icon={Sparkles}
                       />
                     )}
@@ -290,11 +290,14 @@ const SimLabPage = () => {
 
             <TabsContent value="personas">
               <SectionCard className="space-y-4">
-                <AppSectionLabel>PersonaBank</AppSectionLabel>
+                <AppSectionLabel>Banco de Personas Digitais</AppSectionLabel>
+                <p className="text-sm leading-6 text-[var(--text-secondary)] max-w-[720px]">
+                  Cada persona é um modelo psicológico de um perfil real de cliente. O SimLab as usa para simular reações autênticas ao seu conteúdo, identificando pontos de fricção antes de você publicar.
+                </p>
                 {personas.length === 0 ? (
                   <EmptyState
-                    title="Nenhuma persona retornada"
-                    description="As personas seeded ou customizadas do workspace aparecem aqui quando a edge function responde."
+                    title="Personas não carregadas"
+                    description="As personas do sistema (seedadas pelo SimLab) e suas personas customizadas aparecem aqui. Verifique se o workspace está configurado e tente atualizar."
                     icon={BrainCircuit}
                   />
                 ) : (
@@ -327,11 +330,14 @@ const SimLabPage = () => {
 
             <TabsContent value="policies">
               <SectionCard className="space-y-4">
-                <AppSectionLabel>Policies por modulo</AppSectionLabel>
+                <AppSectionLabel>Políticas de Validação por Módulo</AppSectionLabel>
+                <p className="text-sm leading-6 text-[var(--text-secondary)] max-w-[720px]">
+                  As políticas definem os critérios que as personas usam para validar cada tipo de conteúdo: Bio Link, Blog, Posts e Personagens de Marca. Você pode criar políticas customizadas por workspace.
+                </p>
                 {policies.length === 0 ? (
                   <EmptyState
-                    title="Nenhuma policy retornada"
-                    description="As policies default e as policies customizadas por workspace aparecem aqui."
+                    title="Políticas não carregadas"
+                    description="As políticas padrão e as customizadas por workspace aparecem aqui quando o SimLab estiver configurado."
                     icon={ShieldCheck}
                   />
                 ) : (

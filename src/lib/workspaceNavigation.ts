@@ -44,7 +44,7 @@ export const WORKSPACE_NAV_ITEMS: WorkspaceNavItem[] = [
   { label: "Personas (Character)", path: "brand-character", icon: Bot, section: "Estrategia", description: "Personagens e consistencia visual" },
 
   { label: "Viral Analyzer", path: "viral-analyzer", icon: Activity, section: "Inteligencia", description: "Padroes virais e referencias" },
-  { label: "SimLab", path: "simlab", icon: ShieldCheck, section: "Inteligencia", description: "Validacao canonica por personas e politicas" },
+  { label: "SimLab", path: "simlab", icon: ShieldCheck, section: "Inteligencia", description: "Simula como sua audiência reage antes de publicar" },
   { label: "Squad Builder", path: "squads", icon: Bot, section: "Inteligencia", description: "Onboarding e catalogo de squads" },
   { label: "Squad de IA (Chat)", path: "chat", icon: MessageSquare, section: "Inteligencia", description: "Chat de squad e criacao guiada" },
 
