@@ -25,7 +25,7 @@ export default function SiteBuilderPage() {
   }, [workspace?.id]);
 
   return (
-    <div className="flex h-full flex-col p-8 bg-[#030303] text-white">
+    <div className="flex h-full flex-col p-8">
       <div className="flex w-full max-w-7xl mx-auto flex-col gap-8">
         
         {/* Header Hero */}
@@ -113,9 +113,9 @@ export default function SiteBuilderPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
             {sites.map((site, i) => (
               <LiquidGlassCard key={site.id} delay={0.1 + (i * 0.05)} className="p-1">
-                <div className="bg-[#050505] rounded-xl p-6 h-[220px] flex flex-col justify-between border border-white/5 hover:bg-white/5 transition-all cursor-pointer" onClick={() => navigate(site.id)}>
+                <div className="bg-background/50 rounded-xl p-6 h-[220px] flex flex-col justify-between border border-border hover:bg-accent/50 transition-all cursor-pointer" onClick={() => navigate(site.id)}>
                    <div>
-                     <h3 className="text-2xl font-bold text-white mb-2">{site.name}</h3>
+                     <h3 className="text-2xl font-bold mb-2">{site.name}</h3>
                      <a href={`https://${site.domain || 'untitled.com'}`} target="_blank" rel="noreferrer" className="text-zinc-400 flex items-center gap-2 text-sm hover:text-indigo-400">
                        <Globe className="w-4 h-4" /> {site.domain || "Sem domínio vinculado"}
                      </a>
