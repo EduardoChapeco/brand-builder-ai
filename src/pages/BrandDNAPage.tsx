@@ -242,10 +242,10 @@ const BrandDNAPage = () => {
           </div>
           <div>
             <h1 className="text-base font-bold" style={{ fontFamily: 'var(--font-display)', color: 'var(--text-1)' }}>
-              Brand DNA Cloner
+              Cérebro da Marca — DNA Cloner
             </h1>
             <p className="text-[10px]" style={{ color: 'var(--text-3)' }}>
-              {readyCount} templates prontos · {myCount} criados por você · compartilhados globalmente
+              {readyCount} DNAs prontos &middot; {myCount} criados por você &middot; extraia layout, paleta e copy de qualquer URL
             </p>
           </div>
         </div>

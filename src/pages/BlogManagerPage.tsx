@@ -198,9 +198,9 @@ const BlogManagerPage = () => {
       <aside className="w-[340px] shrink-0 border-r overflow-y-auto no-scrollbar" style={{ borderColor: 'var(--border)', background: 'var(--bg-surface)' }}>
         <div className="p-6 border-b" style={{ borderColor: 'var(--border)' }}>
           <p className="text-xs uppercase tracking-[0.2em]" style={{ color: 'var(--text-3)' }}>Blog Manager</p>
-          <h1 className="mt-2 text-2xl font-display font-bold" style={{ color: 'var(--text-1)' }}>Artigos do workspace</h1>
+          <h1 className="mt-2 text-2xl font-display font-bold" style={{ color: 'var(--text-1)' }}>Artigos da Marca</h1>
           <p className="mt-2 text-sm leading-6" style={{ color: 'var(--text-3)' }}>
-            Rascunhos orientados por SEO e conectados ao briefing da marca.
+            Crie, edite e valide artigos SEO alinhados com o Briefing e aprovados pelo SimLab antes de publicar.
           </p>
         </div>
 
@@ -326,9 +326,11 @@ const BlogManagerPage = () => {
           </div>
         ) : (
           <div className="h-full flex items-center justify-center">
-            <div className="text-center">
-              <p className="text-lg font-semibold" style={{ color: 'var(--text-1)' }}>Nenhum artigo selecionado</p>
-              <p className="mt-2 text-sm" style={{ color: 'var(--text-3)' }}>Crie um draft no painel lateral para começar.</p>
+            <div className="text-center max-w-[320px] space-y-3">
+              <p className="text-lg font-semibold" style={{ color: 'var(--text-1)' }}>Selecione um artigo</p>
+              <p className="text-sm leading-6" style={{ color: 'var(--text-3)' }}>
+                Crie um draft pelo painel lateral para começar. A IA gera o esboço com base no tema que você informar — conectado ao Briefing e Tom de Voz da sua marca.
+              </p>
             </div>
           </div>
         )}
