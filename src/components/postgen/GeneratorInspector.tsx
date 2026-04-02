@@ -1,6 +1,6 @@
 import { LayoutTemplate, FileImage, Type, Settings2, AlignLeft, AlignCenter, AlignRight, Trash, X, Wand2, RefreshCw, Upload, Download, Film, ExternalLink, Save } from 'lucide-react';
 import { toast } from 'sonner';
-import SimlabReviewPanel from '@/components/ai/SimlabReviewPanel';
+import SimlabReviewPanel from '@/components/simlab/SimlabReviewPanel';
 import VideoJobStatusCard from '@/components/video/VideoJobStatusCard';
 import { TEMPLATE_REGISTRY, getTemplate } from '@/lib/templateRegistry';
 import { BrandCharacterRecord } from '@/lib/postgenPhase2';
