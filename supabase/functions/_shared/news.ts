@@ -57,13 +57,13 @@ export const dedupeByUrl = <T extends { source_url: string }>(items: T[]) => {
 
 export const computeNewsRelevance = (
   article: Pick<NewsCandidate, "title" | "description" | "categories" | "published_at">,
-  brandContext: {
+  snap: {
     segment?: string | null;
-    target_audience?: string | null;
-    pain_points?: string | null;
-    main_differentials?: string | null;
+    audience?: string | null;
+    pain?: string | null;
+    differentials?: string | null;
     keywords?: string[] | null;
-    content_pillars?: Array<{ name?: string; description?: string }> | null;
+    pillars?: string[] | null;
   },
 ) => {
   const haystack = [
@@ -73,14 +73,12 @@ export const computeNewsRelevance = (
   ].join(" ").toLowerCase();
 
   const weightedTerms = [
-    brandContext.segment,
-    brandContext.target_audience,
-    brandContext.pain_points,
-    brandContext.main_differentials,
-    ...(Array.isArray(brandContext.keywords) ? brandContext.keywords : []),
-    ...(Array.isArray(brandContext.content_pillars)
-      ? brandContext.content_pillars.flatMap((pillar) => [pillar?.name, pillar?.description].filter(Boolean))
-      : []),
+    snap.segment,
+    snap.audience,
+    snap.pain,
+    snap.differentials,
+    ...(Array.isArray(snap.keywords) ? snap.keywords : []),
+    ...(Array.isArray(snap.pillars) ? snap.pillars : []),
   ]
     .filter(Boolean)
     .flatMap((value) => String(value).toLowerCase().split(/[,\n;/|]+/))

@@ -396,6 +396,27 @@ export const buildSiteCCPContext = (params: {
   generated_at: new Date().toISOString(),
 });
 
+/**
+ * Gera o ccp_context JSONB a ser salvo com uma Notícia.
+ */
+export const buildNewsItemCCPContext = (params: {
+  workspaceId: string;
+  snap: CCPBrandSnapshot;
+  relevanceScore: number;
+  relevanceReason: string | null;
+  categories: string[];
+}) => ({
+  type: "cerebro/news_item/v1",
+  workspace_id: params.workspaceId,
+  brand: { name: params.snap.brand_name, segment: params.snap.segment, tone: params.snap.tone },
+  analysis: {
+    relevance_score: params.relevanceScore,
+    relevance_reason: params.relevanceReason,
+    categories: params.categories,
+  },
+  generated_at: new Date().toISOString(),
+});
+
 // ─── Invalidação de Cache ──────────────────────────────────────────────────────
 
 /** Invalida o snapshot de um workspace (use após atualização de briefing/brand_kit). */

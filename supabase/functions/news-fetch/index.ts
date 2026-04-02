@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { computeNewsRelevance, dedupeByUrl, parseRssXml } from "../_shared/news.ts";
-import { corsHeaders, createServiceClient, getBrandContext, safeJsonResponse } from "../_shared/postgen.ts";
+import { computeNewsRelevance, dedupeByUrl, parseRssXml, type NewsCandidate } from "../_shared/news.ts";
+import { corsHeaders, createServiceClient, safeJsonResponse } from "../_shared/postgen.ts";
+import { buildNewsItemCCPContext, getCCPSnapshot } from "../_shared/ccp.ts";
 import { dispatchSimlabRun } from "../_shared/simlab.ts";
 
 type FeedRow = {
@@ -8,6 +9,23 @@ type FeedRow = {
   name?: string | null;
   url: string;
   category?: string | null;
+};
+
+type NewsItemRow = {
+  id: string;
+  workspace_id: string;
+  rss_source_id: string | null;
+  title: string;
+  description: string;
+  source_name: string;
+  source_url: string;
+  published_at: string | null;
+  categories: string[];
+  relevance_score: number;
+  relevance_reason: string | null;
+  status: string;
+  ccp_context: Record<string, unknown>;
+  blog_article_id?: string | null;
 };
 
 serve(async (req: Request) => {
@@ -27,7 +45,7 @@ serve(async (req: Request) => {
     }
 
     const supabase = createServiceClient();
-    const brandContext = await getBrandContext(supabase, workspace_id);
+    const snap = await getCCPSnapshot(supabase, workspace_id);
 
     const [{ data: systemFeeds }, { data: workspaceFeeds }, { data: existingRows }] = await Promise.all([
       supabase.from("rss_sources").select("*").eq("is_active", true).order("name"),
@@ -40,8 +58,8 @@ serve(async (req: Request) => {
       ...((workspaceFeeds || []) as FeedRow[]),
     ];
 
-    const existingUrls = new Set((existingRows || []).map((item) => item.source_url));
-    const collected = [];
+    const existingUrls = new Set((existingRows as Array<{ source_url: string }> || []).map((item) => item.source_url));
+    const collected: Array<NewsCandidate & { rss_source_id: string | null }> = [];
     const skipped = [];
 
     for (const feed of feeds) {
@@ -74,19 +92,7 @@ serve(async (req: Request) => {
     }
 
     const deduped = dedupeByUrl(collected).map((item) => {
-      const relevance = computeNewsRelevance(
-        item,
-        {
-          segment: typeof brandContext.briefing?.segment === "string" ? brandContext.briefing.segment : null,
-          target_audience: typeof brandContext.briefing?.target_audience === "string" ? brandContext.briefing.target_audience : null,
-          pain_points: typeof brandContext.briefing?.pain_points === "string" ? brandContext.briefing.pain_points : null,
-          main_differentials: typeof brandContext.briefing?.main_differentials === "string" ? brandContext.briefing.main_differentials : null,
-          keywords: Array.isArray(brandContext.briefing?.keywords) ? brandContext.briefing.keywords as string[] : [],
-          content_pillars: Array.isArray(brandContext.briefing?.content_pillars)
-            ? brandContext.briefing.content_pillars as Array<{ name?: string; description?: string }>
-            : [],
-        },
-      );
+      const relevance = computeNewsRelevance(item, snap);
 
       return {
         workspace_id,
@@ -100,10 +106,17 @@ serve(async (req: Request) => {
         relevance_score: relevance.score,
         relevance_reason: relevance.reason,
         status: relevance.score >= 60 ? "priority" : "new",
+        ccp_context: buildNewsItemCCPContext({
+          workspaceId: workspace_id,
+          snap,
+          relevanceScore: relevance.score,
+          relevanceReason: relevance.reason,
+          categories: item.categories,
+        }),
       };
     });
 
-    let inserted = [];
+    let inserted: NewsItemRow[] = [];
     if (deduped.length > 0) {
       const { data, error } = await supabase
         .from("news_items")
@@ -116,7 +129,7 @@ serve(async (req: Request) => {
 
     if (generate_drafts && inserted.length > 0) {
       const draftRows = inserted
-        .filter((item) => item.relevance_score >= 70)
+        .filter((item) => Number(item.relevance_score || 0) >= 70)
         .slice(0, 3)
         .map((item) => ({
           workspace_id,
@@ -139,7 +152,7 @@ serve(async (req: Request) => {
     }
 
     const validationCandidates = inserted
-      .filter((item) => (item.relevance_score || 0) >= 70)
+      .filter((item) => Number(item.relevance_score || 0) >= 70)
       .slice(0, 3);
 
     const simlabRuns = [];
@@ -152,7 +165,7 @@ serve(async (req: Request) => {
         targetTable: "news_items",
         targetId: item.id,
         objective: item.title,
-        audienceHint: typeof brandContext.briefing?.target_audience === "string" ? brandContext.briefing.target_audience : null,
+        audienceHint: snap.audience || null,
         variants: [{
           key: "news_signal",
           label: item.title,

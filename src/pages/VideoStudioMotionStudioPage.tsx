@@ -1,26 +1,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, lazy } from "react";
 import {
-  AlertTriangle,
-  ArrowRight,
-  FastForward,
   Loader2,
-  Pause,
-  Play,
   RefreshCcw,
-  Rewind,
   Save,
   Sparkles,
   Wand2,
 } from "lucide-react";
-import { Player, type PlayerRef } from "@remotion/player";
+import { type PlayerRef } from "@remotion/player";
 import { toast } from "sonner";
 import AppSectionLabel from "@/components/shared/AppSectionLabel";
 import EmptyState from "@/components/shared/EmptyState";
 import SectionCard from "@/components/shared/SectionCard";
-import SubtleBadge from "@/components/shared/SubtleBadge";
-import VideoStudioRemotionComposition from "@/components/video/VideoStudioRemotionComposition";
-import VideoStudioRemotionPropsPanel from "@/components/video/VideoStudioRemotionPropsPanel";
-import VideoStudioRemotionTimeline from "@/components/video/VideoStudioRemotionTimeline";
+
+const MotionStudioLeftPanel = lazy(() => import("@/components/video/motion-studio/MotionStudioLeftPanel"));
+const MotionStudioMiddlePanel = lazy(() => import("@/components/video/motion-studio/MotionStudioMiddlePanel"));
+const MotionStudioRightPanel = lazy(() => import("@/components/video/motion-studio/MotionStudioRightPanel"));
 import {
   MOTION_STUDIO_TEMPLATES,
   buildMotionStudioLayers,
@@ -35,10 +30,6 @@ import {
 } from "@/components/video/VideoStudioRemotionTemplates";
 import VideoStudioShell from "@/components/video/VideoStudioShell";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
@@ -86,20 +77,7 @@ const formatRelative = (value: string | null | undefined) => {
   return formatter.format(days, "day");
 };
 
-const getStatusBadgeClass = (status?: string | null) => {
-  if (status === "completed" || status === "ready") return "border-emerald-200 bg-emerald-50 text-emerald-700";
-  if (status === "failed" || status === "cancelled") return "border-rose-200 bg-rose-50 text-rose-700";
-  if (status === "running" || status === "queued" || status === "processing") {
-    return "border-sky-200 bg-sky-50 text-sky-700";
-  }
-  return "border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-secondary)]";
-};
 
-const getCommandGuardrailSummary = (errorCount: number, warningCount: number) => {
-  if (errorCount > 0) return `${errorCount} blocking guardrails`;
-  if (warningCount > 0) return `${warningCount} warnings`;
-  return "safe to apply";
-};
 
 export default function VideoStudioMotionStudioPage() {
   const { workspace, briefing } = useWorkspace();
@@ -178,7 +156,7 @@ export default function VideoStudioMotionStudioPage() {
   const warningIssues = issues.filter((issue) => issue.level === "warning");
 
   const selectedSequence = useMemo(
-    () => sequences.find((sequence) => sequence.id === selectedSequenceId) || sequences[0] || null,
+    () => (sequences as any[]).find((sequence) => sequence.id === selectedSequenceId) || sequences[0] || null,
     [selectedSequenceId, sequences],
   );
 
@@ -637,406 +615,64 @@ export default function VideoStudioMotionStudioPage() {
         </SectionCard>
       ) : (
         <div className="grid gap-6 xl:grid-cols-[320px,minmax(0,1fr),360px]">
-          <div className="space-y-6">
-            <SectionCard className="space-y-4">
-              <div>
-                <AppSectionLabel>Template + Guardrails</AppSectionLabel>
-                <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-[var(--text-primary)]">
-                  Start from a real motion template
-                </h2>
-              </div>
+          <Suspense fallback={<div className="h-[500px] animate-pulse rounded-3xl bg-[var(--surface-2)]" />}>
+            <MotionStudioLeftPanel
+              selectedTemplateId={selectedTemplateId}
+              handleSelectTemplate={handleSelectTemplate}
+              commandInput={commandInput}
+              setCommandInput={setCommandInput}
+              handleDraftCommand={() => void handleDraftCommand()}
+              commandPending={commandPending}
+              commandError={commandError}
+              draftPatch={draftPatch}
+              draftPatchIssues={draftPatchIssues}
+              handleApplyDraftPatch={handleApplyDraftPatch}
+              filteredCompositions={filteredCompositions}
+              selectedCompositionId={selectedCompositionId}
+              applyCompositionSnapshot={applyCompositionSnapshot}
+            />
+          </Suspense>
 
-              <div className="space-y-3">
-                {MOTION_STUDIO_TEMPLATES.map((template) => (
-                  <button
-                    key={template.id}
-                    type="button"
-                    onClick={() => handleSelectTemplate(template.id)}
-                    className={
-                      template.id === selectedTemplateId
-                        ? "w-full rounded-2xl border border-[var(--workspace-brand-border)] bg-[var(--workspace-brand-soft)] p-4 text-left"
-                        : "w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4 text-left transition-colors hover:border-[var(--border-strong)]"
-                    }
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-base font-semibold text-[var(--text-primary)]">{template.label}</p>
-                        <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{template.description}</p>
-                      </div>
-                      <SubtleBadge variant="outline">{template.supportedRatios.join(" / ")}</SubtleBadge>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </SectionCard>
+          <Suspense fallback={<div className="h-[500px] animate-pulse rounded-3xl bg-[var(--surface-2)]" />}>
+            <MotionStudioMiddlePanel
+              playerRef={playerRef}
+              playerConfig={playerConfig}
+              dirty={dirty}
+              selectedTemplate={selectedTemplate}
+              values={values}
+              sequences={sequences}
+              visualAssetMap={visualAssetMap}
+              currentFrame={currentFrame}
+              isPlaying={isPlaying}
+              stepFrame={stepFrame}
+              jumpToFrame={jumpToFrame}
+              selectedSequenceId={selectedSequenceId}
+              setSelectedSequenceId={setSelectedSequenceId}
+              selectedSequence={selectedSequence}
+            />
+          </Suspense>
 
-            <SectionCard className="space-y-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <AppSectionLabel>Edit command</AppSectionLabel>
-                  <h2 className="mt-2 text-xl font-semibold tracking-[-0.03em] text-[var(--text-primary)]">
-                    Guardrailed patch drafting
-                  </h2>
-                </div>
-                <SubtleBadge variant="outline">frontend-only</SubtleBadge>
-              </div>
-
-              <Textarea
-                value={commandInput}
-                onChange={(event) => setCommandInput(event.target.value)}
-                placeholder='Examples: "faster 9:16", "headline: Stronger opening", "cta: Book now", "hook +12"'
-                className="min-h-[120px] rounded-2xl"
-              />
-
-              <Button className="w-full rounded-xl" onClick={() => void handleDraftCommand()} disabled={commandPending}>
-                {commandPending ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />}
-                Draft patch
-              </Button>
-
-              {commandError ? (
-                <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                  {commandError}
-                </div>
-              ) : null}
-
-              {draftPatch ? (
-                <div className="space-y-3 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-semibold text-[var(--text-primary)]">{draftPatch.summary}</p>
-                    <SubtleBadge variant="outline">
-                      {getCommandGuardrailSummary(
-                        draftPatchIssues.filter((issue) => issue.level === "error").length,
-                        draftPatchIssues.filter((issue) => issue.level === "warning").length,
-                      )}
-                    </SubtleBadge>
-                  </div>
-
-                  <ul className="space-y-2 text-sm leading-6 text-[var(--text-secondary)]">
-                    {draftPatch.changes.map((change) => (
-                      <li key={change}>{change}</li>
-                    ))}
-                  </ul>
-
-                  {draftPatchIssues.length > 0 ? (
-                    <div className="space-y-2">
-                      {draftPatchIssues.map((issue) => (
-                        <p
-                          key={`${issue.level}-${issue.message}`}
-                          className={
-                            issue.level === "error"
-                              ? "text-xs leading-5 text-rose-700"
-                              : "text-xs leading-5 text-amber-700"
-                          }
-                        >
-                          {issue.message}
-                        </p>
-                      ))}
-                    </div>
-                  ) : null}
-
-                  <Button
-                    className="w-full rounded-xl"
-                    onClick={handleApplyDraftPatch}
-                    disabled={draftPatchIssues.some((issue) => issue.level === "error")}
-                  >
-                    Apply patch to preview
-                    <ArrowRight size={14} />
-                  </Button>
-                </div>
-              ) : null}
-            </SectionCard>
-
-            <SectionCard className="space-y-4">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <AppSectionLabel>Saved revisions</AppSectionLabel>
-                  <h2 className="mt-2 text-xl font-semibold tracking-[-0.03em] text-[var(--text-primary)]">
-                    Layer compositions
-                  </h2>
-                </div>
-                <SubtleBadge variant="outline">{filteredCompositions.length}</SubtleBadge>
-              </div>
-
-              {filteredCompositions.length === 0 ? (
-                <p className="text-sm leading-6 text-[var(--text-secondary)]">
-                  No layer composition has been saved yet for this scope.
-                </p>
-              ) : (
-                <ScrollArea className="h-[360px]">
-                  <div className="space-y-3">
-                    {filteredCompositions.map((composition) => {
-                      const parsed = parseMotionStudioLayers(composition.layers);
-                      const isSelected = composition.id === selectedCompositionId;
-
-                      return (
-                        <button
-                          key={composition.id}
-                          type="button"
-                          onClick={() => applyCompositionSnapshot(composition)}
-                          className={
-                            isSelected
-                              ? "w-full rounded-2xl border border-[var(--workspace-brand-border)] bg-[var(--workspace-brand-soft)] p-4 text-left"
-                              : "w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4 text-left transition-colors hover:border-[var(--border-strong)]"
-                          }
-                        >
-                          <div className="flex items-center justify-between gap-3">
-                            <p className="text-sm font-semibold text-[var(--text-primary)]">
-                              {parsed?.templateId ? getMotionStudioTemplate(parsed.templateId).label : "Unknown template"}
-                            </p>
-                            <SubtleBadge className={getStatusBadgeClass(composition.status)}>{composition.status}</SubtleBadge>
-                          </div>
-                          <p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">
-                            {parsed?.promptOriginal || composition.prompt_original}
-                          </p>
-                          <p className="mt-2 text-[11px] text-[var(--text-muted)]">
-                            Updated {formatRelative(composition.updated_at)}
-                          </p>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </ScrollArea>
-              )}
-            </SectionCard>
-          </div>
-
-          <div className="space-y-6">
-            <SectionCard className="space-y-5">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <AppSectionLabel>Remotion preview</AppSectionLabel>
-                  <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-[var(--text-primary)]">
-                    Live guarded composition
-                  </h2>
-                  <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                    Local preview is driven by the selected template, current props and saved asset references.
-                  </p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <SubtleBadge variant="outline">{playerConfig.ratio}</SubtleBadge>
-                  <SubtleBadge variant="outline">{playerConfig.fps} fps</SubtleBadge>
-                  <SubtleBadge variant={dirty ? "brand" : "outline"}>{dirty ? "Unsaved changes" : "Synced revision"}</SubtleBadge>
-                </div>
-              </div>
-
-              <div className="overflow-hidden rounded-[28px] border border-[var(--border)] bg-[#050505]">
-                <Player
-                  ref={playerRef}
-                  component={VideoStudioRemotionComposition}
-                  durationInFrames={playerConfig.durationInFrames}
-                  compositionWidth={playerConfig.width}
-                  compositionHeight={playerConfig.height}
-                  fps={playerConfig.fps}
-                  inputProps={{
-                    templateLabel: selectedTemplate.label,
-                    values,
-                    sequences,
-                    assets: visualAssetMap,
-                  }}
-                  controls
-                  acknowledgeRemotionLicense
-                  className="w-full"
-                  style={{ width: "100%", aspectRatio: `${playerConfig.width}/${playerConfig.height}` }}
-                />
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <Button variant="outline" className="rounded-xl" onClick={() => playerRef.current?.pauseAndReturnToPlayStart()}>
-                  <RefreshCcw size={14} />
-                  Restart
-                </Button>
-                <Button variant="outline" className="rounded-xl" onClick={() => stepFrame(-15)}>
-                  <Rewind size={14} />
-                  -15f
-                </Button>
-                <Button variant="outline" className="rounded-xl" onClick={() => playerRef.current?.toggle()}>
-                  {isPlaying ? <Pause size={14} /> : <Play size={14} />}
-                  Toggle
-                </Button>
-                <Button variant="outline" className="rounded-xl" onClick={() => stepFrame(15)}>
-                  <FastForward size={14} />
-                  +15f
-                </Button>
-                {selectedSequence ? (
-                  <Button variant="outline" className="rounded-xl" onClick={() => jumpToFrame(selectedSequence.startFrame)}>
-                    Jump to selected
-                  </Button>
-                ) : null}
-              </div>
-            </SectionCard>
-
-            <SectionCard>
-              <VideoStudioRemotionTimeline
-                sequences={sequences}
-                totalFrames={playerConfig.durationInFrames}
-                currentFrame={currentFrame}
-                selectedSequenceId={selectedSequenceId}
-                onSelectSequence={setSelectedSequenceId}
-                onJumpToFrame={jumpToFrame}
-              />
-            </SectionCard>
-          </div>
-
-          <div className="space-y-6">
-            <SectionCard className="space-y-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <AppSectionLabel>Guardrails</AppSectionLabel>
-                  <h2 className="mt-2 text-xl font-semibold tracking-[-0.03em] text-[var(--text-primary)]">
-                    Template policy
-                  </h2>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <SubtleBadge className={blockingIssues.length > 0 ? "border-rose-200 bg-rose-50 text-rose-700" : "border-emerald-200 bg-emerald-50 text-emerald-700"}>
-                    {blockingIssues.length > 0 ? `${blockingIssues.length} blocking` : "render-ready"}
-                  </SubtleBadge>
-                  {warningIssues.length > 0 ? (
-                    <SubtleBadge className="border-amber-200 bg-amber-50 text-amber-700">{warningIssues.length} warnings</SubtleBadge>
-                  ) : null}
-                </div>
-              </div>
-
-              <div className="space-y-2 text-sm leading-6 text-[var(--text-secondary)]">
-                {selectedTemplate.guardrailNotes.map((note) => (
-                  <p key={note}>{note}</p>
-                ))}
-              </div>
-
-              {issues.length > 0 ? (
-                <div className="space-y-2 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4">
-                  {issues.map((issue) => (
-                    <p
-                      key={`${issue.level}-${issue.message}`}
-                      className={
-                        issue.level === "error"
-                          ? "text-sm leading-6 text-rose-700"
-                          : "text-sm leading-6 text-amber-700"
-                      }
-                    >
-                      {issue.message}
-                    </p>
-                  ))}
-                </div>
-              ) : null}
-            </SectionCard>
-
-            <SectionCard className="overflow-hidden p-0">
-              <div className="border-b border-[var(--border)] px-6 py-5">
-                <AppSectionLabel>Dynamic props</AppSectionLabel>
-                <h2 className="mt-2 text-xl font-semibold tracking-[-0.03em] text-[var(--text-primary)]">
-                  Template controls
-                </h2>
-              </div>
-              <ScrollArea className="h-[640px]">
-                <div className="p-6">
-                  <VideoStudioRemotionPropsPanel
-                    template={selectedTemplate}
-                    values={values}
-                    issues={issues}
-                    assets={assetOptions}
-                    onChange={updateValue}
-                  />
-                </div>
-              </ScrollArea>
-            </SectionCard>
-
-            <SectionCard className="space-y-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <AppSectionLabel>Canonical render</AppSectionLabel>
-                  <h2 className="mt-2 text-xl font-semibold tracking-[-0.03em] text-[var(--text-primary)]">
-                    Save, queue and observe
-                  </h2>
-                </div>
-                <SubtleBadge variant="outline">layer-compositor + remotion-render</SubtleBadge>
-              </div>
-
-              <div className="space-y-3">
-                <p className="text-sm leading-6 text-[var(--text-secondary)]">
-                  Each save creates a new `layer_composition` revision. Render always targets a saved revision and reuses the existing job flow.
-                </p>
-
-                <div className="space-y-2">
-                  <AppSectionLabel>Project binding</AppSectionLabel>
-                  <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
-                    <SelectTrigger className="rounded-xl">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No project binding</SelectItem>
-                      {projects.map((project) => (
-                        <SelectItem key={project.id} value={project.id}>
-                          {project.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid gap-2">
-                <Button variant="outline" className="rounded-xl" onClick={() => void persistRevision()} disabled={isSavingRevision || blockingIssues.length > 0}>
-                  {isSavingRevision ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-                  Save revision
-                </Button>
-                <Button className="rounded-xl" onClick={() => void handleQueueRender()} disabled={isQueueingRender || blockingIssues.length > 0}>
-                  {isQueueingRender ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                  Queue Remotion render
-                </Button>
-              </div>
-
-              {renderJob ? (
-                <div className="space-y-3 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-semibold text-[var(--text-primary)]">{renderJob.job_type}</p>
-                    <SubtleBadge className={getStatusBadgeClass(renderJob.status)}>{renderJob.status}</SubtleBadge>
-                  </div>
-                  <div className="grid gap-2 text-sm text-[var(--text-secondary)]">
-                    <p>Job id: {renderJob.id}</p>
-                    <p>Started: {formatDateTime(renderJob.started_at)}</p>
-                    <p>Updated: {formatRelative(renderJob.updated_at)}</p>
-                    <p>Provider: {renderJob.provider_name || "video-runtime"}</p>
-                  </div>
-                  {renderJob.error_message ? (
-                    <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                      {renderJob.error_message}
-                    </div>
-                  ) : null}
-                </div>
-              ) : (
-                <div className="rounded-2xl border border-dashed border-[var(--border)] bg-[var(--surface-2)] p-4 text-sm leading-6 text-[var(--text-secondary)]">
-                  No render job queued from this surface yet.
-                </div>
-              )}
-
-              {renderOutputAsset?.public_url ? (
-                <div className="space-y-3">
-                  <AppSectionLabel>Latest output asset</AppSectionLabel>
-                  <div className="overflow-hidden rounded-2xl border border-[var(--border)] bg-black">
-                    {renderOutputAsset.asset_type.includes("video") ? (
-                      <video src={renderOutputAsset.public_url} controls className="h-full w-full object-cover" />
-                    ) : (
-                      <img src={renderOutputAsset.public_url} alt={renderOutputAsset.file_name || "Render output"} className="h-full w-full object-cover" />
-                    )}
-                  </div>
-                </div>
-              ) : null}
-            </SectionCard>
-
-            {surfaceError ? (
-              <SectionCard className="border-amber-200 bg-amber-50/80">
-                <div className="flex items-start gap-3">
-                  <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-2xl border border-amber-200 bg-white text-amber-700">
-                    <AlertTriangle size={18} />
-                  </div>
-                  <div>
-                    <AppSectionLabel>Surface status</AppSectionLabel>
-                    <p className="mt-2 text-sm leading-7 text-amber-900">{surfaceError}</p>
-                  </div>
-                </div>
-              </SectionCard>
-            ) : null}
-          </div>
+          <Suspense fallback={<div className="h-[500px] animate-pulse rounded-3xl bg-[var(--surface-2)]" />}>
+            <MotionStudioRightPanel
+              blockingIssues={blockingIssues}
+              warningIssues={warningIssues}
+              issues={issues}
+              selectedTemplate={selectedTemplate}
+              values={values}
+              updateValue={updateValue}
+              assetOptions={assetOptions}
+              projects={projects}
+              selectedProjectId={selectedProjectId}
+              setSelectedProjectId={setSelectedProjectId}
+              isSavingRevision={isSavingRevision}
+              persistRevision={persistRevision}
+              isQueueingRender={isQueueingRender}
+              handleQueueRender={handleQueueRender}
+              renderJob={renderJob}
+              renderOutputAsset={renderOutputAsset}
+              surfaceError={surfaceError}
+            />
+          </Suspense>
         </div>
       )}
     </VideoStudioShell>
