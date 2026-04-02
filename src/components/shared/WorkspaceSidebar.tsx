@@ -36,17 +36,17 @@ const WorkspaceSidebar = () => {
     : "PG";
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-[var(--border)] bg-[var(--sidebar-background)]">
-      <SidebarHeader className="px-3 py-3 border-b border-[var(--border)] bg-[var(--sidebar-background)]">
+    <Sidebar collapsible="icon" className="border-r border-[var(--border)] bg-[var(--sidebar-background)] overflow-hidden">
+      <SidebarHeader className="border-b border-[var(--border)] bg-[var(--sidebar-background)] p-3">
         <button
           onClick={() => navigate("/workspaces")}
           className={cn(
-            "flex items-center gap-3 rounded-xl px-2 py-2 text-left transition-colors hover:bg-[var(--surface-2)]",
-            collapsed && "justify-center px-0",
+            "flex w-full items-center gap-3 rounded-lg p-1.5 text-left transition-colors hover:bg-[var(--surface-2)]",
+            collapsed && "justify-center"
           )}
           title={workspace?.name || "Trocar workspace"}
         >
-          <div className="flex shrink-0 h-8 w-8 items-center justify-center rounded-lg bg-[var(--workspace-brand)] text-xs font-semibold text-white shadow-sm">
+          <div className="flex shrink-0 size-8 items-center justify-center rounded-lg bg-[var(--workspace-brand)] text-xs font-bold text-white shadow-sm">
             {initials}
           </div>
           {!collapsed && (
@@ -70,22 +70,20 @@ const WorkspaceSidebar = () => {
                 {group.items.map((item) => {
                   const isActive = location.pathname.includes(`/workspace/${workspaceId}/${item.path}`);
                   return (
-                    <SidebarMenuItem key={item.path} className="mb-0.5">
+                    <SidebarMenuItem key={item.path}>
                       <SidebarMenuButton
                         asChild
                         tooltip={item.label}
                         isActive={isActive}
                         className={cn(
-                          "transition-all h-10 w-full flex items-center font-medium rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-2)]",
-                          isActive && "bg-[var(--sidebar-accent)] text-[var(--workspace-brand)] font-semibold shadow-sm"
+                          "transition-all h-10 w-full justify-start font-medium rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-2)]",
+                          isActive && "bg-[var(--workspace-brand-soft)] text-[var(--workspace-brand)] font-semibold shadow-sm"
                         )}
-                        style={{
-                          ...(isActive ? { backgroundColor: 'var(--workspace-brand-soft)', color: 'var(--workspace-brand)' } : {})
-                        }}
+                        style={isActive ? { backgroundColor: 'var(--workspace-brand-soft)', color: 'var(--workspace-brand)' } : {}}
                       >
-                        <Link to={`/workspace/${workspaceId}/${item.path}`} className="flex items-center gap-3 w-full px-2" onClick={(e) => e.currentTarget.blur()}>
-                          <item.icon className="w-5 h-5 shrink-0" />
-                          <span className="flex-1 truncate tracking-tight">{item.label}</span>
+                        <Link to={`/workspace/${workspaceId}/${item.path}`} onClick={(e) => e.currentTarget.blur()}>
+                          <item.icon className="shrink-0" />
+                          <span>{item.label}</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -97,23 +95,24 @@ const WorkspaceSidebar = () => {
         ))}
       </SidebarContent>
 
-      <SidebarFooter className="gap-3 px-3 py-3 border-t border-[var(--border)] bg-[var(--sidebar-background)]">
-        <Link to={`/workspace/${workspaceId}/settings`} className="block">
-            <div
+      <SidebarFooter className="p-3 border-t border-[var(--border)] bg-[var(--sidebar-background)]">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              asChild
+              tooltip="Configuracoes do Workspace"
               className={cn(
-                "flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-[var(--surface-2)] cursor-pointer text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
-                collapsed && "justify-center px-0",
+                "h-10 transition-colors rounded-lg",
                 location.pathname.includes('/settings') && "bg-[var(--workspace-brand-soft)] text-[var(--workspace-brand)] font-medium"
               )}
             >
-              <Settings2 className="w-5 h-5 shrink-0" />
-              {!collapsed && (
-                <div className="min-w-0 flex-1">
-                  <p className="text-[13px] tracking-tight">Configuracoes do Workspace</p>
-                </div>
-              )}
-            </div>
-        </Link>
+              <Link to={`/workspace/${workspaceId}/settings`}>
+                <Settings2 className="shrink-0" />
+                <span>Configuracoes do Workspace</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
 
         {!collapsed && (
           <div className="flex items-center gap-2 px-2 pb-1 text-[11px] text-[var(--text-muted)] opacity-60">
