@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import { motion, useScroll, useTransform } from 'framer-motion';
 import { toast } from 'sonner';
 import { Plus, Save, Monitor, Smartphone, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -14,8 +15,44 @@ type SiteBlockType = 'hero_3d' | 'glass_features' | 'glow_footer';
 interface SiteBlock {
   id: string;
   type: SiteBlockType;
+  effect?: 'none' | 'parallax' | 'reveal_3d' | 'fade_up';
   content: Record<string, unknown>;
 }
+
+const Scroll3DWrapper = ({ children, effect = 'none' }: { children: React.ReactNode, effect?: string }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
+  
+  // Parallax Depth
+  const yParallax = useTransform(scrollYProgress, [0, 1], [120, -120]);
+  
+  // 3D Reveal
+  const rotateX = useTransform(scrollYProgress, [0, 0.5, 1], [45, 0, 0]);
+  const scale = useTransform(scrollYProgress, [0, 0.4, 1], [0.8, 1, 1]);
+  const opacity3D = useTransform(scrollYProgress, [0, 0.3, 1], [0, 1, 1]);
+
+  // Fade Up
+  const yFade = useTransform(scrollYProgress, [0, 0.2, 1], [60, 0, 0]);
+  const opacityFade = useTransform(scrollYProgress, [0, 0.2, 1], [0, 1, 1]);
+
+  if (effect === 'parallax') {
+    return <motion.div ref={ref} style={{ y: yParallax }}>{children}</motion.div>;
+  }
+  if (effect === 'reveal_3d') {
+    return (
+      <div style={{ perspective: '1200px' }}>
+        <motion.div ref={ref} style={{ rotateX, scale, opacity: opacity3D, transformOrigin: 'top center' }}>
+          {children}
+        </motion.div>
+      </div>
+    );
+  }
+  if (effect === 'fade_up') {
+    return <motion.div ref={ref} style={{ y: yFade, opacity: opacityFade }}>{children}</motion.div>;
+  }
+
+  return <div ref={ref}>{children}</div>;
+};
 
 export default function SiteEditorPage() {
   const { siteId } = useParams();
@@ -67,12 +104,17 @@ export default function SiteEditorPage() {
 
   const addBlock = (type: SiteBlockType) => {
     const id = crypto.randomUUID();
-    let defaultContent = {};
-    if (type === 'hero_3d') defaultContent = { title: 'Experiencia Imersiva', subtitle: 'A nova dimensao da sua marca.' };
-    if (type === 'glass_features') defaultContent = { items: [{title: 'Recurso 1'}, {title: 'Recurso 2'}, {title: 'Recurso 3'}] };
-    if (type === 'glow_footer') defaultContent = { copyright: '© 2026 Brand Builder AI' };
+    let defaultContent: Record<string, unknown> = {};
+    let defaultEffect: 'none' | 'parallax' | 'reveal_3d' | 'fade_up' = 'none';
+    if (type === 'hero_3d') { defaultContent = { title: 'Experiencia Imersiva', subtitle: 'A nova dimensao da sua marca.' }; defaultEffect = 'parallax'; }
+    if (type === 'glass_features') { defaultContent = { items: [{title: 'Recurso 1'}, {title: 'Recurso 2'}, {title: 'Recurso 3'}] }; defaultEffect = 'reveal_3d'; }
+    if (type === 'glow_footer') { defaultContent = { copyright: '© 2026 Brand Builder AI' }; defaultEffect = 'fade_up'; }
     
-    setBlocks([...blocks, { id, type, content: defaultContent }]);
+    setBlocks([...blocks, { id, type, effect: defaultEffect, content: defaultContent }]);
+  };
+
+  const updateBlockEffect = (id: string, effect: 'none' | 'parallax' | 'reveal_3d' | 'fade_up') => {
+    setBlocks(blocks.map(b => b.id === id ? { ...b, effect } : b));
   };
 
   const removeBlock = (id: string) => {
@@ -178,11 +220,25 @@ export default function SiteEditorPage() {
               ) : (
                 <div className="flex flex-col gap-2">
                   {blocks.map((block, i) => (
-                    <LiquidGlassCard key={block.id} className="p-3 text-sm flex justify-between items-center bg-black/40">
-                      <span className="font-medium text-zinc-300">
-                        {block.type === 'hero_3d' ? '3D Hero' : block.type === 'glass_features' ? 'Features Grid' : 'Footer'}
-                      </span>
-                      <Button variant="ghost" size="sm" className="h-6 px-2 text-red-400 hover:text-red-300 hover:bg-red-500/10" onClick={() => removeBlock(block.id)}>Remover</Button>
+                    <LiquidGlassCard key={block.id} className="p-3 text-sm flex flex-col gap-3 bg-black/40">
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium text-zinc-300">
+                          {block.type === 'hero_3d' ? '3D Hero' : block.type === 'glass_features' ? 'Features Grid' : 'Footer'}
+                        </span>
+                        <Button variant="ghost" size="sm" className="h-6 px-2 text-red-400 hover:text-red-300 hover:bg-red-500/10" onClick={() => removeBlock(block.id)}>Remover</Button>
+                      </div>
+                      <div className="flex bg-black/50 p-2 rounded-lg border border-white/5">
+                        <select 
+                          className="bg-transparent border-none text-xs text-zinc-400 outline-none w-full cursor-pointer"
+                          value={block.effect || 'none'}
+                          onChange={(e) => updateBlockEffect(block.id, e.target.value as 'none' | 'parallax' | 'reveal_3d' | 'fade_up')}
+                        >
+                          <option value="none" className="bg-zinc-900">Flutuabilidade (Desligado)</option>
+                          <option value="parallax" className="bg-zinc-900">Efeito 3D Parallax</option>
+                          <option value="reveal_3d" className="bg-zinc-900">Aparicao Tilt (Reveal 3D)</option>
+                          <option value="fade_up" className="bg-zinc-900">Cascata Suave (Fade Up)</option>
+                        </select>
+                      </div>
                     </LiquidGlassCard>
                   ))}
                 </div>
@@ -216,40 +272,42 @@ export default function SiteEditorPage() {
               <div className="flex flex-col">
                 {blocks.map(block => (
                   <div key={block.id} className="w-full relative group">
-                    {/* Render Block Visuals */}
-                    {block.type === 'hero_3d' && (
-                      <div className="relative min-h-[600px] flex items-center justify-center overflow-hidden border-b border-white/5">
-                        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 via-transparent to-purple-500/10" />
-                        <div className="z-10 text-center max-w-4xl px-6">
-                           <h1 className="text-5xl md:text-7xl font-bold tracking-tighter mb-6 bg-clip-text text-transparent bg-gradient-to-b from-white to-white/50">{String(block.content?.title || '')}</h1>
-                           <p className="text-xl md:text-2xl text-zinc-400 font-light">{String(block.content?.subtitle || '')}</p>
-                           <Button className="mt-8 bg-white text-black hover:bg-zinc-200 rounded-full h-14 px-8 text-lg font-medium">Começar Agora</Button>
+                    <Scroll3DWrapper effect={block.effect || 'none'}>
+                      {/* Render Block Visuals */}
+                      {block.type === 'hero_3d' && (
+                        <div className="relative min-h-[600px] flex items-center justify-center overflow-hidden border-b border-white/5">
+                          <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 via-transparent to-purple-500/10" />
+                          <div className="z-10 text-center max-w-4xl px-6">
+                             <h1 className="text-5xl md:text-7xl font-bold tracking-tighter mb-6 bg-clip-text text-transparent bg-gradient-to-b from-white to-white/50">{String(block.content?.title || '')}</h1>
+                             <p className="text-xl md:text-2xl text-zinc-400 font-light">{String(block.content?.subtitle || '')}</p>
+                             <Button className="mt-8 bg-white text-black hover:bg-zinc-200 rounded-full h-14 px-8 text-lg font-medium">Começar Agora</Button>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                    
-                    {block.type === 'glass_features' && (
-                      <div className="py-24 px-6 md:px-12 bg-black/50 border-b border-white/5">
-                        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
-                          {[1,2,3].map(i => (
-                            <LiquidGlassCard key={i} delay={i * 0.1} className="p-8 aspect-square flex flex-col justify-end">
-                              <div className="w-12 h-12 rounded-full bg-white/10 mb-6" />
-                              <h3 className="text-2xl font-semibold mb-2">Pilar Premium {i}</h3>
-                              <p className="text-zinc-400">Integração baseada em inteligência artificial e geração procedimental de texturas fluidas.</p>
-                            </LiquidGlassCard>
-                          ))}
+                      )}
+                      
+                      {block.type === 'glass_features' && (
+                        <div className="py-24 px-6 md:px-12 bg-black/50 border-b border-white/5 relative z-10 hidden-scrollbar">
+                          <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
+                            {[1,2,3].map(i => (
+                              <LiquidGlassCard key={i} delay={i * 0.1} className="p-8 aspect-square flex flex-col justify-end">
+                                <div className="w-12 h-12 rounded-full bg-white/10 mb-6" />
+                                <h3 className="text-2xl font-semibold mb-2">Pilar Premium {i}</h3>
+                                <p className="text-zinc-400">Integração baseada em inteligência artificial e geração procedimental de texturas fluidas.</p>
+                              </LiquidGlassCard>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
 
-                    {block.type === 'glow_footer' && (
-                      <div className="relative pt-32 pb-12 px-6 flex flex-col items-center text-center overflow-hidden">
-                        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-2xl h-[400px] bg-blue-500/20 blur-[100px] rounded-full pointer-events-none" />
-                        <h2 className="text-4xl font-light z-10 mb-8">Pronto para elevar sua marca?</h2>
-                        <Button variant="outline" className="z-10 border-white/20 bg-black/50 hover:bg-white/10 backdrop-blur-md rounded-full h-12 px-8">Falar com Consultor</Button>
-                        <p className="mt-24 text-sm text-zinc-600 z-10">{String(block.content?.copyright || '')}</p>
-                      </div>
-                    )}
+                      {block.type === 'glow_footer' && (
+                        <div className="relative pt-32 pb-12 px-6 flex flex-col items-center text-center overflow-hidden">
+                          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-2xl h-[400px] bg-blue-500/20 blur-[100px] rounded-full pointer-events-none" />
+                          <h2 className="text-4xl font-light z-10 mb-8">Pronto para elevar sua marca?</h2>
+                          <Button variant="outline" className="z-10 border-white/20 bg-black/50 hover:bg-white/10 backdrop-blur-md rounded-full h-12 px-8">Falar com Consultor</Button>
+                          <p className="mt-24 text-sm text-zinc-600 z-10">{String(block.content?.copyright || '')}</p>
+                        </div>
+                      )}
+                    </Scroll3DWrapper>
                   </div>
                 ))}
               </div>
