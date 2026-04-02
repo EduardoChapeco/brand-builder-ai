@@ -232,8 +232,10 @@ const buildColors = (data: BioLinkData, themeId: string) => {
 };
 
 export const BioLinkRenderer = ({ data }: { data: BioLinkData }) => {
-  const theme = getBioLinkTheme(data.theme_id || data.theme_config?.id || BIOLINK_THEMES[0].id);
-  const blocks = normalizeBioLinkBlocks(data);
+  const theme = getBioLinkTheme(data.theme_id || BIOLINK_THEMES[0].id);
+  const blocks = data.blocks && data.blocks.length > 0
+    ? data.blocks
+    : normalizeBioLinkBlocks({ blocks: data.blocks as unknown as import('@/integrations/supabase/types').Json, links: data.links as unknown as import('@/integrations/supabase/types').Json } as Pick<import('@/lib/postgenPhase3').BioLinkRecord, 'blocks' | 'links'>);
   const profile = data.profile || {};
   const colors = buildColors(data, theme.id);
 

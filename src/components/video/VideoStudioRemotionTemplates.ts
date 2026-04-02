@@ -93,7 +93,7 @@ type LayerSnapshot = {
   duration_in_frames: number;
 };
 
-type SequenceSnapshot = MotionStudioSequence & {
+type SequenceSnapshot = Omit<MotionStudioSequence, "kind"> & {
   kind: "sequence";
 };
 

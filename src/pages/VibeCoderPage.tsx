@@ -23,8 +23,8 @@ import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
 import { buildProjectSummary, VIBECODER_STARTER_FILES } from '@/lib/postgenPhase3';
 
-type Project = Tables<'projects'>;
-type Conversation = Tables<'platform_conversations'>;
+type Project = { id: string; workspace_id: string; name: string; description?: string; files_json?: Record<string, string>; status?: string; created_at?: string; updated_at?: string; [key: string]: unknown };
+type Conversation = { id: string; project_id: string; workspace_id: string; user_message?: string; assistant_response?: string; mode?: string; diff_summary?: string; created_at?: string; [key: string]: unknown };
 
 const adaptFilesForSandpack = (files: Record<string, string>) => {
   const next: Record<string, string> = {};

@@ -62,7 +62,7 @@ export interface VideoTimelineVersion {
 export interface VideoJob {
   id: string;
   workspace_id: string;
-  job_type: string;
+  job_type?: string;
   status: VideoJobStatus;
   error_message?: string | null;
   provider_name?: string | null;

@@ -209,7 +209,7 @@ export default function MotionStudioRightPanel({
         {renderJob ? (
           <div className="space-y-3 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4">
             <div className="flex items-center justify-between gap-3">
-              <p className="text-sm font-semibold text-[var(--text-primary)]">{renderJob.job_type}</p>
+              <p className="text-sm font-semibold text-[var(--text-primary)]">{(renderJob as any).job_type || renderJob.type || 'render'}</p>
               <SubtleBadge className={getStatusBadgeClass(renderJob.status)}>{renderJob.status}</SubtleBadge>
             </div>
             <div className="grid gap-2 text-sm text-[var(--text-secondary)]">

@@ -101,10 +101,8 @@ export const BIOLINK_THEMES: BioLinkThemeDefinition[] = [
 export type BioLinkRecord = Tables<'bio_links'>;
 export type BlogArticleRecord = Tables<'blog_articles'>;
 export type NewsItemRecord = Tables<'news_items'>;
-// @ts-expect-error Legacy Schema
-export type LandingPageRecord = Tables<'landing_pages'>;
-// @ts-expect-error Legacy Schema
-export type ProjectRecord = Tables<'projects'>;
+export type LandingPageRecord = Record<string, unknown>;
+export type ProjectRecord = Record<string, unknown>;
 
 export const BLOG_LAYOUTS = [
   { id: 'medium_clean', name: 'Medium Style', description: 'Leitura confortável, com foco total no texto.' },
