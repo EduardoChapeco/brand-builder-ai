@@ -21,8 +21,11 @@ import { extractRemotionResultUrl, launchRemotionComposition } from '@/lib/remot
 // Performance Audit: Implement Lazy Loading
 const ArtboardStage = lazy(() => import('@/components/canvas/ArtboardStage'));
 
-type Tone    = 'Casual' | 'Sério' | 'Informativo' | 'Humor' | 'Urgente';
-type Funnel  = 'Awareness' | 'Educativo' | 'Captar Leads' | 'Vendas' | 'Engajamento';
+import type { Tone, Funnel, RssTopic } from '@/components/postgen/GeneratorTypes';
+const GeneratorWizard = lazy(() => import('@/components/postgen/GeneratorWizard'));
+const GeneratorSidebar = lazy(() => import('@/components/postgen/GeneratorSidebar'));
+const GeneratorInspector = lazy(() => import('@/components/postgen/GeneratorInspector'));
+const GeneratorStage = lazy(() => import('@/components/postgen/GeneratorStage'));
 
 interface GeneratedSlide {
   index:    number;
@@ -100,16 +103,7 @@ interface GeneratorLocationState {
   arcType?: string;
 }
 
-interface RssTopic {
-  title:       string;
-  description: string;
-  url:         string;
-  source_name: string;
-  published_at: string;
-  source_type?: 'rss' | 'ai';
-  trend_score?: number;
-  hook_suggestions?: string[];
-}
+
 
 type EditableFieldName = 'headline' | 'body' | 'cta';
 
@@ -931,168 +925,36 @@ const GeneratorPage = () => {
 
   if (wizardStep < 4) {
     return (
-      <div className="flex flex-col items-center justify-center p-8 h-full w-full overflow-y-auto" style={{ background: 'var(--bg-app)' }}>
-        <div className="max-w-xl w-full p-8 rounded-[2rem] relative" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', boxShadow: '0 20px 40px rgba(0,0,0,0.1)' }}>
-          <div className="flex items-center gap-3 mb-8">
-            {[1, 2, 3].map(step => (
-              <div key={step} className="flex-1 h-1.5 rounded-full transition-all duration-500" style={{ background: wizardStep >= step ? 'var(--primary)' : 'var(--bg-elevated)' }} />
-            ))}
-          </div>
-
-          {wizardStep === 1 && (
-             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-               <h2 className="text-2xl font-display font-bold mb-2" style={{ color: 'var(--text-1)' }}>Sobre o que vamos falar hoje?</h2>
-               <p className="text-sm mb-6" style={{ color: 'var(--text-2)' }}>Escolha um assunto, ou selecione uma sugestao para a IA redigir.</p>
-
-               <button onClick={handleFetchRss} disabled={isFetchingRss}
-                 className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-medium mb-4 transition-all"
-                 style={{ border: '1px solid var(--primary)', color: 'var(--primary)', background: 'var(--primary-muted)' }}>
-                 {isFetchingRss ? <><RefreshCw size={16} className="animate-spin" /> Buscando Noticias...</> : <><Search size={16} /> Ver Tendências & RSS (IA Scout)</>}
-               </button>
-
-               {showRssPanel && (
-                 <div className="mb-4 rounded-2xl overflow-hidden" style={{ border: '1px solid var(--border)', background: 'var(--bg-card)' }}>
-                   <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
-                     <span className="text-sm font-semibold" style={{ color: 'var(--text-2)' }}>{rssTopics.length} sugestões</span>
-                     <button onClick={() => setShowRssPanel(false)}><X size={16} style={{ color: 'var(--text-3)' }} /></button>
-                   </div>
-                   <div className="max-h-60 overflow-y-auto">
-                     {rssTopics.map((t, i) => (
-                       <button key={i} onClick={() => { setTopic(t.title); setSelectedSourceUrl(t.url || undefined); setShowRssPanel(false); }}
-                         className="w-full text-left px-4 py-3 hover:bg-white/5 transition-colors"
-                         style={{ borderBottom: i < rssTopics.length - 1 ? '1px solid var(--border-subtle)' : 'none' }}>
-                         <p className="font-semibold text-sm mb-1" style={{ color: 'var(--text-1)' }}>{t.title}</p>
-                         <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-3)' }}>
-                           <span>{t.source_name}</span>
-                           {t.source_type && (
-                             <span className="px-1.5 py-0.5 rounded-full" style={{ background: t.source_type === 'ai' ? 'var(--primary-muted)' : 'rgba(6,182,212,0.14)', color: t.source_type === 'ai' ? 'var(--primary)' : '#06B6D4' }}>
-                               {t.source_type.toUpperCase()}
-                             </span>
-                           )}
-                           {typeof t.trend_score === 'number' && (
-                             <span className="px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(245,158,11,0.14)', color: '#F59E0B' }}>
-                               Trend {t.trend_score}
-                             </span>
-                           )}
-                         </div>
-                       </button>
-                     ))}
-                   </div>
-                 </div>
-               )}
-
-               <textarea value={topic} onChange={e => { setTopic(e.target.value); setSelectedSourceUrl(undefined); }}
-                 placeholder="Digite seu proprio tema... ↵" rows={4}
-                 className="w-full px-4 py-4 rounded-2xl text-sm resize-none outline-none transition-colors mb-6 shadow-sm"
-                 style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-1)' }}
-               />
-               <button onClick={() => { if(!topic) toast.error('Defina um tópico'); else setWizardStep(2); }}
-                 className="w-full py-4 rounded-2xl font-bold transition-all hover:scale-[1.02]"
-                 style={{ background: 'var(--primary)', color: 'white', boxShadow: '0 8px 32px rgba(124,58,237,0.3)' }}>Avançar para Configurações →</button>
-             </div>
-          )}
-
-          {wizardStep === 2 && (
-             <div className="animate-in fade-in slide-in-from-right-8 duration-500 flex flex-col gap-6">
-                <div>
-                  <h2 className="text-2xl font-display font-bold mb-2">Ajustes & Onboarding</h2>
-                  <p className="text-sm opacity-70">Configure a base antes de gerar. Depois você edita slide por slide.</p>
-                </div>
-
-                <div>
-                   <p className="text-sm font-semibold mb-2">Formato Base</p>
-                   <div className="grid grid-cols-2 gap-2">
-                     {FORMAT_OPTIONS.map(([fmt, dim]) => (
-                        <button key={fmt} onClick={() => setFormat(fmt)}
-                          className="py-2.5 px-3 rounded-lg border text-sm transition-all"
-                          style={{ borderColor: format===fmt?'var(--primary)':'var(--border)', background: format===fmt?'var(--primary-muted)':'transparent' }}
-                        ><span className="font-medium">{dim.label}</span> <span className="opacity-50 text-xs">{dim.aspectLabel}</span></button>
-                     ))}
-                   </div>
-                   {format === 'square' && (
-                      <div className="mt-3">
-                         <p className="text-xs mb-1.5 opacity-70">Quantidade de Slides</p>
-                         <div className="flex gap-2">
-                            {[1, 3, 5, 7, 8].map(n => (
-                               <button key={n} onClick={() => setSlideCount(n)} className="flex-1 py-1.5 rounded text-sm border transiton-all"
-                                style={{ background: slideCount === n ? 'var(--primary-muted)' : 'var(--bg-card)', borderColor: slideCount === n ? 'var(--primary)' : 'var(--border)' }}>{n}</button>
-                            ))}
-                         </div>
-                      </div>
-                   )}
-                </div>
-                
-                <div className="p-4 rounded-xl border border-white/10 bg-black/10">
-                   <p className="text-sm font-semibold mb-3">Imagens de Fundo Inicial</p>
-                   <div className="flex gap-2">
-                      <button onClick={() => setGlobalImageMethod('ai')} className={`flex-1 py-2 rounded-lg border text-xs flex items-center justify-center gap-1 transition-all ${globalImageMethod==='ai'?'border-purple-500 bg-purple-500/10 text-purple-400':'border-white/10'}`}>IA (Recomendado)</button>
-                      <button onClick={() => setGlobalImageMethod('upload')} className={`flex-1 py-2 rounded-lg border text-xs flex items-center justify-center gap-1 transition-all ${globalImageMethod==='upload'?'border-purple-500 bg-purple-500/10 text-purple-400':'border-white/10'}`}>⬆ Upload (Mais Tarde)</button>
-                      <button onClick={() => setGlobalImageMethod('none')} className={`flex-1 py-2 rounded-lg border text-xs flex items-center justify-center gap-1 transition-all ${globalImageMethod==='none'?'border-purple-500 bg-purple-500/10 text-purple-400':'border-white/10'}`}>Nenhuma</button>
-                   </div>
-                   <p className="text-[10px] mt-2 opacity-50 text-center">Obs: você poderá customizar individualmente por slide depois.</p>
-                </div>
-
-                <div>
-                   <p className="text-sm font-semibold mb-2">Design Master (Para Todos)</p>
-                   <select value={globalTemplate} onChange={e => setGlobalTemplate(e.target.value)} className="w-full p-2.5 rounded-lg border text-sm outline-none" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
-                      <option value="auto">🪄 Modo Automático (Mix Inteligente IA)</option>
-                      {clonedDna && <option value="dna-clone">DNA CLONADO ({clonedDna.name})</option>}
-                      {TEMPLATE_REGISTRY.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                   </select>
-                   {recommendedTemplateId && (
-                     <p className="text-[11px] mt-2" style={{ color: 'var(--text-3)' }}>
-                       Template recomendado: <span style={{ color: 'var(--primary)' }}>{getTemplate(recommendedTemplateId)?.name || recommendedTemplateId}</span>
-                     </p>
-                   )}
-                </div>
-
-                <div>
-                   <p className="text-sm font-semibold mb-2">Brand Character (Opcional)</p>
-                   <select value={selectedCharacterId} onChange={e => setSelectedCharacterId(e.target.value)} className="w-full p-2.5 rounded-lg border text-sm outline-none" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
-                      <option value="none">Nenhum personagem</option>
-                      {availableCharacters.map(character => <option key={character.id} value={character.id}>{character.name}</option>)}
-                   </select>
-                   {selectedCharacter && (
-                     <p className="text-[11px] mt-2" style={{ color: 'var(--text-3)' }}>
-                       Persona ativa: <span style={{ color: 'var(--primary)' }}>{selectedCharacter.name}</span>
-                     </p>
-                   )}
-                </div>
-
-                {preloadedMediaAsset && (
-                  <div className="p-4 rounded-xl border border-white/10 bg-black/10">
-                    <p className="text-sm font-semibold mb-2">Asset conectado</p>
-                    <div className="flex items-center gap-3">
-                      <img src={preloadedMediaAsset.public_url} alt="Media asset" className="w-14 h-14 rounded-xl object-cover" />
-                      <div>
-                        <p className="text-sm" style={{ color: 'var(--text-1)' }}>{preloadedMediaAsset.module}</p>
-                        <p className="text-[11px]" style={{ color: 'var(--text-3)' }}>Este asset sera usado como base visual do post.</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex gap-3 mt-2">
-                   <button onClick={()=>setWizardStep(1)} className="px-6 py-3 rounded-xl border text-sm font-bold opacity-70 hover:opacity-100" style={{ borderColor: 'var(--border)' }}>Voltar</button>
-                   <button onClick={handleGenerate} className="flex-1 py-3 rounded-xl font-bold flex justify-center items-center gap-2 transition-all hover:scale-[1.02]" style={{ background: 'var(--primary)', color: 'white', boxShadow: '0 8px 32px rgba(124,58,237,0.4)' }}><Wand2 size={18}/> Criar Post AI</button>
-                </div>
-             </div>
-          )}
-
-          {wizardStep === 3 && (
-             <div className="animate-in fade-in zoom-in duration-500 py-12 flex flex-col items-center justify-center text-center">
-                 <div className="relative mb-8">
-                   <div className="absolute inset-0 rounded-full animate-ping opacity-20" style={{ background: 'var(--primary)' }} />
-                   <div className="w-20 h-20 rounded-full flex items-center justify-center animate-spin" style={{ background: 'var(--primary-muted)', border: '2px solid var(--primary)' }}>
-                     <Wand2 size={32} style={{ color: 'var(--primary)' }} />
-                   </div>
-                 </div>
-                 <h2 className="text-2xl font-display font-bold mb-3" style={{ color: 'var(--text-1)' }}>Extraindo Genialidade...</h2>
-                 <p className="text-sm" style={{ color: 'var(--text-2)' }}>{genStep}</p>
-             </div>
-          )}
-        </div>
-      </div>
+      <GeneratorWizard
+        wizardStep={wizardStep}
+        setWizardStep={setWizardStep}
+        topic={topic}
+        setTopic={setTopic}
+        setSelectedSourceUrl={setSelectedSourceUrl}
+        isFetchingRss={isFetchingRss}
+        handleFetchRss={handleFetchRss}
+        showRssPanel={showRssPanel}
+        setShowRssPanel={setShowRssPanel}
+        rssTopics={rssTopics}
+        format={format}
+        setFormat={setFormat}
+        FORMAT_OPTIONS={FORMAT_OPTIONS}
+        slideCount={slideCount}
+        setSlideCount={setSlideCount}
+        globalImageMethod={globalImageMethod}
+        setGlobalImageMethod={setGlobalImageMethod}
+        globalTemplate={globalTemplate}
+        setGlobalTemplate={setGlobalTemplate}
+        clonedDna={clonedDna}
+        recommendedTemplateId={recommendedTemplateId}
+        selectedCharacterId={selectedCharacterId}
+        setSelectedCharacterId={setSelectedCharacterId}
+        availableCharacters={availableCharacters}
+        selectedCharacter={selectedCharacter}
+        preloadedMediaAsset={preloadedMediaAsset}
+        handleGenerate={handleGenerate}
+        genStep={genStep}
+      />
     );
   }
 
@@ -1100,377 +962,81 @@ const GeneratorPage = () => {
 
   return (
     <div className="flex h-full overflow-hidden" style={{ background: 'var(--bg-app)' }}>
-      <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={e => e.target.files?.[0] && handleUploadBgActiveSlide(e.target.files[0])} />
+      <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={e => { if (e.target.files) handleUploadBgActiveSlide(e.target.files[0]) }} />
       
-      {/* ─── COLUNA 1: THUMBNAILS (Esquerda) ─── */}
-      <div className="panel-left" style={{ width: 220, minWidth: 220, borderRight: '1px solid var(--border)' }}>
-         <div className="panel-section mb-0 flex-1 flex flex-col h-full">
-            <p className="text-[10px] uppercase font-bold tracking-widest opacity-60 mb-3">Visão Geral (Slides)</p>
-            <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-3">
-               {slideConfigs.map((cfg, idx) => {
-                 // Sidebar width is ~220. Button padding ~8px. Container width ~ 200px.
-                 const thumbContainerWidth = 200;
-                 const thumbScale = thumbContainerWidth / width;
-                 return (
-                 <button key={cfg.id} onClick={() => setActiveSlideIdx(idx)} className="relative group text-left w-full rounded-xl overflow-hidden transition-all shrink-0"
-                         style={{ border: `2px solid ${activeSlideIdx === idx ? 'var(--primary)' : 'var(--border)'}`, padding: '2px', background: activeSlideIdx === idx ? 'var(--primary-muted)' : 'transparent' }}>
-                    <div className="w-full bg-black rounded-lg overflow-hidden relative pointer-events-none" style={{ aspectRatio: `${width}/${height}` }}>
-                        {cfg.html && (
-                           <div style={{ position: 'absolute', transform: `scale(${thumbScale})`, transformOrigin: 'top left', pointerEvents: 'none', width: `${width}px`, height: `${height}px`, top: 0, left: 0 }}>
-                              <SlideFrame slideHtml={cfg.html} width={width} height={height} />
-                           </div>
-                        )}
-                    </div>
-                    <span className="absolute top-2 left-2 bg-black/70 text-white text-[9px] px-1.5 py-0.5 rounded-sm font-bold">{idx + 1}</span>
-                    <div className="pt-2 pb-1 px-1 flex justify-between items-center opacity-70 group-hover:opacity-100">
-                       <span className="text-[10px] truncate">{getTemplate(cfg.templateId)?.name || 'Customizado'}</span>
-                    </div>
-                    {/* Excluir Slide */}
-                    {slideConfigs.length > 1 && activeSlideIdx === idx && (
-                       <div onClick={(e) => { e.stopPropagation(); setSlideConfigs(prev => { const n = [...prev]; n.splice(idx, 1); return n; }); setActiveSlideIdx(Math.max(0, idx - 1)); }}
-                          className="absolute bottom-2 right-2 bg-red-500/20 text-red-400 p-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Trash size={12} />
-                       </div>
-                    )}
-                 </button>
-               )})}
+      <GeneratorSidebar
+        slideConfigs={slideConfigs}
+        setSlideConfigs={setSlideConfigs}
+        activeSlideIdx={activeSlideIdx}
+        setActiveSlideIdx={setActiveSlideIdx}
+        width={width}
+        height={height}
+        createSlideConfig={createSlideConfig}
+        renderSlideConfig={renderSlideConfig}
+      />
 
-               <button onClick={() => {
-                  const newCfg = createSlideConfig({ templateId: activeSlide?.templateId || 'minimal-dark', visualMode: activeSlide?.visualMode || 'dark', headline: 'Novo Tópico' });
-                  const updated = [...slideConfigs, newCfg];
-                  const fixed = updated.map((c, i) => ({ ...c, html: renderSlideConfig(c, i, updated.length) }));
-                  setSlideConfigs(fixed);
-                  setActiveSlideIdx(fixed.length - 1);
-               }} className="w-full py-3 rounded-xl border-2 border-dashed transition-colors text-[11px] font-bold mt-2"
-                  style={{ borderColor: 'var(--border-strong)', color: 'var(--text-3)' }}
-               >+ ADICIONAR SLIDE</button>
-            </div>
-         </div>
-      </div>
+      <GeneratorStage
+        postTitle={postTitle}
+        activeArcLabel={activeArcLabel}
+        selectedCharacter={selectedCharacter}
+        width={width}
+        height={height}
+        activeSlideIdx={activeSlideIdx}
+        slideConfigs={slideConfigs}
+        setActiveSlideIdx={setActiveSlideIdx}
+        format={format}
+        setSlideConfigs={setSlideConfigs}
+        extractSlideFields={extractSlideFields}
+      />
 
-      {/* ─── COLUNA 2: CANVAS (Centro) ─── */}
-      <div className="flex-1 flex flex-col min-w-0 bg-[#06060A]">
-         <div className="flex items-center justify-between px-5 py-3 shrink-0 bg-black/40 border-b border-white/5">
-            <div className="flex items-center gap-3">
-               <span className="text-sm font-medium" style={{ color: 'var(--text-1)' }} title={postTitle}>{postTitle.length > 50 ? postTitle.slice(0, 50) + '...' : postTitle}</span>
-               {activeArcLabel && (
-                 <span className="px-2.5 py-1 rounded-full text-[10px] font-bold" style={{ background: 'var(--primary-muted)', color: 'var(--primary)' }}>
-                   {activeArcLabel}
-                 </span>
-               )}
-               {selectedCharacter && (
-                 <span className="px-2.5 py-1 rounded-full text-[10px] font-bold" style={{ background: 'rgba(6,182,212,0.14)', color: '#06B6D4' }}>
-                   {selectedCharacter.name}
-                 </span>
-               )}
-            </div>
-            <div className="flex gap-4 items-center">
-               <span className="text-xs opacity-50 font-mono tracking-widest">{width} × {height}</span>
-               <div className="bg-white/10 px-3 py-1 rounded-full text-[10px] font-bold text-white/70">SLIDE {activeSlideIdx + 1} / {slideConfigs.length}</div>
-            </div>
-         </div>
-
-         <Suspense fallback={<div className="flex-1 flex flex-col items-center justify-center animate-pulse"><Wand2 size={40} className="opacity-20 mb-4"/><p className="text-sm opacity-50">Carregando Visual Engine...</p></div>}>
-           <ArtboardStage format={format} className="flex-1">
-               {activeSlide?.html ? (
-                   <SlideFrame 
-                      slideHtml={activeSlide.html} width={width} height={height} editable={true}
-                      onHtmlChange={(nx) => {
-                         const nextCfgs = [...slideConfigs];
-                         nextCfgs[activeSlideIdx].html = nx;
-                         // Extract text changes to keep state synced for right panel
-                         const fields = extractSlideFields(nx);
-                         if (fields.headline) nextCfgs[activeSlideIdx].headline = fields.headline;
-                         if (fields.body !== undefined) nextCfgs[activeSlideIdx].body = fields.body;
-                         if (fields.cta !== undefined) nextCfgs[activeSlideIdx].cta = fields.cta;
-                         setSlideConfigs(nextCfgs);
-                      }}
-                   />
-               ) : (
-                  <div className="w-full h-full flex items-center justify-center opacity-20"><Wand2 size={48} /></div>
-               )}
-           </ArtboardStage>
-         </Suspense>
-
-         {/* Bottom nav for presentation mode fallback or easy switching */}
-         <div className="h-14 border-t border-white/5 bg-black/40 flex items-center justify-center gap-4">
-             <button onClick={() => setActiveSlideIdx(Math.max(0, activeSlideIdx - 1))} disabled={activeSlideIdx === 0}
-               className="p-2 rounded-lg bg-white/5 disabled:opacity-20 hover:bg-white/10 transition-colors"><ChevronLeft size={16}/></button>
-             <div className="flex gap-1.5">
-               {slideConfigs.map((_, i) => (
-                 <button key={i} onClick={() => setActiveSlideIdx(i)}
-                   className="rounded-full transition-all"
-                   style={{ width: i === activeSlideIdx ? 24 : 8, height: 8, background: i === activeSlideIdx ? 'var(--primary)' : 'rgba(255,255,255,0.2)' }} />
-               ))}
-             </div>
-             <button onClick={() => setActiveSlideIdx(Math.min(slideConfigs.length - 1, activeSlideIdx + 1))} disabled={activeSlideIdx === slideConfigs.length - 1}
-               className="p-2 rounded-lg bg-white/5 disabled:opacity-20 hover:bg-white/10 transition-colors"><ChevronRight size={16}/></button>
-         </div>
-      </div>
-
-      {/* ─── COLUNA 3: PAINEL DE PROPRIEDADES (Direita) ─── */}
-      <div className="panel-right" style={{ width: 280, minWidth: 280 }}>
-          <div className="border-b p-4" style={{ borderColor: 'var(--border)' }}>
-             <SimlabReviewPanel
-                title="SimLab Gate"
-                run={simlabRun}
-                insight={simlabInsight}
-                variants={simlabVariants}
-                loading={simlabLoading}
-                error={simlabError}
-                onRefresh={simlabRun?.id ? refreshSimlabRun : null}
-             />
-          </div>
-          {/* TABS HEADER */}
-          <div className="flex border-b text-[10px] font-bold uppercase tracking-widest shrink-0" style={{ borderColor: 'var(--border)' }}>
-             <button onClick={() => setActiveTab('visual')} className={`flex-1 py-3.5 flex flex-col items-center gap-1.5 border-b-2 transition-colors ${activeTab==='visual'?'border-purple-500 text-purple-400':'border-transparent text-[color:var(--text-3)] hover:bg-white/5'}`}><LayoutTemplate size={14}/>Visual</button>
-             <button onClick={() => setActiveTab('media')} className={`flex-1 py-3.5 flex flex-col items-center gap-1.5 border-b-2 transition-colors ${activeTab==='media'?'border-purple-500 text-purple-400':'border-transparent text-[color:var(--text-3)] hover:bg-white/5'}`}><FileImage size={14}/>Mídia</button>
-             <button onClick={() => setActiveTab('text')} className={`flex-1 py-3.5 flex flex-col items-center gap-1.5 border-b-2 transition-colors ${activeTab==='text'?'border-purple-500 text-purple-400':'border-transparent text-[color:var(--text-3)] hover:bg-white/5'}`}><Type size={14}/>Texto</button>
-             <button onClick={() => setActiveTab('export')} className={`flex-1 py-3.5 flex flex-col items-center gap-1.5 border-b-2 transition-colors ${activeTab==='export'?'border-purple-500 text-purple-400':'border-transparent text-[color:var(--text-3)] hover:bg-white/5'}`}><Settings2 size={14}/>Export</button>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-6">
-              
-              {/* INSPECTOR GLOBAL (Aparece se tiver nodo selecionado, independente da aba) */}
-              {selectedNode && (
-                 <div className="p-3 rounded-xl mb-4" style={{ background: 'var(--primary-muted)', border: '1px solid var(--primary)' }}>
-                    <div className="flex justify-between items-center mb-3">
-                       <p className="font-bold text-xs" style={{ color: 'var(--primary)' }}>Inspetor (DND)</p>
-                       <span className="text-[9px] px-1.5 py-0.5 rounded font-mono uppercase" style={{ background: 'rgba(124,58,237,0.1)', color: 'var(--primary)', border: '1px solid currentColor' }}>{selectedNode.tag}</span>
-                    </div>
-                    
-                    <div className="flex flex-col gap-3 text-xs">
-                       <div>
-                          <p className="opacity-70 mb-1.5">Tamanho e Alinhamento</p>
-                          <div className="flex gap-2">
-                             <input type="number" className="w-16 px-2 py-1.5 rounded text-center outline-none bg-black/30 border border-white/10" 
-                                value={parseInt(selectedNode.styles.fontSize) || 16} onChange={e => handleStyleUpdate({ fontSize: e.target.value + 'px' })} />
-                             <div className="flex gap-1 border border-white/10 rounded overflow-hidden">
-                                <button onClick={() => handleStyleUpdate({ textAlign: 'left' })} className="px-2 py-1.5 transition-colors focus:bg-purple-600 outline-none"><AlignLeft size={13}/></button>
-                                <button onClick={() => handleStyleUpdate({ textAlign: 'center' })} className="px-2 py-1.5 transition-colors focus:bg-purple-600 outline-none border-l border-r border-white/10"><AlignCenter size={13}/></button>
-                                <button onClick={() => handleStyleUpdate({ textAlign: 'right' })} className="px-2 py-1.5 transition-colors focus:bg-purple-600 outline-none"><AlignRight size={13}/></button>
-                             </div>
-                          </div>
-                       </div>
-                       <div>
-                         <p className="opacity-70 mb-1.5">Cores</p>
-                         <div className="flex flex-wrap gap-1.5">
-                            {[{ label: 'Primária', val: brand.color_primary }, { label: 'Secundária', val: brand.color_secondary }, { label: 'Acento', val: brand.color_accent }, { label: 'Clara', val: brand.color_text_light }, { label: 'Escura', val: brand.color_text_dark }].map(c => c.val && (
-                              <button key={c.label} onClick={() => handleStyleUpdate({ color: c.val })} className="w-6 h-6 rounded-full border border-black/20 hover:scale-110" style={{ background: c.val }} title={c.label} />
-                            ))}
-                         </div>
-                       </div>
-                       <button onClick={() => handleStyleUpdate({ display: 'none' })} className="mt-2 w-full py-2 rounded-lg font-bold flex items-center justify-center gap-1 bg-red-500/10 text-red-500 hover:bg-red-500/20">
-                          <Trash size={12} /> Excluir Tela
-                       </button>
-                    </div>
-                 </div>
-              )}
-
-              {/* ABA VISUAL */}
-              {activeTab === 'visual' && activeSlide && (
-                 <>
-                   {(recommendedTemplateId || selectedCharacter) && (
-                     <div className="flex flex-wrap gap-2">
-                       {recommendedTemplateId && (
-                         <span className="px-3 py-1 rounded-full text-[11px] font-semibold" style={{ background: 'var(--primary-muted)', color: 'var(--primary)' }}>
-                           Recomendado: {getTemplate(recommendedTemplateId)?.name || recommendedTemplateId}
-                         </span>
-                       )}
-                       {selectedCharacter && (
-                         <span className="px-3 py-1 rounded-full text-[11px] font-semibold" style={{ background: 'rgba(6,182,212,0.14)', color: '#06B6D4' }}>
-                           Character: {selectedCharacter.name}
-                         </span>
-                       )}
-                     </div>
-                   )}
-                   {availableCharacters.length > 0 && (
-                     <div>
-                        <p className="text-[11px] font-bold uppercase tracking-wide opacity-50 mb-3">Brand Character</p>
-                        <select value={selectedCharacterId} onChange={e => setSelectedCharacterId(e.target.value)} className="w-full p-2.5 rounded-lg border text-sm outline-none" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
-                           <option value="none">Nenhum personagem</option>
-                           {availableCharacters.map(character => <option key={character.id} value={character.id}>{character.name}</option>)}
-                        </select>
-                     </div>
-                   )}
-                   <div>
-                      <p className="text-[11px] font-bold uppercase tracking-wide opacity-50 mb-3">Modo Visual (Slide Atual)</p>
-                      <div className="flex flex-wrap gap-1.5">
-                          {VIS_MODES.map(vm => (
-                              <button key={vm.id} onClick={() => updateSlideConfig(activeSlideIdx, { visualMode: vm.id })}
-                                 className={`px-3 py-1.5 rounded-full text-[11px] font-medium border transition-colors ${activeSlide.visualMode === vm.id ? 'bg-purple-600 text-white border-purple-600' : 'bg-[color:var(--bg-card)] border-[color:var(--border)] text-[color:var(--text-3)] hover:text-white'}`}>
-                                 {vm.label}
-                              </button>
-                          ))}
-                      </div>
-                   </div>
-                   <hr className="border-[color:var(--border)]" />
-                   <div>
-                      <p className="text-[11px] font-bold uppercase tracking-wide opacity-50 mb-3">Template (Slide Atual)</p>
-                      <div className="grid grid-cols-2 gap-2.5">
-                         {clonedDna && (
-                            <button onClick={() => updateSlideConfig(activeSlideIdx, { templateId: 'dna-clone' })} title={clonedDna.name}
-                               className={`h-[72px] rounded-lg overflow-hidden relative border-2 transition-all ${activeSlide.templateId === 'dna-clone' ? 'border-purple-500 scale-105' : 'border-dashed border-white/20'}`}>
-                               <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center p-2">
-                                 <span className="text-[9px] font-bold leading-tight mb-1">DNA CLONADO</span>
-                                 <span className="text-[8px] truncate tracking-wide w-full" style={{ color: 'var(--primary)' }}>{clonedDna.name.toUpperCase()}</span>
-                               </div>
-                            </button>
-                         )}
-                         {TEMPLATE_REGISTRY.map(tpl => (
-                             <button key={tpl.id} onClick={() => updateSlideConfig(activeSlideIdx, { templateId: tpl.id })}
-                               className={`h-[72px] rounded-lg overflow-hidden relative border-2 transition-all ${activeSlide.templateId === tpl.id ? 'border-purple-500 scale-105 shadow-[0_0_15px_rgba(124,58,237,0.4)]' : 'border-transparent'}`}>
-                               <div className="absolute inset-0" style={{ background: tpl.previewGradient }}/>
-                               <span className="absolute bottom-1.5 left-2 text-[9px] font-bold z-10 w-full text-left" style={{ color: tpl.previewAccent, textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>{tpl.name}</span>
-                             </button>
-                         ))}
-                      </div>
-                   </div>
-                 </>
-              )}
-
-              {/* ABA MÍDIA */}
-              {activeTab === 'media' && activeSlide && (
-                 <>
-                   <div>
-                      <p className="text-[11px] font-bold uppercase tracking-wide opacity-50 mb-3">Fundo (Slide Atual)</p>
-                      {activeSlide.bgImageUrl ? (
-                         <div className="relative aspect-video rounded-xl overflow-hidden mb-4 border border-white/10 shadow-lg">
-                            <img src={activeSlide.bgImageUrl} className="w-full h-full object-cover"/>
-                            <button onClick={()=>updateSlideConfig(activeSlideIdx, { bgImageUrl: undefined })} className="absolute top-2 right-2 bg-black/80 p-1.5 rounded-full hover:bg-red-500 hover:text-white transition-colors backdrop-blur"><X size={12}/></button>
-                         </div>
-                      ) : (
-                         <div className="aspect-video rounded-xl border border-dashed border-white/20 mb-4 flex items-center justify-center bg-black/10 text-xs opacity-50">Sem Fundo</div>
-                      )}
-                      
-                      <div className="flex flex-col gap-2">
-                         <button disabled={isGenImg} onClick={handleBgGenForActiveSlide} className="w-full py-3.5 text-xs font-bold rounded-xl flex justify-center items-center gap-2 transition-colors disabled:opacity-50" style={{ background: 'var(--primary-muted)', color: 'var(--primary)', border: '1px solid var(--primary)' }}>
-                            {isGenImg ? <RefreshCw className="animate-spin" size={14}/> : <Wand2 size={14} />}
-                            {isGenImg ? 'Gerando IA...' : 'Gerar Imagem com IA'}
-                         </button>
-                         <button onClick={()=>fileInputRef.current?.click()} className="w-full py-3.5 text-xs font-bold bg-[color:var(--bg-card)] border border-[color:var(--border)] rounded-xl flex justify-center items-center gap-2 hover:bg-white/5 transition-colors">
-                            <Upload size={14} /> Fazer Upload
-                         </button>
-                      </div>
-                   </div>
-                 </>
-              )}
-
-              {/* ABA TEXTO */}
-              {activeTab === 'text' && activeSlide && (
-                 <>
-                    <div>
-                       <p className="text-[11px] font-bold uppercase tracking-wide opacity-50 mb-2">Headline</p>
-                       <textarea value={activeSlide.headline} onChange={e => updateSlideConfig(activeSlideIdx, { headline: e.target.value })} 
-                          rows={2} className="w-full px-3 py-2.5 text-[13px] bg-[color:var(--bg-card)] rounded-xl border border-[color:var(--border)] outline-none focus:border-purple-500 transition-colors shadow-inner" />
-                    </div>
-                    <div>
-                       <p className="text-[11px] font-bold uppercase tracking-wide opacity-50 mb-2">Corpo</p>
-                       <textarea value={activeSlide.body || ''} onChange={e => updateSlideConfig(activeSlideIdx, { body: e.target.value })} 
-                          rows={4} className="w-full px-3 py-2.5 text-[13px] bg-[color:var(--bg-card)] rounded-xl border border-[color:var(--border)] outline-none focus:border-purple-500 transition-colors shadow-inner" />
-                    </div>
-                    <div>
-                       <p className="text-[11px] font-bold uppercase tracking-wide opacity-50 mb-2">CTA (Opcional)</p>
-                       <input value={activeSlide.cta || ''} onChange={e => updateSlideConfig(activeSlideIdx, { cta: e.target.value })} 
-                          className="w-full px-3 py-2.5 text-[13px] bg-[color:var(--bg-card)] rounded-xl border border-[color:var(--border)] outline-none focus:border-purple-500 transition-colors shadow-inner" />
-                    </div>
-                    <hr className="border-[color:var(--border)] my-1" />
-                    <div>
-                       <p className="text-[11px] font-bold uppercase tracking-wide opacity-50 mb-2 text-purple-400">Legenda p/ Instagram (Post Todo)</p>
-                       <textarea value={caption} onChange={e => setCaption(e.target.value)} 
-                          rows={5} className="w-full px-3 py-2.5 text-[13px] bg-purple-500/5 rounded-xl border border-purple-500/30 outline-none focus:border-purple-500 transition-colors" />
-                       <div className="flex flex-wrap gap-1 mt-2">
-                         {hashtags.map(tag => (
-                           <button key={tag} onClick={() => removeHashtag(tag)}
-                             className="text-[9px] px-1.5 py-0.5 rounded-full transition-all hover:bg-red-500/20"
-                             style={{ background: 'var(--primary-muted)', color: 'var(--primary)', border: '1px solid var(--border)' }}>
-                             {tag} ×
-                           </button>
-                         ))}
-                       </div>
-                    </div>
-                 </>
-              )}
-
-              {/* ABA EXPORTAR */}
-              {activeTab === 'export' && (
-                 <div className="flex flex-col gap-3">
-                    <button onClick={async () =>{
-                       if(!activeSlide?.html) return;
-                       toast.info('Exportando slide...', { id: 'exp' });
-                       const b = await exportSlide(activeSlide.html, `slide_${activeSlideIdx+1}`, width, height);
-                       const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = `${postTitle||'post'}_slide_${activeSlideIdx+1}.png`; a.click();
-                       toast.success('Pronto!', { id: 'exp' });
-                    }} className="w-full py-3.5 bg-[color:var(--bg-card)] border border-[color:var(--border)] text-sm font-semibold rounded-xl hover:bg-white/5 flex gap-2 justify-center items-center shadow-sm">
-                       <Download size={16}/> PNG (Slide Atual)
-                    </button>
-
-                    <button onClick={()=>{ exportAllSlides(slideConfigs.map(c=>c.html!), postTitle||'post', width, height); }} 
-                       className="w-full py-3.5 bg-[color:var(--bg-card)] border border-[color:var(--border)] text-sm font-semibold rounded-xl hover:bg-white/5 flex gap-2 justify-center items-center shadow-sm">
-                       <Download size={16}/> Todos Slides (ZIP)
-                    </button>
-
-                    <button onClick={()=>{ exportSlidesPDF(slideConfigs.map(c=>c.html!), postTitle||'post', width, height); }} 
-                       className="w-full py-3.5 bg-[color:var(--bg-card)] border border-[color:var(--border)] text-sm font-semibold rounded-xl hover:bg-white/5 flex gap-2 justify-center items-center shadow-sm">
-                       <Download size={16}/> Baixar PDF
-                    </button>
-                    
-                     <button onClick={()=>{ exportSlidesHTML(slideConfigs.map(c=>c.html!), postTitle||'post', width, height); }} 
-                        className="w-full py-3.5 bg-[color:var(--bg-card)] border border-[color:var(--border)] text-sm font-semibold rounded-xl hover:bg-white/5 flex gap-2 justify-center items-center shadow-sm">
-                        <Download size={16}/> Baixar Animado (HTML)
-                     </button>
-
-                     <button
-                        disabled={!slideConfigs.length || isLaunchingRemotion}
-                        onClick={handleAnimateWithRemotion}
-                        className="w-full py-3.5 bg-[color:var(--bg-card)] border border-[color:var(--border)] text-sm font-semibold rounded-xl hover:bg-white/5 flex gap-2 justify-center items-center shadow-sm disabled:opacity-60"
-                     >
-                        {isLaunchingRemotion ? <RefreshCw className="animate-spin" size={16}/> : <Film size={16}/>}
-                        Animar com Remotion
-                     </button>
-
-                     <div className="my-2 border-t border-[color:var(--border)]" />
-
-                     {(remotionJobId || remotionCompositionId) && (
-                        <div className="space-y-3">
-                           {remotionCompositionId ? (
-                              <p className="text-[11px] leading-5 text-[color:var(--text-3)]">
-                                 Composition ativa: <span className="font-mono text-[color:var(--text-2)]">{remotionCompositionId}</span>
-                              </p>
-                           ) : null}
-
-                           {remotionResultUrl ? (
-                              <a
-                                 href={remotionResultUrl}
-                                 target="_blank"
-                                 rel="noreferrer"
-                                 className="w-full py-3.5 bg-[color:var(--bg-card)] border border-[color:var(--border)] text-sm font-semibold rounded-xl hover:bg-white/5 flex gap-2 justify-center items-center shadow-sm"
-                              >
-                                 <ExternalLink size={16}/> Abrir Render Concluido
-                              </a>
-                           ) : null}
-
-                           <VideoJobStatusCard
-                              title="Remotion Status"
-                              job={remotionStatusPayload?.job?.job || null}
-                              onRefresh={remotionJobId ? refreshRemotionJob : undefined}
-                           />
-                        </div>
-                     )}
-
-                     <button disabled={isSavingLibrary} onClick={handleSaveToLibrary} className="w-full py-4 text-sm rounded-xl font-bold flex justify-center items-center gap-2 transition-all hover:scale-[1.02]"
-                        style={{ background: 'var(--primary)', color: 'white', boxShadow: '0 8px 32px rgba(124,58,237,0.3)' }}>
-                       {isSavingLibrary ? <RefreshCw className="animate-spin" size={16}/> : <Save size={16}/>}
-                       Salvar na Biblioteca
-                    </button>
-                    
-                    <button onClick={() => setWizardStep(1)} className="text-[11px] font-bold uppercase tracking-wide w-full text-center text-[color:var(--text-3)] hover:text-white mt-4 underline decoration-white/20 underline-offset-4">
-                       Fazer Outro Post
-                    </button>
-                 </div>
-              )}
-          </div>
-      </div>
+      <GeneratorInspector
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        simlabRun={simlabRun}
+        simlabInsight={simlabInsight}
+        simlabVariants={simlabVariants}
+        simlabLoading={simlabLoading}
+        simlabError={simlabError}
+        refreshSimlabRun={refreshSimlabRun}
+        selectedNode={selectedNode}
+        handleStyleUpdate={handleStyleUpdate}
+        brand={brand}
+        activeSlide={activeSlide}
+        activeSlideIdx={activeSlideIdx}
+        recommendedTemplateId={recommendedTemplateId}
+        selectedCharacter={selectedCharacter}
+        availableCharacters={availableCharacters}
+        selectedCharacterId={selectedCharacterId}
+        setSelectedCharacterId={setSelectedCharacterId}
+        VIS_MODES={VIS_MODES}
+        updateSlideConfig={updateSlideConfig}
+        clonedDna={clonedDna}
+        isGenImg={isGenImg}
+        handleBgGenForActiveSlide={handleBgGenForActiveSlide}
+        fileInputRef={fileInputRef}
+        caption={caption}
+        setCaption={setCaption}
+        hashtags={hashtags}
+        removeHashtag={removeHashtag}
+        width={width}
+        height={height}
+        postTitle={postTitle}
+        exportSlide={exportSlide}
+        exportAllSlides={exportAllSlides}
+        exportSlidesPDF={exportSlidesPDF}
+        exportSlidesHTML={exportSlidesHTML}
+        slideConfigs={slideConfigs}
+        isLaunchingRemotion={isLaunchingRemotion}
+        handleAnimateWithRemotion={handleAnimateWithRemotion}
+        remotionJobId={remotionJobId}
+        remotionCompositionId={remotionCompositionId}
+        remotionResultUrl={remotionResultUrl}
+        remotionStatusPayload={remotionStatusPayload}
+        refreshRemotionJob={refreshRemotionJob}
+        isSavingLibrary={isSavingLibrary}
+        handleSaveToLibrary={handleSaveToLibrary}
+        setWizardStep={setWizardStep}
+      />
     </div>
   );
 };
