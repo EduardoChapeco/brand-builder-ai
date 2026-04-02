@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import {
   Activity,
   ArrowRight,
-  CameraIcon,
   ExternalLink,
   Layers,
   MonitorSmartphone,
@@ -29,8 +28,8 @@ type Post = Tables<'posts_v2'>;
 const quickActions = [
   {
     id: 'generator',
-    label: 'Post rapido',
-    description: 'Hook viral com template recomendado pela IA.',
+    label: 'Post rápido',
+    description: 'Hook viral com template recomendado pela IA e identidade da marca.',
     icon: Wand2,
     path: '../generator',
     state: { funnel: 'Awareness' },
@@ -39,27 +38,27 @@ const quickActions = [
   {
     id: 'carousel',
     label: 'Carrossel educativo',
-    description: 'Storyboard para reter, explicar e converter melhor.',
+    description: 'Storyboard inteligente para reter, explicar e converter.',
     icon: Layers,
     path: '../carousel-builder',
     state: { funnel: 'Educativo' },
     accent: '#0F766E',
   },
   {
-    id: 'product',
-    label: 'Foto de produto',
-    description: 'Prompt e composicao visual para e-commerce e ads.',
-    icon: CameraIcon,
-    path: '../product-shots',
-    accent: '#B45309',
+    id: 'biolink',
+    label: 'Bio Link',
+    description: 'Hub central da marca para o link da bio com pré-visualização ao vivo.',
+    icon: ExternalLink,
+    path: '../biolink',
+    accent: '#7C3AED',
   },
   {
-    id: 'feed',
-    label: 'Feed preview',
-    description: 'Visualize os posts como uma grade social real.',
-    icon: MonitorSmartphone,
-    path: '../feed-preview',
-    accent: '#7C3AED',
+    id: 'simlab',
+    label: 'SimLab',
+    description: 'Valide seu conteúdo com personas digitais antes de publicar.',
+    icon: Activity,
+    path: '../simlab',
+    accent: '#B45309',
   },
 ];
 
@@ -206,11 +205,11 @@ const DashboardPage = () => {
           />
 
           <section className="grid gap-4 md:grid-cols-3">
-            <MetricCard label="Padroes virais" value={loading ? '...' : analyses.length} icon={TrendingUp} />
-            <MetricCard label="Posts recentes" value={loading ? '...' : recentPosts.length} icon={Layers} />
+            <MetricCard label="Padrões virais mapeados" value={loading ? '...' : analyses.length} icon={TrendingUp} />
+            <MetricCard label="Posts na biblioteca" value={loading ? '...' : recentPosts.length} icon={Layers} />
             <MetricCard
-              label="DNA carregado"
-              value={briefing?.segment ? 'OK' : 'Pendente'}
+              label="Identidade da Marca"
+              value={briefing?.segment ? 'Configurada' : 'Pendente'}
               icon={Activity}
               className={briefing?.segment ? '' : 'border-dashed'}
             />
@@ -287,10 +286,10 @@ const DashboardPage = () => {
                   </div>
                   <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
-                      Proximo movimento
+                      Próximo passo
                     </p>
                     <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                      Use os padroes virais do workspace para abrir um novo post ou carrossel com mais contexto de marca.
+                      Crie um post com o Gerador ou valide seu conteúdo no SimLab antes de publicar.
                     </p>
                   </div>
                 </div>

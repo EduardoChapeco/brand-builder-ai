@@ -57,7 +57,12 @@ const BlogManagerPage = () => {
       .limit(40);
 
     if (error) {
-      toast.error('Nao foi possivel carregar os artigos');
+      const isPending = error.message?.includes('does not exist') || error.code === '42P01';
+      if (isPending) {
+        toast.info('Blog Manager em configuração. As migrações estão sendo aplicadas. Aguarde e recarregue.', { duration: 6000 });
+      } else {
+        toast.error('Não foi possível carregar os artigos');
+      }
       return;
     }
 

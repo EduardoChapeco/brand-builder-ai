@@ -91,7 +91,22 @@ const BioLinkPage = () => {
 
       if (!mounted) return;
       if (error) {
-        toast.error('Nao foi possivel carregar o Bio Link');
+        // If it's a "relation does not exist" error, migration is still pending
+        const isPending = error.message?.includes('does not exist') || error.code === '42P01';
+        if (isPending) {
+          toast.info('Bio Link em configuração. Aguarde alguns instantes e atualize a página.', { duration: 6000 });
+        } else {
+          toast.error('Não foi possível carregar o Bio Link');
+        }
+        // Initialize with defaults so the UI stays usable
+        const initialHandle = briefing?.instagram_handle?.replace('@', '')
+          || briefing?.company_name
+          || workspace.slug
+          || workspace.name;
+        setHandle(slugify(initialHandle || 'suamarca'));
+        setProfileBio(briefing?.main_differentials || '');
+        setProfileTitle(briefing?.segment || 'Link hub premium');
+        setBlocks([createBlock('link')]);
         return;
       }
 

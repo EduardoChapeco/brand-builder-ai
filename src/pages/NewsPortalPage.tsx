@@ -46,7 +46,12 @@ const NewsPortalPage = () => {
       .limit(60);
 
     if (error) {
-      toast.error('Nao foi possivel carregar o News Portal');
+      const isPending = error.message?.includes('does not exist') || error.code === '42P01';
+      if (isPending) {
+        toast.info('News Portal em configuração. Aguarde e recarregue em alguns instantes.', { duration: 6000 });
+      } else {
+        toast.error('Não foi possível carregar o News Portal');
+      }
     } else {
       const rows = (data || []) as NewsItem[];
       setItems(rows);
