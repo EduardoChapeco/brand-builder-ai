@@ -395,23 +395,20 @@ const BioLinkPage = () => {
 
   return (
     <div className="flex h-full w-full overflow-hidden" style={{ background: 'var(--bg-app)' }}>
-      <div className="w-[360px] shrink-0 border-r overflow-y-auto no-scrollbar" style={{ borderColor: 'var(--border)', background: 'var(--bg-surface)' }}>
+      {/* LEFT COLUMN: GLOBAL CONFIG */}
+      <div className="w-[320px] shrink-0 border-r overflow-y-auto no-scrollbar z-10 flex flex-col" style={{ borderColor: 'var(--border)', background: 'var(--bg-surface)' }}>
         <div className="p-6 border-b" style={{ borderColor: 'var(--border)' }}>
-          <p className="text-xs uppercase tracking-[0.24em]" style={{ color: 'var(--text-3)' }}>Bio Link Premium</p>
-          <h1 className="mt-2 text-2xl font-display font-bold" style={{ color: 'var(--text-1)' }}>Builder público da marca</h1>
-          <p className="mt-2 text-sm leading-6" style={{ color: 'var(--text-3)' }}>
-            Mesmo renderer no builder e na URL pública. Draft salva no banco e publicação gera HTML persistido.
-          </p>
+          <p className="text-xs uppercase tracking-[0.24em]" style={{ color: 'var(--text-3)' }}>Bio Link</p>
+          <h1 className="mt-1 text-xl font-display font-bold" style={{ color: 'var(--text-1)' }}>Cores & Perfil</h1>
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className="p-6 flex-1 space-y-6">
           <div className="space-y-2">
             <Label>Slug público</Label>
             <Input value={handle} onChange={(event) => setHandle(slugify(event.target.value))} placeholder="suamarca" />
           </div>
-
           <div className="space-y-2">
-            <Label>Tema</Label>
+            <Label>Tema Visual</Label>
             <Select value={themeId} onValueChange={setThemeId}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -421,229 +418,198 @@ const BioLinkPage = () => {
               </SelectContent>
             </Select>
           </div>
-
           <div className="space-y-2">
             <Label>Título do perfil</Label>
-            <Input value={profileTitle} onChange={(event) => setProfileTitle(event.target.value)} placeholder="Consultoria | Conteúdo | Estratégia" />
+            <Input value={profileTitle} onChange={(event) => setProfileTitle(event.target.value)} placeholder="Consultoria | Conteúdo" />
           </div>
           <div className="space-y-2">
             <Label>Bio</Label>
-            <Textarea value={profileBio} onChange={(event) => setProfileBio(event.target.value)} className="min-h-[88px] resize-none" placeholder="Descrição curta da proposta de valor." />
+            <Textarea value={profileBio} onChange={(event) => setProfileBio(event.target.value)} className="min-h-[88px] resize-none" placeholder="Descrição curta..." />
           </div>
           <div className="space-y-2">
             <Label>Localização</Label>
             <Input value={profileLocation} onChange={(event) => setProfileLocation(event.target.value)} placeholder="São Paulo, Brasil" />
           </div>
+        </div>
 
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label>Blocos</Label>
+        <div className="p-6 border-t mt-auto space-y-4" style={{ borderColor: 'var(--border)', background: 'var(--bg-card)' }}>
+          <div className="flex items-center justify-between gap-3 mb-2">
+            <div>
+              <p className="text-xs font-semibold" style={{ color: 'var(--text-3)' }}>URL pública</p>
             </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              {([
-                { type: 'link',       emoji: '🔗', label: 'Link CTA' },
-                { type: 'site_card',  emoji: '🌐', label: 'Ir p/ Site' },
-                { type: 'blog_card',  emoji: '📰', label: 'Ir p/ Blog' },
-                { type: 'youtube',    emoji: '▶️', label: 'YouTube' },
-                { type: 'spotify',    emoji: '🎵', label: 'Spotify' },
-                { type: 'map',        emoji: '📍', label: 'Mapa' },
-                { type: 'newsletter', emoji: '✉️', label: 'Newsletter' },
-                { type: 'spacer',     emoji: '↕️', label: 'Espaço' },
-              ] as const).map(({ type, emoji, label }) => (
-                <button
-                  key={type}
-                  onClick={() => addBlock(type)}
-                  className="h-10 rounded-xl flex items-center justify-center gap-2 text-xs font-semibold transition-all"
-                  style={{
-                    background: 'rgba(255,255,255,0.04)',
-                    border: '1px solid rgba(255,255,255,0.07)',
-                    color: 'var(--text-2)',
-                  }}
-                >
-                  <span>{emoji}</span> {label} <Plus size={12} style={{ color: 'var(--primary)', marginLeft: 'auto' }} />
-                </button>
-              ))}
-            </div>
-            
-            <div className="space-y-2">
-              {blocks.map((block, index) => (
-                <button
-                  key={block.id}
-                  onClick={() => setSelectedBlockId(block.id)}
-                  className="w-full rounded-2xl p-4 text-left transition-all"
-                  style={{
-                    background: selectedBlockId === block.id ? 'var(--primary-muted)' : 'var(--bg-card)',
-                    border: `1px solid ${selectedBlockId === block.id ? 'var(--primary)' : 'var(--border)'}`,
-                  }}
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.2em]" style={{ color: 'var(--text-3)' }}>
-                        Bloco {index + 1}
-                      </p>
-                      <p className="mt-1 font-semibold" style={{ color: 'var(--text-1)' }}>
-                        {block.title || block.type}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="px-3 py-1 rounded-full text-xs font-semibold" style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-2)' }}>
-                        {block.type}
-                      </span>
-                      <button
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          setBlocks((current) => current.filter((item) => item.id !== block.id));
-                          if (selectedBlockId === block.id) setSelectedBlockId(null);
-                        }}
-                        className="w-8 h-8 rounded-xl flex items-center justify-center"
-                        style={{ background: 'rgba(239,68,68,0.12)', color: '#ef4444' }}
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold" style={{ background: isPublished ? 'rgba(16,185,129,0.14)' : 'rgba(255,255,255,0.06)', color: isPublished ? '#10B981' : 'var(--text-3)' }}>
+              {isPublished ? 'Live' : 'Draft'}
+            </span>
           </div>
-
-          {selectedBlock && (
-            <div className="rounded-3xl p-5 space-y-4" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-              <div className="flex items-center justify-between">
-                <h2 className="font-display text-lg font-semibold" style={{ color: 'var(--text-1)' }}>Editor do bloco</h2>
-                <span className="px-3 py-1 rounded-full text-xs font-semibold" style={{ background: 'var(--primary-muted)', color: 'var(--primary)' }}>
-                  {selectedBlock.type}
-                </span>
-              </div>
-
-              {selectedBlock.type !== 'spacer' && (
-                <>
-                  <div className="space-y-2">
-                    <Label>Título</Label>
-                    <Input value={selectedBlock.title || ''} onChange={(event) => updateBlock(selectedBlock.id, { title: event.target.value })} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>URL ou embed</Label>
-                    <Input value={selectedBlock.url || ''} onChange={(event) => updateBlock(selectedBlock.id, { url: event.target.value })} placeholder="https://..." />
-                  </div>
-                </>
-              )}
-
-              {(selectedBlock.type === 'link' || selectedBlock.type === 'site_card' || selectedBlock.type === 'blog_card') && (
-                <div className="grid grid-cols-[72px_1fr] gap-3">
-                  <div className="space-y-2">
-                    <Label>Emoji</Label>
-                    <Input value={selectedBlock.emoji || ''} onChange={(event) => updateBlock(selectedBlock.id, { emoji: event.target.value })} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Nota curta</Label>
-                    <Input value={selectedBlock.note || ''} onChange={(event) => updateBlock(selectedBlock.id, { note: event.target.value })} placeholder="Uma frase de contexto" />
-                  </div>
-                </div>
-              )}
-
-              {selectedBlock.type === 'newsletter' && (
-                <>
-                  <div className="space-y-2">
-                    <Label>Texto de apoio</Label>
-                    <Textarea value={selectedBlock.note || ''} onChange={(event) => updateBlock(selectedBlock.id, { note: event.target.value })} className="min-h-[72px] resize-none" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                      <Label>Placeholder</Label>
-                      <Input value={selectedBlock.placeholder || ''} onChange={(event) => updateBlock(selectedBlock.id, { placeholder: event.target.value })} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Botão</Label>
-                      <Input value={selectedBlock.buttonLabel || ''} onChange={(event) => updateBlock(selectedBlock.id, { buttonLabel: event.target.value })} />
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {selectedBlock.type === 'map' && (
-                <div className="space-y-2">
-                  <Label>Descrição</Label>
-                  <Textarea value={selectedBlock.note || ''} onChange={(event) => updateBlock(selectedBlock.id, { note: event.target.value })} className="min-h-[72px] resize-none" placeholder="Atendimento presencial, showroom, estúdio..." />
-                </div>
-              )}
-
-              {selectedBlock.type === 'spacer' && (
-                <div className="space-y-2">
-                  <Label>Altura</Label>
-                  <Input type="number" min={8} max={120} value={selectedBlock.height || 24} onChange={(event) => updateBlock(selectedBlock.id, { height: Number(event.target.value) || 24 })} />
-                </div>
-              )}
-            </div>
-          )}
-
-          <div className="grid grid-cols-2 gap-3">
-            <Button onClick={saveDraft} disabled={isSaving} variant="outline" className="gap-2">
-              <Save size={14} /> {isSaving ? 'Salvando...' : 'Salvar'}
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => navigator.clipboard.writeText(publicUrl)} className="flex-1 h-8 text-xs gap-2">
+              <Copy size={12} /> Copiar
             </Button>
-            <Button onClick={publish} disabled={isPublishing} className="gap-2" style={{ background: 'var(--primary)', color: '#fff' }}>
-              <Send size={14} /> {isPublishing ? 'Publicando...' : 'Publicar'}
+            <Button variant="outline" onClick={() => window.open(publicUrl, '_blank')} className="flex-1 h-8 text-xs gap-2">
+              <Globe size={12} /> Abrir
             </Button>
           </div>
-
-          {simlabRun?.verdict && simlabRun.verdict !== 'approved' ? (
-            <Button onClick={publishWithOverride} disabled={isPublishing} variant="outline" className="w-full gap-2">
-              <Send size={14} /> Publicar com override auditado
+          <div className="grid grid-cols-2 gap-2 mt-4">
+            <Button onClick={saveDraft} disabled={isSaving} variant="outline" className="gap-2 text-xs h-9">
+              <Save size={14} /> Salvar
             </Button>
-          ) : null}
-
-          <SimlabReviewPanel
-            title="SimLab Journey Review"
-            run={simlabRun}
-            insight={simlabInsight}
-            variants={simlabVariants}
-            loading={simlabLoading}
-            error={simlabError}
-            onRefresh={simlabRun?.id ? refreshSimlabRun : null}
-          />
-
-          <div className="rounded-2xl p-4" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-xs uppercase tracking-[0.2em]" style={{ color: 'var(--text-3)' }}>URL pública</p>
-                <p className="mt-1 text-sm font-semibold" style={{ color: 'var(--text-1)' }}>{publicUrl}</p>
-              </div>
-              <span className="px-3 py-1 rounded-full text-xs font-semibold" style={{ background: isPublished ? 'rgba(16,185,129,0.14)' : 'rgba(255,255,255,0.06)', color: isPublished ? '#10B981' : 'var(--text-3)' }}>
-                {isPublished ? 'Publicado' : 'Draft'}
-              </span>
-            </div>
-            <div className="mt-4 flex gap-2">
-              <Button variant="outline" onClick={() => navigator.clipboard.writeText(publicUrl)} className="gap-2">
-                <Copy size={14} /> Copiar
-              </Button>
-              <Button variant="outline" onClick={() => window.open(publicUrl, '_blank')} className="gap-2">
-                <Globe size={14} /> Abrir
-              </Button>
-            </div>
+            <Button onClick={publish} disabled={isPublishing} className="gap-2 text-xs h-9 shadow-lg" style={{ background: 'var(--primary)', color: '#fff' }}>
+              <Send size={14} /> Publicar
+            </Button>
           </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto no-scrollbar">
-        <div className="px-8 py-8 border-b flex items-center justify-between" style={{ borderColor: 'var(--border)', background: 'var(--bg-surface)' }}>
-          <div>
-            <p className="text-xs uppercase tracking-[0.24em]" style={{ color: 'var(--text-3)' }}>Live Preview</p>
-            <h2 className="mt-2 text-2xl font-display font-bold" style={{ color: 'var(--text-1)' }}>Preview público compartilhado</h2>
-          </div>
-          <div className="flex items-center gap-2">
-            <Eye size={16} style={{ color: 'var(--primary)' }} />
-            <Link2 size={16} style={{ color: 'var(--primary)' }} />
-            <Plus size={16} style={{ color: 'var(--primary)' }} />
+      {/* CENTER COLUMN: LIVE PREVIEW + BOTTOM ISLAND */}
+      <div className="flex-1 relative flex flex-col overflow-y-auto no-scrollbar" style={{ background: 'rgba(0,0,0,0.2)' }}>
+        <div className="px-8 py-6 flex items-center justify-center pointer-events-none sticky top-0 z-10 w-full">
+          <div className="px-4 py-2 rounded-full cursor-pointer pointer-events-auto backdrop-blur-xl border text-sm font-semibold flex items-center gap-2" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
+             <Eye size={14} style={{ color: 'var(--primary)' }} /> Live Preview
           </div>
         </div>
 
-        <div className="p-8">
-          <div className="rounded-[36px] overflow-hidden border mx-auto max-w-[420px] shadow-2xl" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
-            <BioLinkRenderer data={previewData} />
+        <div className="p-8 pb-[140px]">
+          <div className="rounded-[40px] overflow-hidden border mx-auto w-full max-w-[420px] shadow-2xl transition-all" style={{ borderColor: 'rgba(255,255,255,0.1)', background: '#09090b', minHeight: '600px' }}>
+            <BioLinkRenderer data={previewData} onBlockClick={setSelectedBlockId} activeBlockId={selectedBlockId} />
+          </div>
+        </div>
+
+        {/* BOTTOM ISLAND DOCK */}
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-30 pointer-events-auto safe-area-bottom">
+          <div className="flex items-center p-1.5 rounded-2xl backdrop-blur-2xl border shadow-2xl" style={{ background: 'rgba(15, 15, 20, 0.75)', borderColor: 'rgba(255,255,255,0.1)' }}>
+            {([
+              { type: 'link',       emoji: '🔗', label: 'Link' },
+              { type: 'site_card',  emoji: '🌐', label: 'Site' },
+              { type: 'blog_card',  emoji: '📰', label: 'Blog' },
+              { type: 'youtube',    emoji: '▶️', label: 'Vídeo' },
+              { type: 'spotify',    emoji: '🎵', label: 'Áudio' },
+              { type: 'map',        emoji: '📍', label: 'Mapa' },
+              { type: 'newsletter', emoji: '✉️', label: 'Lead' },
+              { type: 'spacer',     emoji: '↕️', label: 'Espaço' },
+            ] as const).map(({ type, emoji, label }) => (
+              <button
+                key={type}
+                onClick={() => addBlock(type)}
+                className="flex flex-col items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-[14px] mx-0.5 transition-all hover:-translate-y-2 hover:bg-white/10 group"
+              >
+                <div className="text-xl sm:text-2xl mb-1 group-hover:scale-110 transition-transform">{emoji}</div>
+                <span className="text-[9px] sm:text-[10px] font-bold text-zinc-400 group-hover:text-white uppercase tracking-wider">{label}</span>
+              </button>
+            ))}
           </div>
         </div>
       </div>
+
+      {/* RIGHT COLUMN: BLOCK EDITOR */}
+      {selectedBlock ? (
+        <div className="w-[340px] shrink-0 border-l overflow-y-auto no-scrollbar z-10 animate-in slide-in-from-right flex flex-col" style={{ borderColor: 'var(--border)', background: 'var(--bg-surface)' }}>
+          <div className="p-6 border-b flex items-center justify-between" style={{ borderColor: 'var(--border)' }}>
+            <div>
+              <p className="text-xs uppercase tracking-[0.2em]" style={{ color: 'var(--primary)' }}>{selectedBlock.type}</p>
+              <h2 className="mt-1 text-lg font-bold">Propriedades</h2>
+            </div>
+            <button
+              onClick={() => {
+                setBlocks((current) => current.filter((item) => item.id !== selectedBlock.id));
+                setSelectedBlockId(null);
+              }}
+              className="w-9 h-9 rounded-full flex items-center justify-center transition-colors hover:bg-red-500/20 text-red-500"
+              title="Remover Bloco"
+            >
+              <Trash2 size={16} />
+            </button>
+          </div>
+
+          <div className="p-6 space-y-5 flex-1">
+            {selectedBlock.type !== 'spacer' && (
+              <>
+                <div className="space-y-2">
+                  <Label>Título do Bloco</Label>
+                  <Input value={selectedBlock.title || ''} onChange={(event) => updateBlock(selectedBlock.id, { title: event.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Link de Destino / ID Embed</Label>
+                  <Input value={selectedBlock.url || ''} onChange={(event) => updateBlock(selectedBlock.id, { url: event.target.value })} placeholder="https://..." />
+                </div>
+              </>
+            )}
+
+            {(selectedBlock.type === 'link' || selectedBlock.type === 'site_card' || selectedBlock.type === 'blog_card') && (
+              <div className="grid grid-cols-[72px_1fr] gap-3">
+                <div className="space-y-2">
+                  <Label>Ícone</Label>
+                  <Input value={selectedBlock.emoji || ''} onChange={(event) => updateBlock(selectedBlock.id, { emoji: event.target.value })} className="text-center text-lg" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Subtítulo</Label>
+                  <Input value={selectedBlock.note || ''} onChange={(event) => updateBlock(selectedBlock.id, { note: event.target.value })} placeholder="Ex: Assista agora" />
+                </div>
+              </div>
+            )}
+
+            {selectedBlock.type === 'newsletter' && (
+              <>
+                <div className="space-y-2">
+                  <Label>Texto de Apoio</Label>
+                  <Textarea value={selectedBlock.note || ''} onChange={(event) => updateBlock(selectedBlock.id, { note: event.target.value })} className="min-h-[72px] resize-none" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label>Placeholder</Label>
+                    <Input value={selectedBlock.placeholder || ''} onChange={(event) => updateBlock(selectedBlock.id, { placeholder: event.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Texto do Botão</Label>
+                    <Input value={selectedBlock.buttonLabel || ''} onChange={(event) => updateBlock(selectedBlock.id, { buttonLabel: event.target.value })} />
+                  </div>
+                </div>
+              </>
+            )}
+
+            {selectedBlock.type === 'map' && (
+              <div className="space-y-2">
+                <Label>Endereço de Busca</Label>
+                <Textarea value={selectedBlock.note || ''} onChange={(event) => updateBlock(selectedBlock.id, { note: event.target.value })} className="min-h-[64px] resize-none" placeholder="Av. Paulista, 1000 - SP" />
+                <p className="text-[10px] text-zinc-500">Este alamat será usado na busca nativa do widget do mapa.</p>
+              </div>
+            )}
+
+            {selectedBlock.type === 'spacer' && (
+              <div className="space-y-2">
+                <Label>Altura do Espaçador (px)</Label>
+                <Input type="number" min={8} max={200} value={selectedBlock.height || 24} onChange={(event) => updateBlock(selectedBlock.id, { height: Number(event.target.value) || 24 })} />
+              </div>
+            )}
+          </div>
+          
+          <div className="p-6 border-t" style={{ borderColor: 'var(--border)' }}>
+             <Button className="w-full" variant="outline" onClick={() => setSelectedBlockId(null)}>Fechar Edição</Button>
+          </div>
+        </div>
+      ) : (
+        <div className="w-[340px] shrink-0 border-l flex flex-col items-center justify-center p-8 text-center" style={{ borderColor: 'var(--border)', background: 'var(--bg-surface)' }}>
+          <div className="w-20 h-20 rounded-3xl mb-6 flex items-center justify-center" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+            <Link2 size={32} style={{ color: 'var(--text-3)' }} />
+          </div>
+          <h3 className="font-display font-bold text-xl mb-3 text-text1">Nenhum bloco</h3>
+          <p className="text-sm text-text3 max-w-[240px] leading-relaxed">
+            Clique em um bloco existente no preview para editar ou adicione um novo bloco no dock inferior.
+          </p>
+          
+          <div className="mt-8 w-full space-y-2">
+             <p className="text-xs uppercase font-bold tracking-wider text-text3 text-left">Ordem dos Blocos</p>
+             {blocks.map(block => (
+               <button key={block.id} onClick={() => setSelectedBlockId(block.id)} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 border border-transparent hover:border-white/10 transition-all text-left">
+                  <div className="w-8 h-8 rounded-lg bg-black/20 flex items-center justify-center text-sm">{block.emoji || (block.type === 'spacer' ? '↕️' : '🔗')}</div>
+                  <div className="flex-1 truncate">
+                    <p className="text-sm font-semibold truncate">{block.title || block.type}</p>
+                  </div>
+               </button>
+             ))}
+             {blocks.length === 0 && <p className="text-sm text-text3 italic text-left">Bio vazia.</p>}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

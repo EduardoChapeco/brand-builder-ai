@@ -86,31 +86,20 @@ const renderBlock = (block: BioLinkBlock, colors: ReturnType<typeof buildColors>
   }
 
   if (block.type === 'map') {
+    const query = encodeURIComponent(block.note || block.url || 'Sao Paulo');
     return (
-      <div key={block.id} style={{ ...shellStyle, padding: 18 }}>
-        <p style={{ margin: 0, fontSize: 12, letterSpacing: '0.12em', textTransform: 'uppercase', color: colors.muted }}>
-          Mapa
-        </p>
-        <h3 style={{ margin: '10px 0 8px', fontSize: 18 }}>{block.title || 'Localização'}</h3>
-        <p style={{ margin: 0, color: colors.muted, lineHeight: 1.5 }}>{block.note || block.url}</p>
-        {block.url && (
-          <a
-            href={block.url}
-            target="_blank"
-            rel="noreferrer"
-            style={{
-              display: 'inline-flex',
-              marginTop: 14,
-              padding: '12px 16px',
-              borderRadius: 14,
-              background: colors.primary,
-              color: '#fff',
-              textDecoration: 'none',
-              fontWeight: 700,
-            }}
-          >
-            Abrir no Maps
-          </a>
+      <div key={block.id} style={{ ...shellStyle, padding: 0, overflow: 'hidden' }}>
+        <iframe
+          title={block.title || 'Mapa'}
+          src={`https://maps.google.com/maps?q=${query}&t=&z=13&ie=UTF8&iwloc=&output=embed`}
+          style={{ width: '100%', height: 280, border: 'none', display: 'block' }}
+          allowFullScreen
+        />
+        {(block.title || block.note) && (
+          <div style={{ padding: '16px 18px', borderTop: `1px solid ${colors.border}` }}>
+            <h3 style={{ margin: '0 0 4px', fontSize: 16 }}>{block.title || 'Localização'}</h3>
+            {block.note && <p style={{ margin: 0, color: colors.muted, fontSize: 13, lineHeight: 1.5 }}>{block.note}</p>}
+          </div>
         )}
       </div>
     );
@@ -231,13 +220,44 @@ const buildColors = (data: BioLinkData, themeId: string) => {
   };
 };
 
-export const BioLinkRenderer = ({ data }: { data: BioLinkData }) => {
+export const BioLinkRenderer = ({ data, onBlockClick, activeBlockId }: { data: BioLinkData, onBlockClick?: (id: string) => void, activeBlockId?: string | null }) => {
   const theme = getBioLinkTheme(data.theme_id || BIOLINK_THEMES[0].id);
-  const blocks = data.blocks && data.blocks.length > 0
-    ? data.blocks
-    : normalizeBioLinkBlocks({ blocks: data.blocks as unknown as import('@/integrations/supabase/types').Json, links: data.links as unknown as import('@/integrations/supabase/types').Json } as Pick<import('@/lib/postgenPhase3').BioLinkRecord, 'blocks' | 'links'>);
+  const blocks = normalizeBioLinkBlocks(data as any);
   const profile = data.profile || {};
   const colors = buildColors(data, theme.id);
+
+  const renderBlockWithInteraction = (block: BioLinkBlock) => {
+    const baseElement = renderBlock(block, colors);
+    
+    // Se não há click handler para edição, não polui com overlay interativo
+    if (!onBlockClick) return baseElement;
+
+    const isActive = activeBlockId === block.id;
+
+    return (
+      <div 
+        key={block.id} 
+        onClick={(e) => { e.preventDefault(); onBlockClick(block.id); }}
+        style={{ 
+          position: 'relative', 
+          cursor: 'pointer',
+          borderRadius: colors.shape === 'square' ? 4 : 20,
+          transition: 'all 0.2s',
+          transform: isActive ? 'scale(1.02)' : 'none',
+          boxShadow: isActive ? `0 0 0 3px ${colors.primary}50, ${colors.shadow}` : 'none'
+        }}
+      >
+        <div style={{ pointerEvents: 'none' }}>
+           {baseElement}
+        </div>
+        {isActive && (
+          <div style={{ position: 'absolute', top: -8, right: -8, background: colors.primary, color: '#fff', padding: '4px 10px', borderRadius: 12, fontSize: 11, fontWeight: 'bold' }}>
+            Editando
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div
@@ -305,7 +325,7 @@ export const BioLinkRenderer = ({ data }: { data: BioLinkData }) => {
         </section>
 
         <section style={{ display: 'grid', gap: 14 }}>
-          {blocks.map((block) => renderBlock(block, colors))}
+          {blocks.map((block) => renderBlockWithInteraction(block))}
         </section>
 
         <p style={{ margin: '26px 0 0', textAlign: 'center', fontSize: 11, letterSpacing: '0.12em', color: colors.muted, textTransform: 'uppercase' }}>
