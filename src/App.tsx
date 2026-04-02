@@ -32,6 +32,7 @@ import BlogManagerPage from "@/pages/BlogManagerPage";
 import WebClonerPage from "@/pages/WebClonerPage";
 import VibeCoderPage from "@/pages/VibeCoderPage";
 import SiteBuilderPage from "@/pages/SiteBuilderPage";
+import SiteEditorPage from "@/pages/SiteEditorPage";
 import SimLabPage from "@/pages/SimLabPage";
 
 const queryClient = new QueryClient({
@@ -62,6 +63,7 @@ const App = () => (
             <Route path="dashboard"       element={<DashboardPage />} />
             <Route path="squads"          element={<SquadsPage />} />
             <Route path="site-builder"    element={<SiteBuilderPage />} />
+            <Route path="site-builder/:siteId" element={<SiteEditorPage />} />
             <Route path="generator"       element={<GeneratorPage />} />
             <Route path="carousel-builder" element={<CarouselBuilder />} />
             <Route path="image-prompts"   element={<PromptStudio />} />

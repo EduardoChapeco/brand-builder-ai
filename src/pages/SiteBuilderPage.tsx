@@ -1,8 +1,29 @@
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { supabase } from "@/integrations/supabase/client";
 import { LiquidGlassCard } from "@/components/ui/LiquidGlassCard";
 import { Button } from "@/components/ui/button";
-import { Globe, Plus, LayoutTemplate, MousePointer2, Layers } from "lucide-react";
+import { Globe, Plus, LayoutTemplate, MousePointer2, Layers, Loader2 } from "lucide-react";
 
 export default function SiteBuilderPage() {
+  const { workspace } = useWorkspace();
+  const navigate = useNavigate();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [sites, setSites] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!workspace?.id) return;
+    const fetchSites = async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data } = await (supabase as any).from("websites").select("*").eq("workspace_id", workspace.id);
+      setSites(data || []);
+      setLoading(false);
+    };
+    fetchSites();
+  }, [workspace?.id]);
+
   return (
     <div className="flex h-full flex-col p-8 bg-[#030303] text-white">
       <div className="flex w-full max-w-7xl mx-auto flex-col gap-8">
@@ -19,7 +40,7 @@ export default function SiteBuilderPage() {
               Crie experiências na web em múltiplas páginas com efeitos glass e conversão premium.
             </p>
           </div>
-          <Button className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-lg shadow-indigo-500/20">
+          <Button onClick={() => navigate("new")} className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-lg shadow-indigo-500/20">
             <Plus className="w-4 h-4" />
             Novo Site Institucional
           </Button>
@@ -31,7 +52,7 @@ export default function SiteBuilderPage() {
             <div className="flex justify-between items-start">
               <div>
                 <p className="text-sm text-zinc-400">Sites Publicados</p>
-                <h3 className="text-5xl font-bold mt-2">0</h3>
+                <h3 className="text-5xl font-bold mt-2">{loading ? "-" : sites.length}</h3>
               </div>
               <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center">
                 <Globe className="w-6 h-6 text-blue-400" />
@@ -65,18 +86,42 @@ export default function SiteBuilderPage() {
         </div>
 
         {/* Empty State / Site List Space */}
-        <LiquidGlassCard delay={0.4} className="flex-1 mt-6 min-h-[400px] flex flex-col items-center justify-center border-dashed border-2 border-white/5">
-          <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mb-6">
-            <LayoutTemplate className="w-10 h-10 text-zinc-500" />
+        {loading ? (
+          <div className="flex items-center justify-center p-20">
+            <Loader2 className="w-8 h-8 animate-spin text-zinc-500" />
           </div>
-          <h2 className="text-2xl font-semibold mb-2">Nenhum site encontrado</h2>
-          <p className="text-zinc-400 max-w-md text-center mb-8">
-            Você ainda não possui nenhum site institucional. Crie seu primeiro projeto para começar a desenhar interfaces imersivas utilizando nosso sistema de Liquid Glass.
-          </p>
-          <Button variant="outline" className="border-white/10 bg-white/5 hover:bg-white/10 text-white gap-2">
-            <Plus className="w-4 h-4" /> Importar do Figma ou Criar do Zero
-          </Button>
-        </LiquidGlassCard>
+        ) : sites.length === 0 ? (
+          <LiquidGlassCard delay={0.4} className="flex-1 mt-6 min-h-[400px] flex flex-col items-center justify-center border-dashed border-2 border-white/5">
+            <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mb-6">
+              <LayoutTemplate className="w-10 h-10 text-zinc-500" />
+            </div>
+            <h2 className="text-2xl font-semibold mb-2">Nenhum site encontrado</h2>
+            <p className="text-zinc-400 max-w-md text-center mb-8">
+              Você ainda não possui nenhum site institucional. Crie seu primeiro projeto para começar a desenhar interfaces imersivas utilizando nosso sistema de Liquid Glass.
+            </p>
+            <Button onClick={() => navigate("new")} variant="outline" className="border-white/10 bg-white/5 hover:bg-white/10 text-white gap-2">
+              <Plus className="w-4 h-4" /> Importar do Figma ou Criar do Zero
+            </Button>
+          </LiquidGlassCard>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+            {sites.map((site, i) => (
+              <LiquidGlassCard key={site.id} delay={0.1 + (i * 0.05)} className="p-1">
+                <div className="bg-[#050505] rounded-xl p-6 h-[220px] flex flex-col justify-between border border-white/5 hover:bg-white/5 transition-all cursor-pointer" onClick={() => navigate(site.id)}>
+                   <div>
+                     <h3 className="text-2xl font-bold text-white mb-2">{site.name}</h3>
+                     <a href={`https://${site.domain || 'untitled.com'}`} target="_blank" rel="noreferrer" className="text-zinc-400 flex items-center gap-2 text-sm hover:text-indigo-400">
+                       <Globe className="w-4 h-4" /> {site.domain || "Sem domínio vinculado"}
+                     </a>
+                   </div>
+                   <Button variant="outline" className="w-full bg-transparent border-white/10 text-white mt-4 hover:bg-indigo-600 hover:border-indigo-600 hover:text-white justify-between">
+                     Abrir no Editor <LayoutTemplate className="w-4 h-4 ml-2" />
+                   </Button>
+                </div>
+              </LiquidGlassCard>
+            ))}
+          </div>
+        )}
 
       </div>
     </div>
