@@ -1,4 +1,4 @@
-import type { Json, Tables } from '@/integrations/supabase/types';
+import type { Json } from '@/integrations/supabase/types';
 
 export type BioLinkBlockType = 'link' | 'youtube' | 'spotify' | 'map' | 'newsletter' | 'spacer' | 'site_card' | 'blog_card';
 
