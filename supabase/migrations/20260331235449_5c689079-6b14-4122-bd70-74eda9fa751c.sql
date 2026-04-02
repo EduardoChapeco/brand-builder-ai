@@ -2,7 +2,7 @@
 -- Create missing tables referenced by the application code
 
 -- 1. image_prompt_templates
-CREATE TABLE public.image_prompt_templates (
+CREATE TABLE IF NOT EXISTS public.image_prompt_templates (
   id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   workspace_id uuid REFERENCES public.workspaces(id) ON DELETE CASCADE,
   name text NOT NULL,
@@ -17,10 +17,10 @@ CREATE TABLE public.image_prompt_templates (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 ALTER TABLE public.image_prompt_templates ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow all for image_prompt_templates" ON public.image_prompt_templates FOR ALL TO public USING (true) WITH CHECK (true);
+-- CREATE POLICY "Allow all for image_prompt_templates" ON public.image_prompt_templates FOR ALL TO public USING (true) WITH CHECK (true);
 
 -- 2. brand_characters
-CREATE TABLE public.brand_characters (
+CREATE TABLE IF NOT EXISTS public.brand_characters (
   id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
   name text NOT NULL,
@@ -37,10 +37,10 @@ CREATE TABLE public.brand_characters (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 ALTER TABLE public.brand_characters ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow all for brand_characters" ON public.brand_characters FOR ALL TO public USING (true) WITH CHECK (true);
+-- CREATE POLICY "Allow all for brand_characters" ON public.brand_characters FOR ALL TO public USING (true) WITH CHECK (true);
 
 -- 3. media_assets
-CREATE TABLE public.media_assets (
+CREATE TABLE IF NOT EXISTS public.media_assets (
   id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
   module text NOT NULL DEFAULT 'general',
@@ -53,10 +53,10 @@ CREATE TABLE public.media_assets (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 ALTER TABLE public.media_assets ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow all for media_assets" ON public.media_assets FOR ALL TO public USING (true) WITH CHECK (true);
+-- CREATE POLICY "Allow all for media_assets" ON public.media_assets FOR ALL TO public USING (true) WITH CHECK (true);
 
 -- 4. viral_analyses
-CREATE TABLE public.viral_analyses (
+CREATE TABLE IF NOT EXISTS public.viral_analyses (
   id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
   source_url text,
@@ -70,10 +70,10 @@ CREATE TABLE public.viral_analyses (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 ALTER TABLE public.viral_analyses ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow all for viral_analyses" ON public.viral_analyses FOR ALL TO public USING (true) WITH CHECK (true);
+-- CREATE POLICY "Allow all for viral_analyses" ON public.viral_analyses FOR ALL TO public USING (true) WITH CHECK (true);
 
 -- 5. carousel_storyboards
-CREATE TABLE public.carousel_storyboards (
+CREATE TABLE IF NOT EXISTS public.carousel_storyboards (
   id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
   topic text NOT NULL DEFAULT '',
@@ -82,7 +82,7 @@ CREATE TABLE public.carousel_storyboards (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 ALTER TABLE public.carousel_storyboards ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow all for carousel_storyboards" ON public.carousel_storyboards FOR ALL TO public USING (true) WITH CHECK (true);
+-- CREATE POLICY "Allow all for carousel_storyboards" ON public.carousel_storyboards FOR ALL TO public USING (true) WITH CHECK (true);
 
 -- 6. Add missing columns to api_keys
 ALTER TABLE public.api_keys ADD COLUMN IF NOT EXISTS last_used_at timestamptz;
