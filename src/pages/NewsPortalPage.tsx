@@ -33,7 +33,7 @@ const NewsPortalPage = () => {
   const [syncing, setSyncing] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  const loadItems = useCallback(async () => {
+  const loadItems = useCallback(async (syncRuns = true) => {
     if (!workspace?.id) return;
 
     setLoading(true);
@@ -48,7 +48,26 @@ const NewsPortalPage = () => {
     if (error) {
       toast.error('Nao foi possivel carregar o News Portal');
     } else {
-      setItems((data || []) as NewsItem[]);
+      const rows = (data || []) as NewsItem[];
+      setItems(rows);
+
+      if (syncRuns) {
+        const pendingRuns = rows
+          .filter((item) => item.latest_simlab_run_id && (item.simlab_status === 'queued' || item.simlab_status === 'running'))
+          .slice(0, 6);
+
+        if (pendingRuns.length > 0) {
+          await Promise.all(
+            pendingRuns.map((item) =>
+              supabase.functions.invoke('simlab-status', {
+                body: { run_id: item.latest_simlab_run_id },
+              }),
+            ),
+          );
+          await loadItems(false);
+          return;
+        }
+      }
     }
     setLoading(false);
   }, [workspace?.id]);
@@ -187,6 +206,7 @@ const NewsPortalPage = () => {
                     <div className="flex flex-wrap items-center gap-2">
                       <SubtleBadge variant="brand">Score {item.relevance_score || 0}</SubtleBadge>
                       {item.status ? <SubtleBadge>{item.status}</SubtleBadge> : null}
+                      {item.simlab_status ? <SubtleBadge variant="outline">SimLab {item.simlab_status}</SubtleBadge> : null}
                       {item.categories?.slice(0, 2).map((category) => (
                         <SubtleBadge key={`${item.id}-${category}`} variant="outline">
                           {category}

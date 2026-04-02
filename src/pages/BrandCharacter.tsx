@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Copy, Loader2, Plus, Sparkles, Trash2, UserCircle2, Save } from 'lucide-react';
 import { toast } from 'sonner';
+import SimlabReviewPanel from '@/components/simlab/SimlabReviewPanel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -9,6 +10,7 @@ import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
 import { parseJsonArray } from '@/lib/postgenPhase3';
+import { awaitSimlabCompletion, bindSimlabCharacter, dispatchSimlabValidation, type SimlabInsight, type SimlabRun, type SimlabVariant } from '@/lib/simlab';
 
 type BrandCharacter = Tables<'brand_characters'>;
 type MediaAsset = Tables<'media_assets'>;
@@ -38,6 +40,11 @@ const BrandCharacterPage = () => {
   const [isGeneratingSeed, setIsGeneratingSeed] = useState(false);
   const [generatingFacesFor, setGeneratingFacesFor] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [simlabRun, setSimlabRun] = useState<SimlabRun | null>(null);
+  const [simlabInsight, setSimlabInsight] = useState<SimlabInsight | null>(null);
+  const [simlabVariants, setSimlabVariants] = useState<SimlabVariant[]>([]);
+  const [simlabLoading, setSimlabLoading] = useState(false);
+  const [simlabError, setSimlabError] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     if (!workspace?.id) return;
@@ -79,6 +86,43 @@ const BrandCharacterPage = () => {
     });
     return grouped;
   }, [assets]);
+
+  const currentCharacter = useMemo(
+    () => characters.find((character) => character.id === form.id) || null,
+    [characters, form.id],
+  );
+
+  useEffect(() => {
+    if (!currentCharacter?.latest_simlab_run_id) {
+      setSimlabRun(null);
+      setSimlabInsight(null);
+      setSimlabVariants([]);
+      setSimlabError(null);
+      return;
+    }
+
+    let active = true;
+    setSimlabLoading(true);
+    void awaitSimlabCompletion(currentCharacter.latest_simlab_run_id, 15000)
+      .then((status) => {
+        if (!active) return;
+        setSimlabRun(status.run);
+        setSimlabInsight(status.insight);
+        setSimlabVariants(status.variants);
+        setSimlabError(status.run.verdict === 'approved' ? null : status.insight?.executive_summary || status.run.failure_reason || null);
+      })
+      .catch((error) => {
+        if (!active) return;
+        setSimlabError(error instanceof Error ? error.message : String(error));
+      })
+      .finally(() => {
+        if (active) setSimlabLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [currentCharacter?.latest_simlab_run_id]);
 
   const buildCharacterDraft = () => ({
     name: form.name.trim(),
@@ -187,24 +231,106 @@ const BrandCharacterPage = () => {
         }),
         archetype: form.archetype.trim(),
         seed_prompt: form.seed_prompt.trim() || null,
-        is_active: true,
+        character_kind: 'spokesperson',
+        is_active: false,
       };
 
       const query = form.id
-        ? supabase.from('brand_characters').update(payload).eq('id', form.id)
-        : supabase.from('brand_characters').insert(payload);
+        ? supabase.from('brand_characters').update(payload).eq('id', form.id).select('*').single()
+        : supabase.from('brand_characters').insert(payload).select('*').single();
 
-      const { error } = await query;
-      if (error) throw error;
+      const { data: savedCharacter, error } = await query;
+      if (error || !savedCharacter) throw error || new Error('Nao foi possivel salvar o personagem.');
 
-      toast.success(form.id ? 'Personagem atualizado' : 'Personagem salvo');
-      setForm(defaultForm);
+      setForm((current) => ({ ...current, id: savedCharacter.id }));
+      setSimlabLoading(true);
+      setSimlabError(null);
+
+      const dispatch = await dispatchSimlabValidation({
+        workspace_id: workspace.id,
+        validation_type: 'character',
+        module_type: 'brand_character',
+        stimulus_type: 'brand_character',
+        objective: `Validar personagem ${savedCharacter.name}`,
+        audience_hint: null,
+        target_ref: { table: 'brand_characters', id: savedCharacter.id },
+        variants: [{
+          key: 'character_candidate_v1',
+          label: savedCharacter.name,
+          artifact: {
+            character_kind: 'spokesperson',
+            draft: buildCharacterDraft(),
+            seed_prompt: form.seed_prompt.trim() || null,
+            style_notes: form.style_notes.trim(),
+          },
+        }],
+        request_payload: {
+          existing_media_assets: (galleryByCharacter.get(savedCharacter.id) || []).length,
+        },
+        context_policy: {
+          require_approval: true,
+          review_for_alignment: true,
+        },
+        wait_for_completion: true,
+        timeout_ms: 95000,
+      });
+
+      const validated = await awaitSimlabCompletion(dispatch.run_id, 95000);
+      setSimlabRun(validated.run);
+      setSimlabInsight(validated.insight);
+      setSimlabVariants(validated.variants);
+      setSimlabError(validated.run.verdict === 'approved' ? null : validated.insight?.executive_summary || validated.run.failure_reason || null);
+
+      if (validated.run.selected_persona_ids && validated.run.selected_persona_ids.length > 0) {
+        await bindSimlabCharacter(workspace.id, savedCharacter.id, {
+          persona_ids: validated.run.selected_persona_ids,
+          binding_type: 'validation',
+          alignment_score: validated.run.verdict === 'approved' ? 1 : 0.4,
+          binding_notes: validated.insight?.executive_summary || null,
+        });
+      }
+
+      await supabase
+        .from('brand_characters')
+        .update({
+          is_active: validated.run.verdict === 'approved',
+          character_kind: 'spokesperson',
+          latest_simlab_run_id: validated.run.id,
+          simlab_status: validated.run.status,
+          simlab_validated_at: validated.run.completed_at || new Date().toISOString(),
+        })
+        .eq('id', savedCharacter.id);
+
       await loadData();
+
+      if (validated.run.verdict === 'approved') {
+        toast.success(form.id ? 'Personagem atualizado e aprovado' : 'Personagem salvo e aprovado');
+        setForm(defaultForm);
+      } else {
+        toast.error(validated.insight?.executive_summary || 'SimLab bloqueou a ativacao do personagem.');
+      }
     } catch (error) {
       console.error(error);
       toast.error('Nao foi possivel salvar o personagem');
     } finally {
       setIsSaving(false);
+      setSimlabLoading(false);
+    }
+  };
+
+  const refreshSimlabRun = async () => {
+    if (!simlabRun?.id) return;
+    setSimlabLoading(true);
+    try {
+      const status = await awaitSimlabCompletion(simlabRun.id, 15000);
+      setSimlabRun(status.run);
+      setSimlabInsight(status.insight);
+      setSimlabVariants(status.variants);
+      setSimlabError(status.run.verdict === 'approved' ? null : status.insight?.executive_summary || status.run.failure_reason || null);
+    } catch (error) {
+      setSimlabError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setSimlabLoading(false);
     }
   };
 
@@ -261,7 +387,8 @@ const BrandCharacterPage = () => {
       archetype: character.archetype,
       seed_prompt: character.seed_prompt,
       sample_images: character.sample_images,
-      is_active: true,
+      character_kind: character.character_kind || 'spokesperson',
+      is_active: false,
     });
     if (error) {
       toast.error('Nao foi possivel duplicar');
@@ -426,6 +553,16 @@ const BrandCharacterPage = () => {
                 </Button>
               )}
             </div>
+
+            <SimlabReviewPanel
+              title="SimLab Character Review"
+              run={simlabRun}
+              insight={simlabInsight}
+              variants={simlabVariants}
+              loading={simlabLoading}
+              error={simlabError}
+              onRefresh={simlabRun?.id ? refreshSimlabRun : null}
+            />
           </div>
 
           <div className="glass-card rounded-[2rem] shadow-2xl p-8 h-fit flex flex-col">

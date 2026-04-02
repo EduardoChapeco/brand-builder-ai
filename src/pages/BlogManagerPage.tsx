@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { FileText, Loader2, Plus, Save } from 'lucide-react';
 import { toast } from 'sonner';
+import SimlabReviewPanel from '@/components/simlab/SimlabReviewPanel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,6 +12,7 @@ import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
 import { BLOG_LAYOUTS } from '@/lib/postgenPhase3';
+import { awaitSimlabCompletion, type SimlabInsight, type SimlabRun, type SimlabVariant } from '@/lib/simlab';
 
 type BlogArticle = Tables<'blog_articles'>;
 
@@ -34,6 +36,11 @@ const BlogManagerPage = () => {
   const [topic, setTopic] = useState('');
   const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [simlabRun, setSimlabRun] = useState<SimlabRun | null>(null);
+  const [simlabInsight, setSimlabInsight] = useState<SimlabInsight | null>(null);
+  const [simlabVariants, setSimlabVariants] = useState<SimlabVariant[]>([]);
+  const [simlabLoading, setSimlabLoading] = useState(false);
+  const [simlabError, setSimlabError] = useState<string | null>(null);
 
   const selectedArticle = useMemo(
     () => articles.find((article) => article.id === selectedId) || null,
@@ -68,6 +75,38 @@ const BlogManagerPage = () => {
   useEffect(() => {
     loadArticles();
   }, [loadArticles]);
+
+  useEffect(() => {
+    if (!selectedArticle?.latest_simlab_run_id) {
+      setSimlabRun(null);
+      setSimlabInsight(null);
+      setSimlabVariants([]);
+      setSimlabError(null);
+      return;
+    }
+
+    let active = true;
+    setSimlabLoading(true);
+    void awaitSimlabCompletion(selectedArticle.latest_simlab_run_id, 15000)
+      .then((status) => {
+        if (!active) return;
+        setSimlabRun(status.run);
+        setSimlabInsight(status.insight);
+        setSimlabVariants(status.variants);
+        setSimlabError(status.run.verdict === 'approved' ? null : status.insight?.executive_summary || status.run.failure_reason || null);
+      })
+      .catch((error) => {
+        if (!active) return;
+        setSimlabError(error instanceof Error ? error.message : String(error));
+      })
+      .finally(() => {
+        if (active) setSimlabLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [selectedArticle?.latest_simlab_run_id]);
 
   const createDraft = async () => {
     if (!workspace?.id || !topic.trim()) {
@@ -104,6 +143,10 @@ const BlogManagerPage = () => {
 
   const saveArticle = async () => {
     if (!selectedArticle) return;
+    if (selectedArticle.status === 'published' && simlabRun?.verdict !== 'approved') {
+      toast.error('O artigo so pode ser publicado depois de aprovacao do SimLab.');
+      return;
+    }
     setSaving(true);
     try {
       const payload = {
@@ -126,6 +169,22 @@ const BlogManagerPage = () => {
       toast.error('Nao foi possivel salvar o artigo');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const refreshSimlabRun = async () => {
+    if (!selectedArticle?.latest_simlab_run_id) return;
+    setSimlabLoading(true);
+    try {
+      const status = await awaitSimlabCompletion(selectedArticle.latest_simlab_run_id, 15000);
+      setSimlabRun(status.run);
+      setSimlabInsight(status.insight);
+      setSimlabVariants(status.variants);
+      setSimlabError(status.run.verdict === 'approved' ? null : status.insight?.executive_summary || status.run.failure_reason || null);
+    } catch (error) {
+      setSimlabError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setSimlabLoading(false);
     }
   };
 
@@ -229,6 +288,16 @@ const BlogManagerPage = () => {
                 </Select>
               </div>
             </div>
+
+            <SimlabReviewPanel
+              title="SimLab Review"
+              run={simlabRun}
+              insight={simlabInsight}
+              variants={simlabVariants}
+              loading={simlabLoading}
+              error={simlabError}
+              onRefresh={simlabRun?.id ? refreshSimlabRun : null}
+            />
 
             <div className="space-y-2">
               <Label>Markdown</Label>

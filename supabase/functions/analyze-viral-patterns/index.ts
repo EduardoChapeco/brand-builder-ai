@@ -185,7 +185,7 @@ ${preview || source_url || ""}`,
     const simlabDispatch = await dispatchSimlabRun(supabase, {
       workspaceId: workspace_id,
       validationType: "trend",
-      moduleType: "trend_validation",
+      moduleType: "trend_signal",
       stimulusType: "viral_pattern",
       targetTable: null,
       targetId: null,

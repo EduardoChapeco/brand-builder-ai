@@ -231,10 +231,13 @@ class SimlabRuntime:
                     str(agent["id"]),
                     {
                         "status": "completed",
-                        "variant_id": best_variant_id,
-                        "verdict": best_verdict,
                         "finished_at": datetime.now(timezone.utc).isoformat(),
                         "error_message": best_message,
+                        "prompt_snapshot": {
+                            **(agent.get("prompt_snapshot") or {}),
+                            "winner_variant_id": best_variant_id,
+                            "verdict": best_verdict,
+                        },
                     },
                 )
 

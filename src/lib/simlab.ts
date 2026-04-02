@@ -40,6 +40,7 @@ export type SimlabRun = {
   completed_at?: string | null;
   n_personas?: number;
   n_agents_per_persona?: number;
+  selected_persona_ids?: string[];
   model_name?: string | null;
   provider_name?: string | null;
   winning_variant_id?: string | null;
@@ -174,6 +175,7 @@ const toRun = (value: unknown): SimlabRun => {
     completed_at: toString(record.completed_at),
     n_personas: toNumber(record.n_personas) || undefined,
     n_agents_per_persona: toNumber(record.n_agents_per_persona) || undefined,
+    selected_persona_ids: toArray(record.selected_persona_ids).filter((item): item is string => typeof item === "string"),
     model_name: toString(record.model_name),
     provider_name: toString(record.provider_name),
     winning_variant_id: toString(record.winning_variant_id),

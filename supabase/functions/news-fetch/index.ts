@@ -147,7 +147,7 @@ serve(async (req: Request) => {
       const dispatch = await dispatchSimlabRun(supabase, {
         workspaceId: workspace_id,
         validationType: "trend",
-        moduleType: "trend_validation",
+        moduleType: "trend_signal",
         stimulusType: "news_signal",
         targetTable: "news_items",
         targetId: item.id,

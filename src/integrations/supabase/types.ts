@@ -68,55 +68,74 @@ export type Database = {
         Row: {
           age_range: string | null
           archetype: string | null
+          character_kind: string | null
           created_at: string
           ethnicity_notes: string | null
           expression_default: string | null
           gender: string | null
           id: string
           is_active: boolean | null
+          latest_simlab_run_id: string | null
           name: string
           physical_traits: Json | null
           sample_images: Json | null
           seed_prompt: string | null
           signature_item: string | null
+          simlab_status: string | null
+          simlab_validated_at: string | null
           style_notes: string | null
           workspace_id: string
         }
         Insert: {
           age_range?: string | null
           archetype?: string | null
+          character_kind?: string | null
           created_at?: string
           ethnicity_notes?: string | null
           expression_default?: string | null
           gender?: string | null
           id?: string
           is_active?: boolean | null
+          latest_simlab_run_id?: string | null
           name: string
           physical_traits?: Json | null
           sample_images?: Json | null
           seed_prompt?: string | null
           signature_item?: string | null
+          simlab_status?: string | null
+          simlab_validated_at?: string | null
           style_notes?: string | null
           workspace_id: string
         }
         Update: {
           age_range?: string | null
           archetype?: string | null
+          character_kind?: string | null
           created_at?: string
           ethnicity_notes?: string | null
           expression_default?: string | null
           gender?: string | null
           id?: string
           is_active?: boolean | null
+          latest_simlab_run_id?: string | null
           name?: string
           physical_traits?: Json | null
           sample_images?: Json | null
           seed_prompt?: string | null
           signature_item?: string | null
+          simlab_status?: string | null
+          simlab_validated_at?: string | null
           style_notes?: string | null
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "brand_characters_latest_simlab_run_id_fkey"
+            columns: ["latest_simlab_run_id"]
+            isOneToOne: false
+            referencedRelation: "simlab_runs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "brand_characters_workspace_id_fkey"
             columns: ["workspace_id"]
@@ -261,6 +280,179 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "brand_templates_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bio_links: {
+        Row: {
+          blocks: Json | null
+          created_at: string
+          id: string
+          is_published: boolean | null
+          latest_simlab_run_id: string | null
+          links: Json | null
+          profile: Json | null
+          published_html: string | null
+          seo_config: Json | null
+          simlab_status: string | null
+          simlab_validated_at: string | null
+          slug: string
+          theme_config: Json | null
+          theme_id: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          blocks?: Json | null
+          created_at?: string
+          id?: string
+          is_published?: boolean | null
+          latest_simlab_run_id?: string | null
+          links?: Json | null
+          profile?: Json | null
+          published_html?: string | null
+          seo_config?: Json | null
+          simlab_status?: string | null
+          simlab_validated_at?: string | null
+          slug: string
+          theme_config?: Json | null
+          theme_id?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          blocks?: Json | null
+          created_at?: string
+          id?: string
+          is_published?: boolean | null
+          latest_simlab_run_id?: string | null
+          links?: Json | null
+          profile?: Json | null
+          published_html?: string | null
+          seo_config?: Json | null
+          simlab_status?: string | null
+          simlab_validated_at?: string | null
+          slug?: string
+          theme_config?: Json | null
+          theme_id?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bio_links_latest_simlab_run_id_fkey"
+            columns: ["latest_simlab_run_id"]
+            isOneToOne: false
+            referencedRelation: "simlab_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bio_links_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      blog_articles: {
+        Row: {
+          agent_prd_id: string | null
+          content_html: string | null
+          content_markdown: string | null
+          created_at: string | null
+          hero_image_url: string | null
+          id: string
+          instagram_post_id: string | null
+          keywords: string[] | null
+          latest_simlab_run_id: string | null
+          layout_template: string | null
+          meta_description: string | null
+          news_item_id: string | null
+          simlab_status: string | null
+          simlab_validated_at: string | null
+          slug: string | null
+          source_type: string | null
+          source_url: string | null
+          status: string | null
+          title: string
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          agent_prd_id?: string | null
+          content_html?: string | null
+          content_markdown?: string | null
+          created_at?: string | null
+          hero_image_url?: string | null
+          id?: string
+          instagram_post_id?: string | null
+          keywords?: string[] | null
+          latest_simlab_run_id?: string | null
+          layout_template?: string | null
+          meta_description?: string | null
+          news_item_id?: string | null
+          simlab_status?: string | null
+          simlab_validated_at?: string | null
+          slug?: string | null
+          source_type?: string | null
+          source_url?: string | null
+          status?: string | null
+          title: string
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          agent_prd_id?: string | null
+          content_html?: string | null
+          content_markdown?: string | null
+          created_at?: string | null
+          hero_image_url?: string | null
+          id?: string
+          instagram_post_id?: string | null
+          keywords?: string[] | null
+          latest_simlab_run_id?: string | null
+          layout_template?: string | null
+          meta_description?: string | null
+          news_item_id?: string | null
+          simlab_status?: string | null
+          simlab_validated_at?: string | null
+          slug?: string | null
+          source_type?: string | null
+          source_url?: string | null
+          status?: string | null
+          title?: string
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blog_articles_instagram_post_id_fkey"
+            columns: ["instagram_post_id"]
+            isOneToOne: false
+            referencedRelation: "posts_v2"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blog_articles_latest_simlab_run_id_fkey"
+            columns: ["latest_simlab_run_id"]
+            isOneToOne: false
+            referencedRelation: "simlab_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blog_articles_news_item_id_fkey"
+            columns: ["news_item_id"]
+            isOneToOne: false
+            referencedRelation: "news_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blog_articles_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -658,6 +850,104 @@ export type Database = {
           },
         ]
       }
+      news_items: {
+        Row: {
+          blog_article_id: string | null
+          categories: string[] | null
+          content_extracted: boolean | null
+          content_markdown: string | null
+          content_piece_ids: string[] | null
+          description: string | null
+          fetched_at: string | null
+          id: string
+          latest_simlab_run_id: string | null
+          published_at: string | null
+          relevance_reason: string | null
+          relevance_score: number | null
+          rss_source_id: string | null
+          simlab_status: string | null
+          simlab_validated_at: string | null
+          source_name: string | null
+          source_url: string
+          status: string | null
+          title: string
+          workspace_id: string
+        }
+        Insert: {
+          blog_article_id?: string | null
+          categories?: string[] | null
+          content_extracted?: boolean | null
+          content_markdown?: string | null
+          content_piece_ids?: string[] | null
+          description?: string | null
+          fetched_at?: string | null
+          id?: string
+          latest_simlab_run_id?: string | null
+          published_at?: string | null
+          relevance_reason?: string | null
+          relevance_score?: number | null
+          rss_source_id?: string | null
+          simlab_status?: string | null
+          simlab_validated_at?: string | null
+          source_name?: string | null
+          source_url: string
+          status?: string | null
+          title: string
+          workspace_id: string
+        }
+        Update: {
+          blog_article_id?: string | null
+          categories?: string[] | null
+          content_extracted?: boolean | null
+          content_markdown?: string | null
+          content_piece_ids?: string[] | null
+          description?: string | null
+          fetched_at?: string | null
+          id?: string
+          latest_simlab_run_id?: string | null
+          published_at?: string | null
+          relevance_reason?: string | null
+          relevance_score?: number | null
+          rss_source_id?: string | null
+          simlab_status?: string | null
+          simlab_validated_at?: string | null
+          source_name?: string | null
+          source_url?: string
+          status?: string | null
+          title?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "news_items_blog_article_id_fkey"
+            columns: ["blog_article_id"]
+            isOneToOne: false
+            referencedRelation: "blog_articles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "news_items_latest_simlab_run_id_fkey"
+            columns: ["latest_simlab_run_id"]
+            isOneToOne: false
+            referencedRelation: "simlab_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "news_items_rss_source_id_fkey"
+            columns: ["rss_source_id"]
+            isOneToOne: false
+            referencedRelation: "rss_sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "news_items_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       posts: {
         Row: {
           caption: string | null
@@ -702,7 +992,10 @@ export type Database = {
       }
       posts_v2: {
         Row: {
+          agent_prd_id: string | null
+          animation_config: Json | null
           caption: string | null
+          character_id: string | null
           created_at: string
           format: string | null
           funnel_type: string | null
@@ -710,18 +1003,27 @@ export type Database = {
           hashtags: string | null
           id: string
           image_urls: Json | null
+          latest_simlab_run_id: string | null
+          prompt_used: string | null
+          simlab_status: string | null
+          simlab_validated_at: string | null
           slides_count: number | null
           slides_html: Json | null
           source_topic: string | null
           source_url: string | null
           status: string | null
+          storyboard_id: string | null
           template_id: string | null
           title: string | null
           visual_mode: string | null
+          workspace_squad_id: string | null
           workspace_id: string
         }
         Insert: {
+          agent_prd_id?: string | null
+          animation_config?: Json | null
           caption?: string | null
+          character_id?: string | null
           created_at?: string
           format?: string | null
           funnel_type?: string | null
@@ -729,18 +1031,27 @@ export type Database = {
           hashtags?: string | null
           id?: string
           image_urls?: Json | null
+          latest_simlab_run_id?: string | null
+          prompt_used?: string | null
+          simlab_status?: string | null
+          simlab_validated_at?: string | null
           slides_count?: number | null
           slides_html?: Json | null
           source_topic?: string | null
           source_url?: string | null
           status?: string | null
+          storyboard_id?: string | null
           template_id?: string | null
           title?: string | null
           visual_mode?: string | null
+          workspace_squad_id?: string | null
           workspace_id: string
         }
         Update: {
+          agent_prd_id?: string | null
+          animation_config?: Json | null
           caption?: string | null
+          character_id?: string | null
           created_at?: string
           format?: string | null
           funnel_type?: string | null
@@ -748,22 +1059,63 @@ export type Database = {
           hashtags?: string | null
           id?: string
           image_urls?: Json | null
+          latest_simlab_run_id?: string | null
+          prompt_used?: string | null
+          simlab_status?: string | null
+          simlab_validated_at?: string | null
           slides_count?: number | null
           slides_html?: Json | null
           source_topic?: string | null
           source_url?: string | null
           status?: string | null
+          storyboard_id?: string | null
           template_id?: string | null
           title?: string | null
           visual_mode?: string | null
+          workspace_squad_id?: string | null
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "posts_v2_agent_prd_id_fkey"
+            columns: ["agent_prd_id"]
+            isOneToOne: false
+            referencedRelation: "agent_prds"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "posts_v2_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "brand_characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "posts_v2_latest_simlab_run_id_fkey"
+            columns: ["latest_simlab_run_id"]
+            isOneToOne: false
+            referencedRelation: "simlab_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "posts_v2_storyboard_id_fkey"
+            columns: ["storyboard_id"]
+            isOneToOne: false
+            referencedRelation: "carousel_storyboards"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "posts_v2_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "posts_v2_workspace_squad_id_fkey"
+            columns: ["workspace_squad_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_squads"
             referencedColumns: ["id"]
           },
         ]
@@ -898,24 +1250,30 @@ export type Database = {
       workspaces: {
         Row: {
           created_at: string
+          created_by: string | null
           id: string
           logo_url: string | null
           name: string
           slug: string | null
+          updated_at: string
         }
         Insert: {
           created_at?: string
+          created_by?: string | null
           id?: string
           logo_url?: string | null
           name: string
           slug?: string | null
+          updated_at?: string
         }
         Update: {
           created_at?: string
+          created_by?: string | null
           id?: string
           logo_url?: string | null
           name?: string
           slug?: string | null
+          updated_at?: string
         }
         Relationships: []
       }

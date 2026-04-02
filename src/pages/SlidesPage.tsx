@@ -79,6 +79,10 @@ const SlidesPage = () => {
     setIsGenerating(true);
     setWizardStep(3);
     setGenStep('Estruturando roteiro...');
+    setSimlabRun(null);
+    setSimlabInsight(null);
+    setSimlabVariants([]);
+    setSimlabError(null);
     let completed = false;
 
     try {
@@ -109,6 +113,52 @@ const SlidesPage = () => {
 
       // Generate HTMLs
       const withHtml = startSlides.map(s => ({ ...s, html: renderHtml(s, width, height) }));
+
+      if (workspace?.id) {
+        setGenStep('Validando com SimLab...');
+        setSimlabLoading(true);
+
+        const dispatch = await dispatchSimlabValidation({
+          workspace_id: workspace.id,
+          validation_type: 'content',
+          module_type: 'slide_deck',
+          stimulus_type: 'presentation_deck',
+          objective: topic.trim(),
+          audience_hint: briefing?.target_audience || null,
+          variants: [{
+            key: 'deck_candidate_v1',
+            label: topic.trim(),
+            artifact: {
+              title: topic.trim(),
+              slide_count: withHtml.length,
+              slides: withHtml.map((slide, index) => ({
+                order: index + 1,
+                title: slide.title,
+                body: slide.body,
+                cta: slide.cta,
+                layout_id: slide.layoutId,
+                html: slide.html || '',
+              })),
+            },
+          }],
+          context_policy: {
+            require_approval: true,
+            review_by_slide: true,
+          },
+          wait_for_completion: true,
+          timeout_ms: 95000,
+        });
+
+        const validated = await awaitSimlabCompletion(dispatch.run_id, 95000);
+        setSimlabRun(validated.run);
+        setSimlabInsight(validated.insight);
+        setSimlabVariants(validated.variants);
+
+        if (validated.run.verdict !== 'approved') {
+          setSimlabError(validated.insight?.executive_summary || validated.run.failure_reason || 'SimLab recomendou revisao antes de exportar a apresentacao.');
+        }
+      }
+
       setSlides(withHtml);
       setActiveIdx(0);
       completed = true;
@@ -118,11 +168,29 @@ const SlidesPage = () => {
       return;
     } finally {
       setIsGenerating(false);
+      setSimlabLoading(false);
       setWizardStep(completed ? 4 : 2);
     }
   };
 
   const activeSlide = slides[activeIdx];
+  const canExport = simlabRun?.verdict === 'approved' && !simlabLoading;
+
+  const refreshSimlabRun = async () => {
+    if (!simlabRun?.id) return;
+    setSimlabLoading(true);
+    try {
+      const status = await awaitSimlabCompletion(simlabRun.id, 15000);
+      setSimlabRun(status.run);
+      setSimlabInsight(status.insight);
+      setSimlabVariants(status.variants);
+      setSimlabError(status.run.verdict === 'approved' ? null : status.insight?.executive_summary || status.run.failure_reason || null);
+    } catch (error) {
+      setSimlabError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setSimlabLoading(false);
+    }
+  };
 
   const handleUploadBg = (file: File) => {
     const reader = new FileReader();
@@ -141,6 +209,11 @@ const SlidesPage = () => {
                   <textarea value={topic} onChange={e=>setTopic(e.target.value)} rows={3} placeholder="Ex: Pitch de vendas para clientes corporativos..."
                     className="w-full p-4 rounded-xl border bg-black/10 text-sm mb-4 outline-none focus:border-purple-500" style={{ borderColor: 'var(--border)' }}/>
                   <button onClick={()=>topic?setWizardStep(2):toast.error('Preencha')} className="w-full py-4 bg-purple-600 text-white font-bold rounded-xl hover:bg-purple-700">Avançar →</button>
+                  {!canExport ? (
+                    <p className="text-xs leading-5 text-[var(--text-secondary)]">
+                      A exportacao so fica liberada quando o SimLab aprova o deck.
+                    </p>
+                  ) : null}
                </div>
             )}
             {wizardStep === 2 && (
@@ -221,6 +294,17 @@ const SlidesPage = () => {
 
       {/* RIGHT: TABS */}
       <div className="w-[300px] border-l flex flex-col" style={{ borderColor: 'var(--border)', background: 'var(--bg-surface)' }}>
+         <div className="border-b p-4" style={{ borderColor: 'var(--border)' }}>
+            <SimlabReviewPanel
+              title="SimLab Gate"
+              run={simlabRun}
+              insight={simlabInsight}
+              variants={simlabVariants}
+              loading={simlabLoading}
+              error={simlabError}
+              onRefresh={simlabRun?.id ? refreshSimlabRun : null}
+            />
+         </div>
          <div className="flex border-b text-[10px] font-bold uppercase tracking-widest shrink-0" style={{ borderColor: 'var(--border)' }}>
              <button onClick={() => setActiveTab('visual')} className={`flex-1 py-3 border-b-2 flex flex-col items-center gap-1 ${activeTab==='visual'?'border-purple-500 text-purple-400':'border-transparent opacity-50'}`}><LayoutTemplate size={14}/>Layout</button>
              <button onClick={() => setActiveTab('media')} className={`flex-1 py-3 border-b-2 flex flex-col items-center gap-1 ${activeTab==='media'?'border-purple-500 text-purple-400':'border-transparent opacity-50'}`}><FileImage size={14}/>Mídia</button>
@@ -278,15 +362,18 @@ const SlidesPage = () => {
                   <button onClick={async () =>{
                      const b = await exportSlide(activeSlide.html!, `slide_${activeIdx+1}`, width, height);
                      const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = `slide_${activeIdx+1}.png`; a.click();
-                  }} className="w-full py-3 bg-white/5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 border border-white/10 hover:bg-white/10"><Download size={16}/> PNG do Slide Atual</button>
+                   }} disabled={!canExport} className="w-full py-3 bg-white/5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 border border-white/10 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"><Download size={16}/> PNG do Slide Atual</button>
                   
-                  <button onClick={()=>{ exportAllSlides(slides.map(c=>c.html!), topic||'apresentacao', width, height); }}
-                     className="w-full py-3 bg-white/5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 border border-white/10 hover:bg-white/10"><Download size={16}/> ZIP (Todos PNG)</button>
+                   <button onClick={()=>{ exportAllSlides(slides.map(c=>c.html!), topic||'apresentacao', width, height); }}
+                      disabled={!canExport}
+                      className="w-full py-3 bg-white/5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 border border-white/10 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"><Download size={16}/> ZIP (Todos PNG)</button>
                   
-                  <button onClick={()=>{ exportSlidesPDF(slides.map(c=>c.html!), topic||'apresentacao', width, height); }}
-                     className="w-full py-3 bg-white/5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 border border-white/10 hover:bg-white/10"><Download size={16}/> Baixar PDF</button>
+                   <button onClick={()=>{ exportSlidesPDF(slides.map(c=>c.html!), topic||'apresentacao', width, height); }}
+                      disabled={!canExport}
+                      className="w-full py-3 bg-white/5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 border border-white/10 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"><Download size={16}/> Baixar PDF</button>
 
                   <button onClick={()=>{ exportSlidesHTML(slides.map(c=>c.html!), topic||'apresentacao', width, height); }}
+                     disabled={!canExport}
                      className="w-full py-3 bg-purple-600/20 text-purple-400 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 border border-purple-500/30 hover:bg-purple-600/30"><Download size={16}/> Baixar HTML Navegável</button>
                </div>
             )}

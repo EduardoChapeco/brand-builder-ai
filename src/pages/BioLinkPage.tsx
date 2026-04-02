@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Copy, Globe, Link2, Plus, Save, Send, Trash2 } from 'lucide-react';
+import { Copy, Eye, Globe, Link2, Plus, Save, Send, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import SimlabReviewPanel from '@/components/simlab/SimlabReviewPanel';
 import { BioLinkRenderer, type BioLinkData } from '@/components/biolink/BioLinkRenderer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { supabase } from '@/integrations/supabase/client';
 import { BIOLINK_THEMES, BioLinkBlock, type BioLinkBlockType, normalizeBioLinkBlocks, slugify } from '@/lib/postgenPhase3';
+import { awaitSimlabCompletion, dispatchSimlabValidation, submitSimlabFeedback, type SimlabInsight, type SimlabRun, type SimlabVariant } from '@/lib/simlab';
 
 const blockOptions: Array<{ id: BioLinkBlockType; label: string }> = [
   { id: 'link', label: 'Link CTA' },
@@ -45,6 +47,11 @@ const BioLinkPage = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [isPublished, setIsPublished] = useState(false);
+  const [simlabRun, setSimlabRun] = useState<SimlabRun | null>(null);
+  const [simlabInsight, setSimlabInsight] = useState<SimlabInsight | null>(null);
+  const [simlabVariants, setSimlabVariants] = useState<SimlabVariant[]>([]);
+  const [simlabLoading, setSimlabLoading] = useState(false);
+  const [simlabError, setSimlabError] = useState<string | null>(null);
 
   const selectedBlock = useMemo(
     () => blocks.find((block) => block.id === selectedBlockId) || null,
@@ -119,6 +126,26 @@ const BioLinkPage = () => {
       );
       setBlocks(normalizeBioLinkBlocks(data));
       setIsPublished(Boolean(data.is_published));
+
+      if (data.latest_simlab_run_id) {
+        setSimlabLoading(true);
+        try {
+          const status = await awaitSimlabCompletion(String(data.latest_simlab_run_id), 15000);
+          setSimlabRun(status.run);
+          setSimlabInsight(status.insight);
+          setSimlabVariants(status.variants);
+          setSimlabError(status.run.verdict === 'approved' ? null : status.insight?.executive_summary || status.run.failure_reason || null);
+        } catch (error) {
+          setSimlabError(error instanceof Error ? error.message : String(error));
+        } finally {
+          setSimlabLoading(false);
+        }
+      } else {
+        setSimlabRun(null);
+        setSimlabInsight(null);
+        setSimlabVariants([]);
+        setSimlabError(null);
+      }
     };
 
     load();
@@ -185,6 +212,51 @@ const BioLinkPage = () => {
       const saved = await persistDraft();
       if (!saved?.id || !workspace?.id) return;
 
+      setSimlabLoading(true);
+      setSimlabError(null);
+      const dispatch = await dispatchSimlabValidation({
+        workspace_id: workspace.id,
+        validation_type: 'journey',
+        module_type: 'bio_link',
+        stimulus_type: 'biolink_page',
+        objective: profileTitle || handle || 'Validar Bio Link',
+        audience_hint: briefing?.target_audience || null,
+        target_ref: { table: 'bio_links', id: saved.id },
+        variants: [{
+          key: 'biolink_candidate_v1',
+          label: profileTitle || handle || 'Bio Link',
+          artifact: {
+            slug: saved.slug,
+            theme_id: themeId,
+            profile: previewData.profile,
+            blocks: previewData.blocks,
+            links: saved.links,
+            seo_config: saved.seo_config,
+          },
+        }],
+        request_payload: {
+          published: Boolean(saved.is_published),
+          profile_title: profileTitle,
+        },
+        context_policy: {
+          require_approval: true,
+          review_for_journey: true,
+        },
+        wait_for_completion: true,
+        timeout_ms: 95000,
+      });
+
+      const validated = await awaitSimlabCompletion(dispatch.run_id, 95000);
+      setSimlabRun(validated.run);
+      setSimlabInsight(validated.insight);
+      setSimlabVariants(validated.variants);
+      setSimlabError(validated.run.verdict === 'approved' ? null : validated.insight?.executive_summary || validated.run.failure_reason || null);
+
+      if (validated.run.verdict !== 'approved') {
+        toast.error(validated.insight?.executive_summary || validated.run.failure_reason || 'SimLab bloqueou a publicacao do Bio Link.');
+        return;
+      }
+
       const { data, error } = await supabase.functions.invoke('biolink-render-publish', {
         body: {
           workspace_id: workspace.id,
@@ -200,6 +272,67 @@ const BioLinkPage = () => {
     } catch (error) {
       console.error(error);
       toast.error('Nao foi possivel publicar o Bio Link');
+    } finally {
+      setIsPublishing(false);
+      setSimlabLoading(false);
+    }
+  };
+
+  const refreshSimlabRun = async () => {
+    if (!simlabRun?.id) return;
+    setSimlabLoading(true);
+    try {
+      const status = await awaitSimlabCompletion(simlabRun.id, 15000);
+      setSimlabRun(status.run);
+      setSimlabInsight(status.insight);
+      setSimlabVariants(status.variants);
+      setSimlabError(status.run.verdict === 'approved' ? null : status.insight?.executive_summary || status.run.failure_reason || null);
+    } catch (error) {
+      setSimlabError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setSimlabLoading(false);
+    }
+  };
+
+  const publishWithOverride = async () => {
+    if (!workspace?.id || !bioLinkId || !simlabRun?.id) return;
+    const reason = window.prompt('Explique o motivo do override manual para publicar este Bio Link:');
+    if (!reason || reason.trim().length < 8) {
+      toast.error('Informe um motivo claro para registrar o override.');
+      return;
+    }
+
+    setIsPublishing(true);
+    try {
+      await submitSimlabFeedback({
+        workspace_id: workspace.id,
+        simlab_run_id: simlabRun.id,
+        source_module: 'bio_link',
+        source_record_type: 'manual_override',
+        source_record_id: bioLinkId,
+        metric_key: 'override_publish',
+        metric_value: 1,
+        observation_payload: {
+          reason: reason.trim(),
+          verdict: simlabRun.verdict,
+          slug: handle,
+        },
+      });
+
+      const { data, error } = await supabase.functions.invoke('biolink-render-publish', {
+        body: {
+          workspace_id: workspace.id,
+          biolink_id: bioLinkId,
+        },
+      });
+
+      if (error) throw error;
+      setHandle(data?.slug || handle);
+      setIsPublished(true);
+      toast.success('Bio Link publicado com override auditado');
+    } catch (error) {
+      console.error(error);
+      toast.error('Nao foi possivel publicar com override');
     } finally {
       setIsPublishing(false);
     }
@@ -408,6 +541,22 @@ const BioLinkPage = () => {
               <Send size={14} /> {isPublishing ? 'Publicando...' : 'Publicar'}
             </Button>
           </div>
+
+          {simlabRun?.verdict && simlabRun.verdict !== 'approved' ? (
+            <Button onClick={publishWithOverride} disabled={isPublishing} variant="outline" className="w-full gap-2">
+              <Send size={14} /> Publicar com override auditado
+            </Button>
+          ) : null}
+
+          <SimlabReviewPanel
+            title="SimLab Journey Review"
+            run={simlabRun}
+            insight={simlabInsight}
+            variants={simlabVariants}
+            loading={simlabLoading}
+            error={simlabError}
+            onRefresh={simlabRun?.id ? refreshSimlabRun : null}
+          />
 
           <div className="rounded-2xl p-4" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
             <div className="flex items-center justify-between gap-3">
