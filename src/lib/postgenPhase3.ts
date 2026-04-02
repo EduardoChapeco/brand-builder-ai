@@ -98,9 +98,9 @@ export const BIOLINK_THEMES: BioLinkThemeDefinition[] = [
   },
 ];
 
-export type BioLinkRecord = Tables<'bio_links'>;
-export type BlogArticleRecord = Tables<'blog_articles'>;
-export type NewsItemRecord = Tables<'news_items'>;
+export type BioLinkRecord = { id: string; workspace_id: string; slug: string; theme_id?: string | null; profile?: unknown; blocks?: unknown; links?: unknown; theme_config?: unknown; seo_config?: unknown; is_published?: boolean; published_html?: string | null; latest_simlab_run_id?: string | null; created_at?: string; updated_at?: string; [key: string]: unknown };
+export type BlogArticleRecord = { id: string; workspace_id: string; title?: string; slug?: string; content?: string; layout?: string; status?: string; created_at?: string; [key: string]: unknown };
+export type NewsItemRecord = { id: string; workspace_id: string; title?: string; url?: string; source?: string; created_at?: string; [key: string]: unknown };
 export type LandingPageRecord = Record<string, unknown>;
 export type ProjectRecord = Record<string, unknown>;
 

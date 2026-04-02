@@ -6,9 +6,7 @@ import AppSectionLabel from "@/components/shared/AppSectionLabel";
 import SectionCard from "@/components/shared/SectionCard";
 import SubtleBadge from "@/components/shared/SubtleBadge";
 import { MOTION_STUDIO_TEMPLATES, getMotionStudioTemplate, parseMotionStudioLayers } from "@/components/video/VideoStudioRemotionTemplates";
-import type { Tables } from "@/integrations/supabase/types";
-
-type LayerCompositionRow = Tables<"layer_compositions">;
+type LayerCompositionRow = { id: string; workspace_id: string; video_project_id?: string | null; prompt_original?: string; layers?: unknown[]; canvas_width?: number; canvas_height?: number; status?: string; latest_job_id?: string | null; updated_at?: string; [key: string]: unknown };
 
 const formatRelative = (value: string | null | undefined) => {
   if (!value) return "no update yet";

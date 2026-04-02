@@ -689,8 +689,8 @@ export const buildMotionStudioLayers = (templateId: string, values: Record<strin
   };
 
   const sequenceSnapshots: SequenceSnapshot[] = template.buildSequences(values).map((sequence) => ({
-    kind: "sequence",
     ...sequence,
+    kind: "sequence" as const,
   }));
 
   return [snapshot, ...sequenceSnapshots];

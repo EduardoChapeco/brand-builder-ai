@@ -6,11 +6,9 @@ import AppSectionLabel from "@/components/shared/AppSectionLabel";
 import SectionCard from "@/components/shared/SectionCard";
 import SubtleBadge from "@/components/shared/SubtleBadge";
 import VideoStudioRemotionPropsPanel from "@/components/video/VideoStudioRemotionPropsPanel";
-import type { Tables } from "@/integrations/supabase/types";
-
-type VideoProjectRow = Tables<"video_projects">;
-type VideoJobRow = Tables<"video_jobs">;
-type VideoAssetRow = Tables<"video_assets">;
+type VideoProjectRow = { id: string; name: string; workspace_id: string; [key: string]: unknown };
+type VideoJobRow = { id: string; status: string; type?: string; job_type?: string; provider_name?: string | null; error_message?: string | null; started_at?: string | null; updated_at?: string; [key: string]: unknown };
+type VideoAssetRow = { id: string; asset_type: string; public_url?: string | null; file_name?: string | null; [key: string]: unknown };
 
 type AssetOption = {
   id: string;
