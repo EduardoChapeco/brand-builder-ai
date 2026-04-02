@@ -141,7 +141,7 @@ export const parseJsonObject = <T extends Record<string, unknown>>(value: Json |
   typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as T) : fallback;
 
 export const normalizeBioLinkBlocks = (record: Pick<BioLinkRecord, 'blocks' | 'links'> | null | undefined): BioLinkBlock[] => {
-  const blocks = parseJsonArray<BioLinkBlock>(record?.blocks ?? null);
+  const blocks = parseJsonArray<BioLinkBlock>((record?.blocks ?? null) as Json);
   if (blocks.length > 0) return blocks;
 
   const legacyLinks = parseJsonArray<{ id?: string; label?: string; url?: string; emoji?: string }>(record?.links ?? null);
