@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { supabase } from "@/integrations/supabase/client";
 import { LiquidGlassCard } from "@/components/ui/LiquidGlassCard";
 import { Button } from "@/components/ui/button";
-import { Globe, Plus, LayoutTemplate, MousePointer2, Layers, Loader2 } from "lucide-react";
+import { Clapperboard, Globe, Plus, LayoutTemplate, MousePointer2, Layers, Loader2 } from "lucide-react";
 
 export default function SiteBuilderPage() {
   const { workspace } = useWorkspace();
@@ -40,10 +40,16 @@ export default function SiteBuilderPage() {
               Crie experiências na web em múltiplas páginas com efeitos glass e conversão premium.
             </p>
           </div>
-          <Button onClick={() => navigate("new")} className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-lg shadow-indigo-500/20">
-            <Plus className="w-4 h-4" />
-            Novo Site Institucional
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button variant="outline" onClick={() => navigate("../video-studio/motion")} className="gap-2 rounded-xl border-white/10 bg-white/5 text-white hover:bg-white/10">
+              <Clapperboard className="w-4 h-4" />
+              Motion Sections
+            </Button>
+            <Button onClick={() => navigate("new")} className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-lg shadow-indigo-500/20">
+              <Plus className="w-4 h-4" />
+              Novo Site Institucional
+            </Button>
+          </div>
         </div>
 
         {/* Builder Analytics / Overview Grid */}

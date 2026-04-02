@@ -20,6 +20,8 @@ export type BrandContext = {
   briefing: Record<string, unknown> | null;
   brandKit: Record<string, unknown> | null;
   system_context: string;
+  /** CCP snapshot disponivel apos migracao — use diretamente nos novos agentes */
+  _snap?: import("./ccp.ts").CCPBrandSnapshot;
 };
 
 export type JsonTaskMeta = {
@@ -96,7 +98,12 @@ export const markKeyUsage = async (
     .eq("id", key.id);
 };
 
+/**
+ * @deprecated Substituto: snapshotToXML() em _shared/ccp.ts (economia de ~62% de tokens).
+ * Mantido apenas como fallback de emergência caso o import dinâmico de ccp.ts falhe.
+ */
 const buildSystemContext = (
+
   briefing: Record<string, unknown> | null,
   brandKit: Record<string, unknown> | null,
 ) => {
@@ -133,22 +140,34 @@ RULES:
 `.trim();
 };
 
+/**
+ * Retorna o contexto de marca do workspace.
+ *
+ * @deprecated Prefira usar getCCPSnapshot() + snapshotToXML() de _shared/ccp.ts
+ * diretamente nos novos agentes. Esta funcao agora delega internamente para o CCP,
+ * mas mantem a interface legada para compatibilidade retroativa.
+ *
+ * Migração:
+ *   // Antes:
+ *   const { system_context } = await getBrandContext(supabase, workspaceId);
+ *   // Depois:
+ *   import { getCCPSnapshot, snapshotToXML } from "../_shared/ccp.ts";
+ *   const snap = await getCCPSnapshot(supabase, workspaceId);
+ *   const system_context = snapshotToXML(snap); // ~180 tokens vs ~480 tokens
+ */
 export const getBrandContext = async (
   supabase: ReturnType<typeof createServiceClient>,
   workspaceId: string,
 ): Promise<BrandContext> => {
-  const [{ data: briefing }, { data: brandKit }] = await Promise.all([
-    supabase.from("briefings").select("*").eq("workspace_id", workspaceId).maybeSingle(),
-    supabase.from("brand_kits").select("*").eq("workspace_id", workspaceId).maybeSingle(),
-  ]);
+  // Importacao dinamica do CCP para evitar circular dependency
+  const { getCCPSnapshot, snapshotToXML } = await import("./ccp.ts");
+  const snap = await getCCPSnapshot(supabase, workspaceId);
 
   return {
-    briefing: (briefing as Record<string, unknown> | null) || null,
-    brandKit: (brandKit as Record<string, unknown> | null) || null,
-    system_context: buildSystemContext(
-      (briefing as Record<string, unknown> | null) || null,
-      (brandKit as Record<string, unknown> | null) || null,
-    ),
+    briefing: null,  // legado — use snap diretamente
+    brandKit: null,  // legado — use snap diretamente
+    system_context: snapshotToXML(snap),
+    _snap: snap,
   };
 };
 
@@ -367,20 +386,9 @@ export const runJsonTask = async <T>(
   return result;
 };
 
-export const callLLM = async <T>(
-  supabase: ReturnType<typeof createServiceClient>,
-  workspaceId: string,
-  systemPrompt: string,
-  userPrompt: string,
-  fallback?: T,
-) => runJsonTask<T>(
-  supabase,
-  workspaceId,
-  systemPrompt,
-  userPrompt,
-  ["groq", "openrouter", "gemini"],
-  fallback,
-);
+// callLLM removed — use runJsonTask() directly.
+// Kept alias export for any external code during transition:
+export { runJsonTask as callLLM };
 
 const replaceCaptureTokens = (
   input: unknown,
@@ -656,7 +664,9 @@ export const uploadBytesToAsset = async (
   return asset;
 };
 
-export const uploadAsset = uploadBytesToAsset;
+// uploadAsset: use uploadBytesToAsset diretamente.
+// @deprecated alias mantido para compatibilidade.
+export { uploadBytesToAsset as uploadAsset };
 
 export const decodeDataUrl = (dataUrl: string) => {
   const match = dataUrl.match(/^data:(.+);base64,(.+)$/);

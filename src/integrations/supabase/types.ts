@@ -594,6 +594,9 @@ export type Database = {
           created_at: string
           id: string
           post_id: string | null
+          remotion_component_preset_id: string | null
+          remotion_composition_id: string | null
+          remotion_template_id: string | null
           slides_plan: Json | null
           topic: string
           workspace_id: string
@@ -603,6 +606,9 @@ export type Database = {
           created_at?: string
           id?: string
           post_id?: string | null
+          remotion_component_preset_id?: string | null
+          remotion_composition_id?: string | null
+          remotion_template_id?: string | null
           slides_plan?: Json | null
           topic?: string
           workspace_id: string
@@ -612,6 +618,9 @@ export type Database = {
           created_at?: string
           id?: string
           post_id?: string | null
+          remotion_component_preset_id?: string | null
+          remotion_composition_id?: string | null
+          remotion_template_id?: string | null
           slides_plan?: Json | null
           topic?: string
           workspace_id?: string
@@ -622,6 +631,27 @@ export type Database = {
             columns: ["post_id"]
             isOneToOne: false
             referencedRelation: "posts_v2"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "carousel_storyboards_remotion_component_preset_id_fkey"
+            columns: ["remotion_component_preset_id"]
+            isOneToOne: false
+            referencedRelation: "remotion_component_presets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "carousel_storyboards_remotion_composition_id_fkey"
+            columns: ["remotion_composition_id"]
+            isOneToOne: false
+            referencedRelation: "remotion_compositions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "carousel_storyboards_remotion_template_id_fkey"
+            columns: ["remotion_template_id"]
+            isOneToOne: false
+            referencedRelation: "remotion_templates"
             referencedColumns: ["id"]
           },
           {
@@ -1005,6 +1035,9 @@ export type Database = {
           image_urls: Json | null
           latest_simlab_run_id: string | null
           prompt_used: string | null
+          remotion_component_preset_id: string | null
+          remotion_composition_id: string | null
+          remotion_template_id: string | null
           simlab_status: string | null
           simlab_validated_at: string | null
           slides_count: number | null
@@ -1033,6 +1066,9 @@ export type Database = {
           image_urls?: Json | null
           latest_simlab_run_id?: string | null
           prompt_used?: string | null
+          remotion_component_preset_id?: string | null
+          remotion_composition_id?: string | null
+          remotion_template_id?: string | null
           simlab_status?: string | null
           simlab_validated_at?: string | null
           slides_count?: number | null
@@ -1061,6 +1097,9 @@ export type Database = {
           image_urls?: Json | null
           latest_simlab_run_id?: string | null
           prompt_used?: string | null
+          remotion_component_preset_id?: string | null
+          remotion_composition_id?: string | null
+          remotion_template_id?: string | null
           simlab_status?: string | null
           simlab_validated_at?: string | null
           slides_count?: number | null
@@ -1098,6 +1137,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "posts_v2_remotion_component_preset_id_fkey"
+            columns: ["remotion_component_preset_id"]
+            isOneToOne: false
+            referencedRelation: "remotion_component_presets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "posts_v2_remotion_composition_id_fkey"
+            columns: ["remotion_composition_id"]
+            isOneToOne: false
+            referencedRelation: "remotion_compositions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "posts_v2_remotion_template_id_fkey"
+            columns: ["remotion_template_id"]
+            isOneToOne: false
+            referencedRelation: "remotion_templates"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "posts_v2_storyboard_id_fkey"
             columns: ["storyboard_id"]
             isOneToOne: false
@@ -1116,6 +1176,456 @@ export type Database = {
             columns: ["workspace_squad_id"]
             isOneToOne: false
             referencedRelation: "workspace_squads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      remotion_ai_generations: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          generation_kind: string
+          id: string
+          input_payload: Json
+          latest_job_id: string | null
+          metadata: Json
+          model_name: string | null
+          output_asset_id: string | null
+          prompt_composed: Json
+          prompt_original: string | null
+          provider_name: string | null
+          remotion_component_preset_id: string | null
+          remotion_composition_id: string | null
+          remotion_template_id: string | null
+          source_post_id: string | null
+          source_scroll_section_id: string | null
+          source_storyboard_id: string | null
+          source_video_generation_id: string | null
+          status: string
+          title: string | null
+          updated_at: string
+          video_project_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          generation_kind?: string
+          id?: string
+          input_payload?: Json
+          latest_job_id?: string | null
+          metadata?: Json
+          model_name?: string | null
+          output_asset_id?: string | null
+          prompt_composed?: Json
+          prompt_original?: string | null
+          provider_name?: string | null
+          remotion_component_preset_id?: string | null
+          remotion_composition_id?: string | null
+          remotion_template_id?: string | null
+          source_post_id?: string | null
+          source_scroll_section_id?: string | null
+          source_storyboard_id?: string | null
+          source_video_generation_id?: string | null
+          status?: string
+          title?: string | null
+          updated_at?: string
+          video_project_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          generation_kind?: string
+          id?: string
+          input_payload?: Json
+          latest_job_id?: string | null
+          metadata?: Json
+          model_name?: string | null
+          output_asset_id?: string | null
+          prompt_composed?: Json
+          prompt_original?: string | null
+          provider_name?: string | null
+          remotion_component_preset_id?: string | null
+          remotion_composition_id?: string | null
+          remotion_template_id?: string | null
+          source_post_id?: string | null
+          source_scroll_section_id?: string | null
+          source_storyboard_id?: string | null
+          source_video_generation_id?: string | null
+          status?: string
+          title?: string | null
+          updated_at?: string
+          video_project_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "remotion_ai_generations_latest_job_id_fkey"
+            columns: ["latest_job_id"]
+            isOneToOne: false
+            referencedRelation: "video_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "remotion_ai_generations_output_asset_id_fkey"
+            columns: ["output_asset_id"]
+            isOneToOne: false
+            referencedRelation: "video_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "remotion_ai_generations_remotion_component_preset_id_fkey"
+            columns: ["remotion_component_preset_id"]
+            isOneToOne: false
+            referencedRelation: "remotion_component_presets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "remotion_ai_generations_remotion_composition_id_fkey"
+            columns: ["remotion_composition_id"]
+            isOneToOne: false
+            referencedRelation: "remotion_compositions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "remotion_ai_generations_remotion_template_id_fkey"
+            columns: ["remotion_template_id"]
+            isOneToOne: false
+            referencedRelation: "remotion_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "remotion_ai_generations_source_post_id_fkey"
+            columns: ["source_post_id"]
+            isOneToOne: false
+            referencedRelation: "posts_v2"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "remotion_ai_generations_source_scroll_section_id_fkey"
+            columns: ["source_scroll_section_id"]
+            isOneToOne: false
+            referencedRelation: "scroll_sections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "remotion_ai_generations_source_storyboard_id_fkey"
+            columns: ["source_storyboard_id"]
+            isOneToOne: false
+            referencedRelation: "carousel_storyboards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "remotion_ai_generations_source_video_generation_id_fkey"
+            columns: ["source_video_generation_id"]
+            isOneToOne: false
+            referencedRelation: "ai_generated_videos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "remotion_ai_generations_video_project_id_fkey"
+            columns: ["video_project_id"]
+            isOneToOne: false
+            referencedRelation: "video_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "remotion_ai_generations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      remotion_component_presets: {
+        Row: {
+          asset_bindings: Json
+          component_key: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_default: boolean
+          is_system: boolean
+          name: string
+          preset_key: string
+          preview_json: Json
+          props_json: Json
+          remotion_template_id: string | null
+          updated_at: string
+          workspace_id: string | null
+        }
+        Insert: {
+          asset_bindings?: Json
+          component_key: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_default?: boolean
+          is_system?: boolean
+          name: string
+          preset_key: string
+          preview_json?: Json
+          props_json?: Json
+          remotion_template_id?: string | null
+          updated_at?: string
+          workspace_id?: string | null
+        }
+        Update: {
+          asset_bindings?: Json
+          component_key?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_default?: boolean
+          is_system?: boolean
+          name?: string
+          preset_key?: string
+          preview_json?: Json
+          props_json?: Json
+          remotion_template_id?: string | null
+          updated_at?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "remotion_component_presets_remotion_template_id_fkey"
+            columns: ["remotion_template_id"]
+            isOneToOne: false
+            referencedRelation: "remotion_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "remotion_component_presets_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      remotion_compositions: {
+        Row: {
+          composition_json: Json
+          composition_key: string
+          composition_kind: string
+          created_at: string
+          created_by: string | null
+          duration_frames: number
+          fps: number
+          height: number
+          id: string
+          latest_export_id: string | null
+          latest_job_id: string | null
+          metadata: Json
+          name: string
+          props_json: Json
+          remotion_component_preset_id: string | null
+          remotion_template_id: string | null
+          source_post_id: string | null
+          source_scroll_section_id: string | null
+          source_storyboard_id: string | null
+          status: string
+          updated_at: string
+          video_project_id: string | null
+          width: number
+          workspace_id: string
+        }
+        Insert: {
+          composition_json?: Json
+          composition_key: string
+          composition_kind?: string
+          created_at?: string
+          created_by?: string | null
+          duration_frames?: number
+          fps?: number
+          height?: number
+          id?: string
+          latest_export_id?: string | null
+          latest_job_id?: string | null
+          metadata?: Json
+          name: string
+          props_json?: Json
+          remotion_component_preset_id?: string | null
+          remotion_template_id?: string | null
+          source_post_id?: string | null
+          source_scroll_section_id?: string | null
+          source_storyboard_id?: string | null
+          status?: string
+          updated_at?: string
+          video_project_id?: string | null
+          width?: number
+          workspace_id: string
+        }
+        Update: {
+          composition_json?: Json
+          composition_key?: string
+          composition_kind?: string
+          created_at?: string
+          created_by?: string | null
+          duration_frames?: number
+          fps?: number
+          height?: number
+          id?: string
+          latest_export_id?: string | null
+          latest_job_id?: string | null
+          metadata?: Json
+          name?: string
+          props_json?: Json
+          remotion_component_preset_id?: string | null
+          remotion_template_id?: string | null
+          source_post_id?: string | null
+          source_scroll_section_id?: string | null
+          source_storyboard_id?: string | null
+          status?: string
+          updated_at?: string
+          video_project_id?: string | null
+          width?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "remotion_compositions_latest_export_id_fkey"
+            columns: ["latest_export_id"]
+            isOneToOne: false
+            referencedRelation: "video_exports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "remotion_compositions_latest_job_id_fkey"
+            columns: ["latest_job_id"]
+            isOneToOne: false
+            referencedRelation: "video_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "remotion_compositions_remotion_component_preset_id_fkey"
+            columns: ["remotion_component_preset_id"]
+            isOneToOne: false
+            referencedRelation: "remotion_component_presets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "remotion_compositions_remotion_template_id_fkey"
+            columns: ["remotion_template_id"]
+            isOneToOne: false
+            referencedRelation: "remotion_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "remotion_compositions_source_post_id_fkey"
+            columns: ["source_post_id"]
+            isOneToOne: false
+            referencedRelation: "posts_v2"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "remotion_compositions_source_scroll_section_id_fkey"
+            columns: ["source_scroll_section_id"]
+            isOneToOne: false
+            referencedRelation: "scroll_sections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "remotion_compositions_source_storyboard_id_fkey"
+            columns: ["source_storyboard_id"]
+            isOneToOne: false
+            referencedRelation: "carousel_storyboards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "remotion_compositions_video_project_id_fkey"
+            columns: ["video_project_id"]
+            isOneToOne: false
+            referencedRelation: "video_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "remotion_compositions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      remotion_templates: {
+        Row: {
+          composition_key: string
+          created_at: string
+          created_by: string | null
+          default_props: Json
+          description: string | null
+          duration_frames: number
+          fps: number
+          height: number
+          id: string
+          is_public: boolean
+          is_system: boolean
+          name: string
+          preview_json: Json
+          props_schema: Json
+          renderer_kind: string
+          slug: string
+          template_kind: string
+          updated_at: string
+          width: number
+          workspace_id: string | null
+        }
+        Insert: {
+          composition_key: string
+          created_at?: string
+          created_by?: string | null
+          default_props?: Json
+          description?: string | null
+          duration_frames?: number
+          fps?: number
+          height?: number
+          id?: string
+          is_public?: boolean
+          is_system?: boolean
+          name: string
+          preview_json?: Json
+          props_schema?: Json
+          renderer_kind?: string
+          slug: string
+          template_kind?: string
+          updated_at?: string
+          width?: number
+          workspace_id?: string | null
+        }
+        Update: {
+          composition_key?: string
+          created_at?: string
+          created_by?: string | null
+          default_props?: Json
+          description?: string | null
+          duration_frames?: number
+          fps?: number
+          height?: number
+          id?: string
+          is_public?: boolean
+          is_system?: boolean
+          name?: string
+          preview_json?: Json
+          props_schema?: Json
+          renderer_kind?: string
+          slug?: string
+          template_kind?: string
+          updated_at?: string
+          width?: number
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "remotion_templates_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
         ]
@@ -1151,6 +1661,1070 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "rss_feeds_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          created_at: string
+          description: string | null
+          entry_file: string | null
+          id: string
+          name: string
+          preview_meta: Json | null
+          source_files_json: Json | null
+          status: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          entry_file?: string | null
+          id?: string
+          name: string
+          preview_meta?: Json | null
+          source_files_json?: Json | null
+          status?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          entry_file?: string | null
+          id?: string
+          name?: string
+          preview_meta?: Json | null
+          source_files_json?: Json | null
+          status?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      websites: {
+        Row: {
+          brand_kit_id: string | null
+          created_at: string
+          domain: string | null
+          global_config: Json | null
+          id: string
+          name: string
+          status: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          brand_kit_id?: string | null
+          created_at?: string
+          domain?: string | null
+          global_config?: Json | null
+          id?: string
+          name: string
+          status?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          brand_kit_id?: string | null
+          created_at?: string
+          domain?: string | null
+          global_config?: Json | null
+          id?: string
+          name?: string
+          status?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "websites_brand_kit_id_fkey"
+            columns: ["brand_kit_id"]
+            isOneToOne: false
+            referencedRelation: "brand_kits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "websites_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      website_pages: {
+        Row: {
+          content_blocks: Json | null
+          created_at: string
+          id: string
+          is_home: boolean | null
+          seo_metadata: Json | null
+          slug: string
+          status: string | null
+          title: string
+          updated_at: string
+          website_id: string
+        }
+        Insert: {
+          content_blocks?: Json | null
+          created_at?: string
+          id?: string
+          is_home?: boolean | null
+          seo_metadata?: Json | null
+          slug: string
+          status?: string | null
+          title: string
+          updated_at?: string
+          website_id: string
+        }
+        Update: {
+          content_blocks?: Json | null
+          created_at?: string
+          id?: string
+          is_home?: boolean | null
+          seo_metadata?: Json | null
+          slug?: string
+          status?: string | null
+          title?: string
+          updated_at?: string
+          website_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "website_pages_website_id_fkey"
+            columns: ["website_id"]
+            isOneToOne: false
+            referencedRelation: "websites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      video_projects: {
+        Row: {
+          active_timeline_version_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          fps: number
+          id: string
+          latest_analysis_job_id: string | null
+          latest_export_id: string | null
+          latest_source_asset_id: string | null
+          latest_subtitle_track_id: string | null
+          metadata: Json
+          name: string
+          ratio: string
+          settings: Json
+          status: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          active_timeline_version_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          fps?: number
+          id?: string
+          latest_analysis_job_id?: string | null
+          latest_export_id?: string | null
+          latest_source_asset_id?: string | null
+          latest_subtitle_track_id?: string | null
+          metadata?: Json
+          name: string
+          ratio?: string
+          settings?: Json
+          status?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          active_timeline_version_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          fps?: number
+          id?: string
+          latest_analysis_job_id?: string | null
+          latest_export_id?: string | null
+          latest_source_asset_id?: string | null
+          latest_subtitle_track_id?: string | null
+          metadata?: Json
+          name?: string
+          ratio?: string
+          settings?: Json
+          status?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_projects_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      video_assets: {
+        Row: {
+          asset_type: string
+          bucket_name: string
+          created_at: string
+          created_by: string | null
+          duration_ms: number | null
+          file_name: string | null
+          file_size_bytes: number | null
+          height: number | null
+          id: string
+          metadata: Json
+          mime_type: string | null
+          public_url: string | null
+          source_asset_id: string | null
+          status: string
+          storage_path: string
+          updated_at: string
+          video_project_id: string | null
+          waveform_json: Json
+          width: number | null
+          workspace_id: string
+        }
+        Insert: {
+          asset_type: string
+          bucket_name?: string
+          created_at?: string
+          created_by?: string | null
+          duration_ms?: number | null
+          file_name?: string | null
+          file_size_bytes?: number | null
+          height?: number | null
+          id?: string
+          metadata?: Json
+          mime_type?: string | null
+          public_url?: string | null
+          source_asset_id?: string | null
+          status?: string
+          storage_path: string
+          updated_at?: string
+          video_project_id?: string | null
+          waveform_json?: Json
+          width?: number | null
+          workspace_id: string
+        }
+        Update: {
+          asset_type?: string
+          bucket_name?: string
+          created_at?: string
+          created_by?: string | null
+          duration_ms?: number | null
+          file_name?: string | null
+          file_size_bytes?: number | null
+          height?: number | null
+          id?: string
+          metadata?: Json
+          mime_type?: string | null
+          public_url?: string | null
+          source_asset_id?: string | null
+          status?: string
+          storage_path?: string
+          updated_at?: string
+          video_project_id?: string | null
+          waveform_json?: Json
+          width?: number | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_assets_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_assets_video_project_id_fkey"
+            columns: ["video_project_id"]
+            isOneToOne: false
+            referencedRelation: "video_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_assets_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      video_timeline_versions: {
+        Row: {
+          command_log: Json
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          summary: string | null
+          timeline_json: Json
+          updated_at: string
+          version_number: number
+          video_project_id: string
+          workspace_id: string
+        }
+        Insert: {
+          command_log?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          summary?: string | null
+          timeline_json?: Json
+          updated_at?: string
+          version_number?: number
+          video_project_id: string
+          workspace_id: string
+        }
+        Update: {
+          command_log?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          summary?: string | null
+          timeline_json?: Json
+          updated_at?: string
+          version_number?: number
+          video_project_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_timeline_versions_video_project_id_fkey"
+            columns: ["video_project_id"]
+            isOneToOne: false
+            referencedRelation: "video_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_timeline_versions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      video_subtitle_tracks: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          language_code: string
+          latest_job_id: string | null
+          provider_name: string | null
+          source_asset_id: string | null
+          style_overrides: Json
+          style_preset: string
+          transcript_text: string | null
+          updated_at: string
+          video_project_id: string
+          words_json: Json
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          language_code?: string
+          latest_job_id?: string | null
+          provider_name?: string | null
+          source_asset_id?: string | null
+          style_overrides?: Json
+          style_preset?: string
+          transcript_text?: string | null
+          updated_at?: string
+          video_project_id: string
+          words_json?: Json
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          language_code?: string
+          latest_job_id?: string | null
+          provider_name?: string | null
+          source_asset_id?: string | null
+          style_overrides?: Json
+          style_preset?: string
+          transcript_text?: string | null
+          updated_at?: string
+          video_project_id?: string
+          words_json?: Json
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_subtitle_tracks_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "video_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_subtitle_tracks_video_project_id_fkey"
+            columns: ["video_project_id"]
+            isOneToOne: false
+            referencedRelation: "video_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_subtitle_tracks_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      video_jobs: {
+        Row: {
+          cost_total: number | null
+          created_at: string
+          created_by: string | null
+          error_message: string | null
+          export_id: string | null
+          finished_at: string | null
+          generation_id: string | null
+          id: string
+          last_heartbeat_at: string | null
+          latency_ms: number | null
+          layer_composition_id: string | null
+          locked_at: string | null
+          locked_by: string | null
+          model_name: string | null
+          output_asset_id: string | null
+          priority: number
+          provider_capability: string | null
+          provider_name: string | null
+          remotion_ai_generation_id: string | null
+          remotion_component_preset_id: string | null
+          remotion_composition_id: string | null
+          remotion_template_id: string | null
+          request_payload: Json
+          result_payload: Json
+          retry_count: number
+          scroll_section_id: string | null
+          started_at: string | null
+          status: string
+          subtitle_track_id: string | null
+          timeline_version_id: string | null
+          updated_at: string
+          video_project_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          cost_total?: number | null
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          export_id?: string | null
+          finished_at?: string | null
+          generation_id?: string | null
+          id?: string
+          last_heartbeat_at?: string | null
+          latency_ms?: number | null
+          layer_composition_id?: string | null
+          locked_at?: string | null
+          locked_by?: string | null
+          model_name?: string | null
+          output_asset_id?: string | null
+          priority?: number
+          provider_capability?: string | null
+          provider_name?: string | null
+          remotion_ai_generation_id?: string | null
+          remotion_component_preset_id?: string | null
+          remotion_composition_id?: string | null
+          remotion_template_id?: string | null
+          request_payload?: Json
+          result_payload?: Json
+          retry_count?: number
+          scroll_section_id?: string | null
+          started_at?: string | null
+          status?: string
+          subtitle_track_id?: string | null
+          timeline_version_id?: string | null
+          updated_at?: string
+          video_project_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          cost_total?: number | null
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          export_id?: string | null
+          finished_at?: string | null
+          generation_id?: string | null
+          id?: string
+          last_heartbeat_at?: string | null
+          latency_ms?: number | null
+          layer_composition_id?: string | null
+          locked_at?: string | null
+          locked_by?: string | null
+          model_name?: string | null
+          output_asset_id?: string | null
+          priority?: number
+          provider_capability?: string | null
+          provider_name?: string | null
+          remotion_ai_generation_id?: string | null
+          remotion_component_preset_id?: string | null
+          remotion_composition_id?: string | null
+          remotion_template_id?: string | null
+          request_payload?: Json
+          result_payload?: Json
+          retry_count?: number
+          scroll_section_id?: string | null
+          started_at?: string | null
+          status?: string
+          subtitle_track_id?: string | null
+          timeline_version_id?: string | null
+          updated_at?: string
+          video_project_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_jobs_remotion_ai_generation_id_fkey"
+            columns: ["remotion_ai_generation_id"]
+            isOneToOne: false
+            referencedRelation: "remotion_ai_generations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_jobs_remotion_component_preset_id_fkey"
+            columns: ["remotion_component_preset_id"]
+            isOneToOne: false
+            referencedRelation: "remotion_component_presets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_jobs_remotion_composition_id_fkey"
+            columns: ["remotion_composition_id"]
+            isOneToOne: false
+            referencedRelation: "remotion_compositions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_jobs_remotion_template_id_fkey"
+            columns: ["remotion_template_id"]
+            isOneToOne: false
+            referencedRelation: "remotion_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_jobs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      video_job_steps: {
+        Row: {
+          attempt_count: number
+          created_at: string
+          error_message: string | null
+          finished_at: string | null
+          id: string
+          request_payload: Json
+          result_payload: Json
+          started_at: string | null
+          status: string
+          step_key: string
+          updated_at: string
+          video_job_id: string
+        }
+        Insert: {
+          attempt_count?: number
+          created_at?: string
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          request_payload?: Json
+          result_payload?: Json
+          started_at?: string | null
+          status?: string
+          step_key: string
+          updated_at?: string
+          video_job_id: string
+        }
+        Update: {
+          attempt_count?: number
+          created_at?: string
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          request_payload?: Json
+          result_payload?: Json
+          started_at?: string | null
+          status?: string
+          step_key?: string
+          updated_at?: string
+          video_job_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_job_steps_video_job_id_fkey"
+            columns: ["video_job_id"]
+            isOneToOne: false
+            referencedRelation: "video_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      video_exports: {
+        Row: {
+          codec: string
+          created_at: string
+          created_by: string | null
+          export_preset: string
+          format: string
+          fps: number
+          height: number
+          id: string
+          latest_job_id: string | null
+          metadata: Json
+          output_asset_id: string | null
+          ratio: string
+          remotion_composition_id: string | null
+          settings_json: Json
+          status: string
+          updated_at: string
+          video_project_id: string
+          width: number
+          workspace_id: string
+        }
+        Insert: {
+          codec?: string
+          created_at?: string
+          created_by?: string | null
+          export_preset: string
+          format?: string
+          fps?: number
+          height: number
+          id?: string
+          latest_job_id?: string | null
+          metadata?: Json
+          output_asset_id?: string | null
+          ratio: string
+          remotion_composition_id?: string | null
+          settings_json?: Json
+          status?: string
+          updated_at?: string
+          video_project_id: string
+          width: number
+          workspace_id: string
+        }
+        Update: {
+          codec?: string
+          created_at?: string
+          created_by?: string | null
+          export_preset?: string
+          format?: string
+          fps?: number
+          height?: number
+          id?: string
+          latest_job_id?: string | null
+          metadata?: Json
+          output_asset_id?: string | null
+          ratio?: string
+          remotion_composition_id?: string | null
+          settings_json?: Json
+          status?: string
+          updated_at?: string
+          video_project_id?: string
+          width?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_exports_remotion_composition_id_fkey"
+            columns: ["remotion_composition_id"]
+            isOneToOne: false
+            referencedRelation: "remotion_compositions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_exports_video_project_id_fkey"
+            columns: ["video_project_id"]
+            isOneToOne: false
+            referencedRelation: "video_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_exports_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      video_templates: {
+        Row: {
+          camera_module: Json
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_public: boolean
+          is_system: boolean
+          lighting_module: Json
+          name: string
+          negative_prompt: string | null
+          preview_json: Json
+          quality_module: Json
+          style_module: Json
+          template_kind: string
+          thumbnail_url: string | null
+          updated_at: string
+          workspace_id: string | null
+        }
+        Insert: {
+          camera_module?: Json
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_public?: boolean
+          is_system?: boolean
+          lighting_module?: Json
+          name: string
+          negative_prompt?: string | null
+          preview_json?: Json
+          quality_module?: Json
+          style_module?: Json
+          template_kind?: string
+          thumbnail_url?: string | null
+          updated_at?: string
+          workspace_id?: string | null
+        }
+        Update: {
+          camera_module?: Json
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_public?: boolean
+          is_system?: boolean
+          lighting_module?: Json
+          name?: string
+          negative_prompt?: string | null
+          preview_json?: Json
+          quality_module?: Json
+          style_module?: Json
+          template_kind?: string
+          thumbnail_url?: string | null
+          updated_at?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_templates_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_generated_videos: {
+        Row: {
+          camera_movement: string | null
+          created_at: string
+          created_by: string | null
+          credits_used: number | null
+          duration_seconds: number
+          id: string
+          keyframe_asset_id: string | null
+          latest_job_id: string | null
+          lighting_preset: string | null
+          metadata: Json
+          negative_prompt: string | null
+          prompt_composed: Json
+          prompt_original: string
+          provider_name: string | null
+          quality_module: Json
+          status: string
+          style_template: string | null
+          title: string | null
+          updated_at: string
+          video_asset_id: string | null
+          video_project_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          camera_movement?: string | null
+          created_at?: string
+          created_by?: string | null
+          credits_used?: number | null
+          duration_seconds?: number
+          id?: string
+          keyframe_asset_id?: string | null
+          latest_job_id?: string | null
+          lighting_preset?: string | null
+          metadata?: Json
+          negative_prompt?: string | null
+          prompt_composed?: Json
+          prompt_original: string
+          provider_name?: string | null
+          quality_module?: Json
+          status?: string
+          style_template?: string | null
+          title?: string | null
+          updated_at?: string
+          video_asset_id?: string | null
+          video_project_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          camera_movement?: string | null
+          created_at?: string
+          created_by?: string | null
+          credits_used?: number | null
+          duration_seconds?: number
+          id?: string
+          keyframe_asset_id?: string | null
+          latest_job_id?: string | null
+          lighting_preset?: string | null
+          metadata?: Json
+          negative_prompt?: string | null
+          prompt_composed?: Json
+          prompt_original?: string
+          provider_name?: string | null
+          quality_module?: Json
+          status?: string
+          style_template?: string | null
+          title?: string | null
+          updated_at?: string
+          video_asset_id?: string | null
+          video_project_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_generated_videos_video_project_id_fkey"
+            columns: ["video_project_id"]
+            isOneToOne: false
+            referencedRelation: "video_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_generated_videos_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      layer_compositions: {
+        Row: {
+          canvas_height: number
+          canvas_width: number
+          created_at: string
+          created_by: string | null
+          final_asset_id: string | null
+          id: string
+          layers: Json
+          latest_job_id: string | null
+          metadata: Json
+          prompt_original: string
+          status: string
+          updated_at: string
+          video_project_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          canvas_height?: number
+          canvas_width?: number
+          created_at?: string
+          created_by?: string | null
+          final_asset_id?: string | null
+          id?: string
+          layers?: Json
+          latest_job_id?: string | null
+          metadata?: Json
+          prompt_original: string
+          status?: string
+          updated_at?: string
+          video_project_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          canvas_height?: number
+          canvas_width?: number
+          created_at?: string
+          created_by?: string | null
+          final_asset_id?: string | null
+          id?: string
+          layers?: Json
+          latest_job_id?: string | null
+          metadata?: Json
+          prompt_original?: string
+          status?: string
+          updated_at?: string
+          video_project_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "layer_compositions_video_project_id_fkey"
+            columns: ["video_project_id"]
+            isOneToOne: false
+            referencedRelation: "video_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "layer_compositions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scroll_sections: {
+        Row: {
+          active_remotion_composition_id: string | null
+          background_image_asset_id: string | null
+          background_video_asset_id: string | null
+          code_bundle: Json
+          content: Json
+          created_at: string
+          created_by: string | null
+          id: string
+          latest_job_id: string | null
+          metadata: Json
+          name: string
+          preview_data: Json
+          remotion_component_preset_id: string | null
+          remotion_template_id: string | null
+          renderer_config: Json
+          scroll_effect_type: string
+          section_order: number
+          site_id: string | null
+          source_generation_id: string | null
+          status: string
+          updated_at: string
+          website_page_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          active_remotion_composition_id?: string | null
+          background_image_asset_id?: string | null
+          background_video_asset_id?: string | null
+          code_bundle?: Json
+          content?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          latest_job_id?: string | null
+          metadata?: Json
+          name: string
+          preview_data?: Json
+          remotion_component_preset_id?: string | null
+          remotion_template_id?: string | null
+          renderer_config?: Json
+          scroll_effect_type: string
+          section_order?: number
+          site_id?: string | null
+          source_generation_id?: string | null
+          status?: string
+          updated_at?: string
+          website_page_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          active_remotion_composition_id?: string | null
+          background_image_asset_id?: string | null
+          background_video_asset_id?: string | null
+          code_bundle?: Json
+          content?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          latest_job_id?: string | null
+          metadata?: Json
+          name?: string
+          preview_data?: Json
+          remotion_component_preset_id?: string | null
+          remotion_template_id?: string | null
+          renderer_config?: Json
+          scroll_effect_type?: string
+          section_order?: number
+          site_id?: string | null
+          source_generation_id?: string | null
+          status?: string
+          updated_at?: string
+          website_page_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scroll_sections_active_remotion_composition_id_fkey"
+            columns: ["active_remotion_composition_id"]
+            isOneToOne: false
+            referencedRelation: "remotion_compositions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scroll_sections_remotion_component_preset_id_fkey"
+            columns: ["remotion_component_preset_id"]
+            isOneToOne: false
+            referencedRelation: "remotion_component_presets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scroll_sections_remotion_template_id_fkey"
+            columns: ["remotion_template_id"]
+            isOneToOne: false
+            referencedRelation: "remotion_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scroll_sections_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "websites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scroll_sections_website_page_id_fkey"
+            columns: ["website_page_id"]
+            isOneToOne: false
+            referencedRelation: "website_pages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scroll_sections_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"

@@ -196,6 +196,30 @@ const BioLinkPage = () => {
         .filter((block) => block.type === 'link')
         .map((block) => ({ id: block.id, label: block.title, url: block.url, emoji: block.emoji })) as unknown as Json,
       blocks: blocks as unknown as Json,
+      ccp_context: ({
+        type: 'cerebro/biolink/v1',
+        workspace_id: workspace.id,
+        brand: {
+          name: briefing?.company_name || workspace.name || '',
+          segment: briefing?.segment || '',
+          tone: briefing?.tone_of_voice || '',
+        },
+        content: {
+          links_count: blocks.filter((b) => b.type === 'link').length,
+          blocks_count: blocks.length,
+          block_types: blocks.map((b) => b.type),
+          primary_cta: blocks.find((b) => b.type === 'link')?.title || null,
+        },
+        seo: {
+          title: profileTitle || slugify(handle),
+          description: profileBio,
+        },
+        simlab: {
+          verdict: simlabRun?.verdict || null,
+          run_id: simlabRun?.id || null,
+        },
+        generated_at: new Date().toISOString(),
+      }) as unknown as Json,
       seo_config: {
         title: profileTitle || slugify(handle),
         description: profileBio,

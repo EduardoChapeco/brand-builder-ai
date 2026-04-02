@@ -1,19 +1,22 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { closestCenter, DndContext, DragEndEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Layers, Loader2, Plus, Sparkles, Trash2 } from 'lucide-react';
+import { ExternalLink, Film, GripVertical, Layers, Loader2, Plus, Sparkles, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import ArtboardStage from '@/components/canvas/ArtboardStage';
 import SlideFrame from '@/components/canvas/SlideFrame';
+import VideoJobStatusCard from '@/components/video/VideoJobStatusCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
+import { useVideoJobStatus } from '@/hooks/useVideoJobStatus';
 import { DEFAULT_BRAND_KIT, getArtboardDimensions } from '@/lib/canvasEngine';
+import { extractRemotionResultUrl, launchRemotionComposition } from '@/lib/remotion-entrypoints';
 import { CAROUSEL_ARCS } from '@/lib/postgenPhase2';
 import { getTemplate } from '@/lib/templateRegistry';
 
@@ -133,24 +136,53 @@ const CarouselBuilder = () => {
   const [activeSlideIndex, setActiveSlideIndex] = useState(0);
   const [storyboardId, setStoryboardId] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isLaunchingRemotion, setIsLaunchingRemotion] = useState(false);
+  const [remotionJobId, setRemotionJobId] = useState<string | null>(null);
+  const [remotionCompositionId, setRemotionCompositionId] = useState<string | null>(null);
+  const remotionStatusRef = useRef<string | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+  const { payload: remotionStatusPayload, refresh: refreshRemotionJob } = useVideoJobStatus(remotionJobId);
+  const remotionResultUrl = useMemo(
+    () => extractRemotionResultUrl(remotionStatusPayload?.job?.job || null),
+    [remotionStatusPayload],
+  );
 
   const activeSlide = slidesPlan[activeSlideIndex] || null;
+  const buildStoryboardHtml = (slide: StoryboardSlide, index: number, totalSlides: number) => {
+    const template = getTemplate(slide.template_suggestion) || getTemplate(preload?.recommendedTemplate || 'data-insight');
+    if (!template) return '';
+    return template.renderer({
+      headline: slide.headline_draft || slide.role,
+      body: slide.notes || 'Edite o storyboard para detalhar o argumento deste slide.',
+      cta: /cta|summary|guarantee/i.test(slide.role) ? 'Continue a leitura' : undefined,
+      slideNumber: index + 1,
+      totalSlides,
+      format: 'square',
+    }, brand);
+  };
 
   const previewHtml = useMemo(() => {
     if (!activeSlide) return '';
-    const template = getTemplate(activeSlide.template_suggestion) || getTemplate(preload?.recommendedTemplate || 'data-insight');
-    if (!template) return '';
-    return template.renderer({
-      headline: activeSlide.headline_draft || activeSlide.role,
-      body: activeSlide.notes || 'Edite o storyboard para detalhar o argumento deste slide.',
-      cta: /cta|summary|guarantee/i.test(activeSlide.role) ? 'Continue a leitura' : undefined,
-      slideNumber: activeSlideIndex + 1,
-      totalSlides: slidesPlan.length,
-      format: 'square',
-    }, brand);
+    return buildStoryboardHtml(activeSlide, activeSlideIndex, slidesPlan.length);
   }, [activeSlide, activeSlideIndex, brand, preload?.recommendedTemplate, slidesPlan.length]);
+
+  useEffect(() => {
+    const job = remotionStatusPayload?.job?.job;
+    if (!job || !remotionJobId) return;
+
+    const marker = `${remotionJobId}:${job.status}`;
+    if (remotionStatusRef.current === marker) return;
+    remotionStatusRef.current = marker;
+
+    if (job.status === 'completed') {
+      toast.success('Animated Carousel concluido.');
+    }
+
+    if (job.status === 'failed') {
+      toast.error(job.error_message || 'O render do storyboard falhou no runtime.');
+    }
+  }, [remotionJobId, remotionStatusPayload]);
 
   const persistStoryboard = async (nextSlides: StoryboardSlide[], nextArc = selectedArc) => {
     if (!workspace?.id) return null;
@@ -270,6 +302,70 @@ const CarouselBuilder = () => {
     });
   };
 
+  const handleAnimatedCarousel = async () => {
+    if (!workspace?.id || slidesPlan.length === 0) {
+      toast.error('Monte o storyboard antes de pedir o Animated Carousel.');
+      return;
+    }
+
+    setIsLaunchingRemotion(true);
+
+    try {
+      const record = await persistStoryboard(slidesPlan);
+      if (!record) return;
+
+      const title = topic.trim() || 'Animated Carousel';
+      const launch = await launchRemotionComposition({
+        workspaceId: workspace.id,
+        title,
+        promptOriginal: `Animate storyboard for ${title}`,
+        compositionKind: 'storyboard_animatic',
+        sourceModule: 'carousel_builder',
+        canvasWidth: dimensions.width,
+        canvasHeight: dimensions.height,
+        sourceRef: {
+          storyboard_id: record.id,
+          arc_type: record.arc_type || selectedArc,
+        },
+        metadata: {
+          topic: topic.trim() || null,
+          arc_type: record.arc_type || selectedArc,
+          slides_count: slidesPlan.length,
+          recommended_template: preload?.recommendedTemplate || null,
+        },
+        scenes: slidesPlan.map((slide, index) => ({
+          id: slide.id,
+          kind: 'storyboard_slide',
+          durationFrames: index === 0 ? 105 : 90,
+          payload: {
+            index,
+            slide_number: index + 1,
+            total_slides: slidesPlan.length,
+            role: slide.role,
+            headline: slide.headline_draft || slide.role,
+            notes: slide.notes || '',
+            template_suggestion: slide.template_suggestion,
+            html: buildStoryboardHtml(slide, index, slidesPlan.length),
+          },
+        })),
+      });
+
+      setRemotionCompositionId(launch.compositionId);
+      setRemotionJobId(launch.jobId);
+      remotionStatusRef.current = null;
+
+      if (launch.status === 'failed') {
+        toast.error(launch.dispatchError || 'O runtime recusou o Animated Carousel.');
+      } else {
+        toast.success('Animated Carousel enviado para a fila real de video_jobs.');
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+    } finally {
+      setIsLaunchingRemotion(false);
+    }
+  };
+
   return (
     <div className="flex h-full w-full overflow-hidden" style={{ background: 'var(--bg-app)' }}>
       <div className="flex-1 overflow-y-auto">
@@ -364,9 +460,9 @@ const CarouselBuilder = () => {
                 </SortableContext>
               </DndContext>
 
-              <div className="flex gap-3">
-                <Button
-                  variant="outline"
+               <div className="flex gap-3">
+                 <Button
+                    variant="outline"
                   onClick={() => setSlidesPlan((current) => ([
                     ...current,
                     {
@@ -377,14 +473,44 @@ const CarouselBuilder = () => {
                       template_suggestion: 'data-insight',
                     },
                   ]))}
-                >
-                  <Plus size={14} className="mr-2" /> Adicionar slide
-                </Button>
-                <Button onClick={handleContinueToDesign} style={{ background: 'var(--primary)', color: '#fff' }}>
-                  Continuar para design
-                </Button>
-              </div>
-            </div>
+                 >
+                   <Plus size={14} className="mr-2" /> Adicionar slide
+                 </Button>
+                 <Button variant="outline" onClick={handleAnimatedCarousel} disabled={isLaunchingRemotion || slidesPlan.length === 0}>
+                   {isLaunchingRemotion ? <Loader2 size={14} className="mr-2 animate-spin" /> : <Film size={14} className="mr-2" />}
+                   Animated Carousel
+                 </Button>
+                 <Button onClick={handleContinueToDesign} style={{ background: 'var(--primary)', color: '#fff' }}>
+                   Continuar para design
+                 </Button>
+               </div>
+
+               {(remotionJobId || remotionCompositionId) ? (
+                 <div className="space-y-3">
+                   {remotionCompositionId ? (
+                     <p className="text-xs leading-5" style={{ color: 'var(--text-3)' }}>
+                       Composition ativa: <span style={{ color: 'var(--text-2)' }}>{remotionCompositionId}</span>
+                     </p>
+                   ) : null}
+                   {remotionResultUrl ? (
+                     <a
+                       href={remotionResultUrl}
+                       target="_blank"
+                       rel="noreferrer"
+                       className="w-full inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold"
+                       style={{ borderColor: 'var(--border)', background: 'var(--bg-card)', color: 'var(--text-1)' }}
+                     >
+                       <ExternalLink size={14} /> Abrir Render Concluido
+                     </a>
+                   ) : null}
+                   <VideoJobStatusCard
+                     title="Animated Carousel Status"
+                     job={remotionStatusPayload?.job?.job || null}
+                     onRefresh={remotionJobId ? refreshRemotionJob : undefined}
+                   />
+                 </div>
+               ) : null}
+             </div>
 
             <div className="rounded-3xl overflow-hidden" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
               <div className="px-6 py-5 border-b flex items-center justify-between" style={{ borderColor: 'var(--border)' }}>

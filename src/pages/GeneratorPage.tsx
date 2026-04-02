@@ -1,11 +1,12 @@
 import { useState, useCallback, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Wand2, Search, Upload, RefreshCw, Download, Copy, ChevronLeft, ChevronRight, X, Save, Trash, AlignLeft, AlignCenter, AlignRight, FileImage, LayoutTemplate, Type, Settings2 } from 'lucide-react';
+import { Wand2, Search, Upload, RefreshCw, Download, Copy, ChevronLeft, ChevronRight, X, Save, Trash, AlignLeft, AlignCenter, AlignRight, FileImage, LayoutTemplate, Type, Settings2, Film, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import SimlabReviewPanel from '@/components/simlab/SimlabReviewPanel';
 import SlideFrame from '@/components/canvas/SlideFrame';
+import VideoJobStatusCard from '@/components/video/VideoJobStatusCard';
 import {
   ArtboardDimension, ArtboardFormat, BrandKit, DEFAULT_BRAND_KIT, SlideData,
   ARTBOARD_DIMENSIONS, getArtboardDimensions, SlideConfig, createSlideConfig, BgSource, VisMod
@@ -14,6 +15,8 @@ import { TEMPLATE_REGISTRY, getTemplate } from '@/lib/templateRegistry';
 import { exportSlide, exportAllSlides, uploadSlideToStorage, exportSlidesPDF, exportSlidesHTML } from '@/lib/exportPost';
 import { BrandCharacterRecord, CAROUSEL_ARCS, MediaAssetRecord } from '@/lib/postgenPhase2';
 import { awaitSimlabCompletion, dispatchSimlabValidation, type SimlabInsight, type SimlabRun, type SimlabVariant } from '@/lib/simlab';
+import { useVideoJobStatus } from '@/hooks/useVideoJobStatus';
+import { extractRemotionResultUrl, launchRemotionComposition } from '@/lib/remotion-entrypoints';
 
 // Performance Audit: Implement Lazy Loading
 const ArtboardStage = lazy(() => import('@/components/canvas/ArtboardStage'));
@@ -216,8 +219,17 @@ const GeneratorPage = () => {
   const [simlabVariants, setSimlabVariants] = useState<SimlabVariant[]>([]);
   const [simlabLoading, setSimlabLoading] = useState(false);
   const [simlabError, setSimlabError] = useState<string | null>(null);
+  const [isLaunchingRemotion, setIsLaunchingRemotion] = useState(false);
+  const [remotionJobId, setRemotionJobId] = useState<string | null>(null);
+  const [remotionCompositionId, setRemotionCompositionId] = useState<string | null>(null);
+  const remotionStatusRef = useRef<string | null>(null);
 
   const { width, height } = getArtboardDimensions(format);
+  const { payload: remotionStatusPayload, refresh: refreshRemotionJob } = useVideoJobStatus(remotionJobId);
+  const remotionResultUrl = useMemo(
+    () => extractRemotionResultUrl(remotionStatusPayload?.job?.job || null),
+    [remotionStatusPayload],
+  );
   const selectedCharacter = useMemo(
     () => availableCharacters.find(character => character.id === selectedCharacterId) || preloadedCharacter,
     [availableCharacters, preloadedCharacter, selectedCharacterId],
@@ -479,6 +491,23 @@ const GeneratorPage = () => {
     window.addEventListener('message', handleMsg);
     return () => window.removeEventListener('message', handleMsg);
   }, []);
+
+  useEffect(() => {
+    const job = remotionStatusPayload?.job?.job;
+    if (!job || !remotionJobId) return;
+
+    const marker = `${remotionJobId}:${job.status}`;
+    if (remotionStatusRef.current === marker) return;
+    remotionStatusRef.current = marker;
+
+    if (job.status === 'completed') {
+      toast.success('Render Remotion concluido.');
+    }
+
+    if (job.status === 'failed') {
+      toast.error(job.error_message || 'O render Remotion falhou no runtime.');
+    }
+  }, [remotionJobId, remotionStatusPayload]);
 
   const handleStyleUpdate = (updates: Record<string, string>) => {
     if (!selectedNode) return;
@@ -804,6 +833,82 @@ const GeneratorPage = () => {
       toast.success(editingPostId ? 'Post atualizado!' : 'Post salvo!');
     } catch (error) { toast.error('Erro ao salvar.'); } 
     finally { setIsSavingLibrary(false); }
+  };
+
+  const handleAnimateWithRemotion = async () => {
+    if (!workspace?.id || slideConfigs.length === 0) {
+      toast.error('Gere o post antes de animar com Remotion.');
+      return;
+    }
+
+    setIsLaunchingRemotion(true);
+
+    try {
+      if (simlabRun && simlabRun.verdict !== 'approved') {
+        toast.warning('SimLab ainda nao aprovou este post. O render vai seguir como draft.');
+      }
+
+      const title = postTitle || topic.trim() || (slideConfigs.length > 1 ? 'Animated Carousel' : 'Animated Post');
+      const launch = await launchRemotionComposition({
+        workspaceId: workspace.id,
+        title,
+        promptOriginal: `Animate social content for ${title}`,
+        compositionKind: slideConfigs.length > 1 ? 'animated_carousel' : 'animated_post',
+        sourceModule: 'generator_page',
+        canvasWidth: width,
+        canvasHeight: height,
+        sourceRef: {
+          post_id: editingPostId || null,
+          storyboard_id: activeStoryboardId || null,
+          simlab_run_id: simlabRun?.id || null,
+        },
+        metadata: {
+          caption,
+          hashtags,
+          format,
+          funnel,
+          tone,
+          source_topic: topic || null,
+          source_url: selectedSourceUrl || null,
+          recommended_template_id: recommendedTemplateId,
+          storyboard_arc: activeStoryboardArc,
+          brand,
+          simlab_verdict: simlabRun?.verdict || null,
+        },
+        scenes: slideConfigs.map((cfg, index) => ({
+          id: `generator-slide-${index + 1}`,
+          kind: slideConfigs.length > 1 ? 'carousel_slide' : 'post_slide',
+          durationFrames: index === 0 ? 120 : index === slideConfigs.length - 1 ? 105 : 90,
+          payload: {
+            index,
+            slide_number: index + 1,
+            total_slides: slideConfigs.length,
+            headline: cfg.headline,
+            body: cfg.body,
+            cta: cfg.cta || null,
+            template_id: cfg.templateId,
+            visual_mode: cfg.visualMode,
+            background_image_url: cfg.bgImageUrl || null,
+            background_source: cfg.bgSource,
+            html: cfg.html || '',
+          },
+        })),
+      });
+
+      setRemotionCompositionId(launch.compositionId);
+      setRemotionJobId(launch.jobId);
+      remotionStatusRef.current = null;
+
+      if (launch.status === 'failed') {
+        toast.error(launch.dispatchError || 'O runtime recusou o render Remotion.');
+      } else {
+        toast.success('Render Remotion enviado para a fila real de video_jobs.');
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+    } finally {
+      setIsLaunchingRemotion(false);
+    }
   };
 
   const removeHashtag = (tag: string) => setHashtags(prev => prev.filter(h => h !== tag));
@@ -1310,15 +1415,51 @@ const GeneratorPage = () => {
                        <Download size={16}/> Baixar PDF
                     </button>
                     
-                    <button onClick={()=>{ exportSlidesHTML(slideConfigs.map(c=>c.html!), postTitle||'post', width, height); }} 
-                       className="w-full py-3.5 bg-[color:var(--bg-card)] border border-[color:var(--border)] text-sm font-semibold rounded-xl hover:bg-white/5 flex gap-2 justify-center items-center shadow-sm">
-                       <Download size={16}/> Baixar Animado (HTML)
-                    </button>
+                     <button onClick={()=>{ exportSlidesHTML(slideConfigs.map(c=>c.html!), postTitle||'post', width, height); }} 
+                        className="w-full py-3.5 bg-[color:var(--bg-card)] border border-[color:var(--border)] text-sm font-semibold rounded-xl hover:bg-white/5 flex gap-2 justify-center items-center shadow-sm">
+                        <Download size={16}/> Baixar Animado (HTML)
+                     </button>
 
-                    <div className="my-2 border-t border-[color:var(--border)]" />
+                     <button
+                        disabled={!slideConfigs.length || isLaunchingRemotion}
+                        onClick={handleAnimateWithRemotion}
+                        className="w-full py-3.5 bg-[color:var(--bg-card)] border border-[color:var(--border)] text-sm font-semibold rounded-xl hover:bg-white/5 flex gap-2 justify-center items-center shadow-sm disabled:opacity-60"
+                     >
+                        {isLaunchingRemotion ? <RefreshCw className="animate-spin" size={16}/> : <Film size={16}/>}
+                        Animar com Remotion
+                     </button>
 
-                    <button disabled={isSavingLibrary} onClick={handleSaveToLibrary} className="w-full py-4 text-sm rounded-xl font-bold flex justify-center items-center gap-2 transition-all hover:scale-[1.02]"
-                       style={{ background: 'var(--primary)', color: 'white', boxShadow: '0 8px 32px rgba(124,58,237,0.3)' }}>
+                     <div className="my-2 border-t border-[color:var(--border)]" />
+
+                     {(remotionJobId || remotionCompositionId) && (
+                        <div className="space-y-3">
+                           {remotionCompositionId ? (
+                              <p className="text-[11px] leading-5 text-[color:var(--text-3)]">
+                                 Composition ativa: <span className="font-mono text-[color:var(--text-2)]">{remotionCompositionId}</span>
+                              </p>
+                           ) : null}
+
+                           {remotionResultUrl ? (
+                              <a
+                                 href={remotionResultUrl}
+                                 target="_blank"
+                                 rel="noreferrer"
+                                 className="w-full py-3.5 bg-[color:var(--bg-card)] border border-[color:var(--border)] text-sm font-semibold rounded-xl hover:bg-white/5 flex gap-2 justify-center items-center shadow-sm"
+                              >
+                                 <ExternalLink size={16}/> Abrir Render Concluido
+                              </a>
+                           ) : null}
+
+                           <VideoJobStatusCard
+                              title="Remotion Status"
+                              job={remotionStatusPayload?.job?.job || null}
+                              onRefresh={remotionJobId ? refreshRemotionJob : undefined}
+                           />
+                        </div>
+                     )}
+
+                     <button disabled={isSavingLibrary} onClick={handleSaveToLibrary} className="w-full py-4 text-sm rounded-xl font-bold flex justify-center items-center gap-2 transition-all hover:scale-[1.02]"
+                        style={{ background: 'var(--primary)', color: 'white', boxShadow: '0 8px 32px rgba(124,58,237,0.3)' }}>
                        {isSavingLibrary ? <RefreshCw className="animate-spin" size={16}/> : <Save size={16}/>}
                        Salvar na Biblioteca
                     </button>

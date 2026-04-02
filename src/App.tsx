@@ -34,6 +34,11 @@ import VibeCoderPage from "@/pages/VibeCoderPage";
 import SiteBuilderPage from "@/pages/SiteBuilderPage";
 import SiteEditorPage from "@/pages/SiteEditorPage";
 import SimLabPage from "@/pages/SimLabPage";
+import VideoStudioPage from "@/pages/VideoStudioPage";
+import VideoStudioEditorPage from "@/pages/VideoStudioEditorPage";
+import VideoStudioGeneratePage from "@/pages/VideoStudioGeneratePage";
+import VideoStudioMotionPage from "@/pages/VideoStudioMotionPage";
+import VideoStudioMotionStudioPage from "@/pages/VideoStudioMotionStudioPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -64,6 +69,11 @@ const App = () => (
             <Route path="squads"          element={<SquadsPage />} />
             <Route path="site-builder"    element={<SiteBuilderPage />} />
             <Route path="site-builder/:siteId" element={<SiteEditorPage />} />
+            <Route path="video-studio"    element={<VideoStudioPage />} />
+            <Route path="video-studio/editor/:projectId" element={<VideoStudioEditorPage />} />
+            <Route path="video-studio/generate" element={<VideoStudioGeneratePage />} />
+            <Route path="video-studio/motion-studio" element={<VideoStudioMotionStudioPage />} />
+            <Route path="video-studio/motion" element={<VideoStudioMotionPage />} />
             <Route path="generator"       element={<GeneratorPage />} />
             <Route path="carousel-builder" element={<CarouselBuilder />} />
             <Route path="image-prompts"   element={<PromptStudio />} />

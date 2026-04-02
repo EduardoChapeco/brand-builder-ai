@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { FileText, Loader2, Plus, Save } from 'lucide-react';
+import { ExternalLink, FileText, Film, Loader2, Plus, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import SimlabReviewPanel from '@/components/simlab/SimlabReviewPanel';
+import VideoJobStatusCard from '@/components/video/VideoJobStatusCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,6 +12,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
+import { useVideoJobStatus } from '@/hooks/useVideoJobStatus';
+import { extractRemotionResultUrl, launchRemotionComposition } from '@/lib/remotion-entrypoints';
 import { BLOG_LAYOUTS } from '@/lib/postgenPhase3';
 import { awaitSimlabCompletion, type SimlabInsight, type SimlabRun, type SimlabVariant } from '@/lib/simlab';
 
@@ -41,11 +44,37 @@ const BlogManagerPage = () => {
   const [simlabVariants, setSimlabVariants] = useState<SimlabVariant[]>([]);
   const [simlabLoading, setSimlabLoading] = useState(false);
   const [simlabError, setSimlabError] = useState<string | null>(null);
+  const [isLaunchingRemotion, setIsLaunchingRemotion] = useState(false);
+  const [remotionJobId, setRemotionJobId] = useState<string | null>(null);
+  const [remotionCompositionId, setRemotionCompositionId] = useState<string | null>(null);
+  const remotionStatusRef = useRef<string | null>(null);
+  const { payload: remotionStatusPayload, refresh: refreshRemotionJob } = useVideoJobStatus(remotionJobId);
+  const remotionResultUrl = useMemo(
+    () => extractRemotionResultUrl(remotionStatusPayload?.job?.job || null),
+    [remotionStatusPayload],
+  );
 
   const selectedArticle = useMemo(
     () => articles.find((article) => article.id === selectedId) || null,
     [articles, selectedId],
   );
+
+  useEffect(() => {
+    const job = remotionStatusPayload?.job?.job;
+    if (!job || !remotionJobId) return;
+
+    const marker = `${remotionJobId}:${job.status}`;
+    if (remotionStatusRef.current === marker) return;
+    remotionStatusRef.current = marker;
+
+    if (job.status === 'completed') {
+      toast.success('Video Summary concluido.');
+    }
+
+    if (job.status === 'failed') {
+      toast.error(job.error_message || 'O Video Summary falhou no runtime.');
+    }
+  }, [remotionJobId, remotionStatusPayload]);
 
   const loadArticles = useCallback(async () => {
     if (!workspace?.id) return;
@@ -162,6 +191,28 @@ const BlogManagerPage = () => {
         content_html: markdownToHtml(selectedArticle.content_markdown || ''),
         layout_template: selectedArticle.layout_template,
         status: selectedArticle.status,
+        ccp_context: {
+          type: 'cerebro/blog/v1',
+          workspace_id: workspace?.id || '',
+          brief: {
+            target_keyword: selectedArticle.slug?.replace(/-/g, ' ') || null,
+            content_pillar: selectedArticle.layout_template || null,
+            word_count_target: selectedArticle.content_markdown
+              ? Math.ceil(selectedArticle.content_markdown.split(/\s+/).length)
+              : null,
+          },
+          quality: {
+            simlab_verdict: simlabRun?.verdict || null,
+            simlab_run_id: selectedArticle.latest_simlab_run_id || null,
+          },
+          video_summary: {
+            job_id: remotionJobId || null,
+            composition_id: remotionCompositionId || null,
+            status: remotionStatusPayload?.job?.job?.status || null,
+            result_url: remotionResultUrl || null,
+          },
+          generated_at: new Date().toISOString(),
+        },
       };
       const { error } = await supabase
         .from('blog_articles')
@@ -190,6 +241,93 @@ const BlogManagerPage = () => {
       setSimlabError(error instanceof Error ? error.message : String(error));
     } finally {
       setSimlabLoading(false);
+    }
+  };
+
+  const handleVideoSummary = async () => {
+    if (!workspace?.id || !selectedArticle) {
+      toast.error('Selecione um artigo antes de pedir o Video Summary.');
+      return;
+    }
+
+    const markdown = (selectedArticle.content_markdown || '').trim();
+    if (!markdown) {
+      toast.error('O artigo precisa ter conteudo antes de gerar o Video Summary.');
+      return;
+    }
+
+    setIsLaunchingRemotion(true);
+
+    try {
+      if (simlabRun && simlabRun.verdict !== 'approved') {
+        toast.warning('SimLab ainda nao aprovou este artigo. O video sera gerado como draft.');
+      }
+
+      const blocks = markdown
+        .split(/\n{2,}/)
+        .map((block) => block.trim())
+        .filter(Boolean)
+        .slice(0, 5);
+
+      const scenes = [
+        {
+          id: `${selectedArticle.id}-hero`,
+          kind: 'article_hero',
+          durationFrames: 120,
+          payload: {
+            title: selectedArticle.title || 'Video Summary',
+            meta_description: selectedArticle.meta_description || '',
+            layout_template: selectedArticle.layout_template || 'medium_clean',
+            status: selectedArticle.status || 'draft',
+          },
+        },
+        ...blocks.map((block, index) => ({
+          id: `${selectedArticle.id}-scene-${index + 1}`,
+          kind: block.startsWith('#') ? 'article_heading' : 'article_paragraph',
+          durationFrames: 90,
+          payload: {
+            order: index + 1,
+            markdown: block,
+            html: markdownToHtml(block),
+            plain_text: block.replace(/^#{1,6}\s*/, ''),
+          },
+        })),
+      ];
+
+      const launch = await launchRemotionComposition({
+        workspaceId: workspace.id,
+        title: selectedArticle.title || 'Video Summary',
+        promptOriginal: `Create a short video summary for blog article ${selectedArticle.title || selectedArticle.id}`,
+        compositionKind: 'video_summary',
+        sourceModule: 'blog_manager',
+        canvasWidth: 1080,
+        canvasHeight: 1920,
+        sourceRef: {
+          article_id: selectedArticle.id,
+          simlab_run_id: selectedArticle.latest_simlab_run_id || null,
+        },
+        metadata: {
+          slug: selectedArticle.slug || null,
+          status: selectedArticle.status || 'draft',
+          layout_template: selectedArticle.layout_template || 'medium_clean',
+          simlab_verdict: simlabRun?.verdict || null,
+        },
+        scenes,
+      });
+
+      setRemotionCompositionId(launch.compositionId);
+      setRemotionJobId(launch.jobId);
+      remotionStatusRef.current = null;
+
+      if (launch.status === 'failed') {
+        toast.error(launch.dispatchError || 'O runtime recusou o Video Summary.');
+      } else {
+        toast.success('Video Summary enviado para a fila real de video_jobs.');
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+    } finally {
+      setIsLaunchingRemotion(false);
     }
   };
 
@@ -239,16 +377,22 @@ const BlogManagerPage = () => {
       <div className="flex-1 overflow-y-auto no-scrollbar">
         {selectedArticle ? (
           <div className="max-w-5xl mx-auto p-8 space-y-6">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs uppercase tracking-[0.2em]" style={{ color: 'var(--text-3)' }}>Editor de artigo</p>
-                <h2 className="mt-2 text-3xl font-display font-bold" style={{ color: 'var(--text-1)' }}>{selectedArticle.title}</h2>
-              </div>
-              <Button onClick={saveArticle} disabled={saving} className="gap-2" style={{ background: 'var(--primary)', color: '#fff' }}>
-                {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-                {saving ? 'Salvando...' : 'Salvar'}
-              </Button>
-            </div>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.2em]" style={{ color: 'var(--text-3)' }}>Editor de artigo</p>
+                  <h2 className="mt-2 text-3xl font-display font-bold" style={{ color: 'var(--text-1)' }}>{selectedArticle.title}</h2>
+                </div>
+               <div className="flex flex-wrap gap-2">
+                 <Button variant="outline" onClick={handleVideoSummary} disabled={isLaunchingRemotion}>
+                   {isLaunchingRemotion ? <Loader2 size={14} className="animate-spin" /> : <Film size={14} />}
+                   {isLaunchingRemotion ? 'Enviando...' : 'Video Summary'}
+                 </Button>
+                 <Button onClick={saveArticle} disabled={saving} className="gap-2" style={{ background: 'var(--primary)', color: '#fff' }}>
+                   {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                   {saving ? 'Salvando...' : 'Salvar'}
+                 </Button>
+               </div>
+             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -294,18 +438,44 @@ const BlogManagerPage = () => {
               </div>
             </div>
 
-            <SimlabReviewPanel
-              title="SimLab Review"
-              run={simlabRun}
+             <SimlabReviewPanel
+               title="SimLab Review"
+               run={simlabRun}
               insight={simlabInsight}
               variants={simlabVariants}
               loading={simlabLoading}
               error={simlabError}
-              onRefresh={simlabRun?.id ? refreshSimlabRun : null}
-            />
+               onRefresh={simlabRun?.id ? refreshSimlabRun : null}
+             />
 
-            <div className="space-y-2">
-              <Label>Markdown</Label>
+             {(remotionJobId || remotionCompositionId) ? (
+               <div className="space-y-3">
+                 {remotionCompositionId ? (
+                   <p className="text-xs leading-5" style={{ color: 'var(--text-3)' }}>
+                     Composition ativa: <span style={{ color: 'var(--text-2)' }}>{remotionCompositionId}</span>
+                   </p>
+                 ) : null}
+                 {remotionResultUrl ? (
+                   <a
+                     href={remotionResultUrl}
+                     target="_blank"
+                     rel="noreferrer"
+                     className="inline-flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold"
+                     style={{ borderColor: 'var(--border)', background: 'var(--bg-card)', color: 'var(--text-1)' }}
+                   >
+                     <ExternalLink size={14} /> Abrir Render Concluido
+                   </a>
+                 ) : null}
+                 <VideoJobStatusCard
+                   title="Video Summary Status"
+                   job={remotionStatusPayload?.job?.job || null}
+                   onRefresh={remotionJobId ? refreshRemotionJob : undefined}
+                 />
+               </div>
+             ) : null}
+
+             <div className="space-y-2">
+               <Label>Markdown</Label>
               <Textarea
                 value={selectedArticle.content_markdown || ''}
                 onChange={(event) => patchSelected({ content_markdown: event.target.value })}

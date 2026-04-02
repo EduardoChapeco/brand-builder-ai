@@ -13,7 +13,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { supabase } from '@/integrations/supabase/client';
 
-type ProviderId = 'groq' | 'openrouter' | 'gemini' | 'firecrawl' | 'steel';
+type ProviderId =
+  | 'groq'
+  | 'openrouter'
+  | 'gemini'
+  | 'firecrawl'
+  | 'steel'
+  | 'elevenlabs'
+  | 'runway'
+  | 'kling'
+  | 'luma'
+  | 'minimax'
+  | 'removebg'
+  | 'replicate';
 
 interface ApiKeyRecord {
   id: string;
@@ -93,6 +105,62 @@ const PROVIDERS: Array<{
     helper: 'Usado em Web Cloner e fluxos que exigem screenshot real.',
     defaultLimit: 100,
   },
+  {
+    id: 'elevenlabs',
+    name: 'ElevenLabs',
+    description: 'Speech-to-text para legenda e transcript do Video Studio.',
+    link: 'https://elevenlabs.io',
+    helper: 'Necessario para geracao real de legendas palavra a palavra.',
+    defaultLimit: 600,
+  },
+  {
+    id: 'runway',
+    name: 'Runway',
+    description: 'Geracao de video a partir de keyframe e prompt modular.',
+    link: 'https://runwayml.com',
+    helper: 'Primeira prioridade para adapters de image-to-video.',
+    defaultLimit: 120,
+  },
+  {
+    id: 'kling',
+    name: 'Kling',
+    description: 'Fallback image-to-video para cenas cinematograficas.',
+    link: 'https://klingai.com',
+    helper: 'Usado como provider alternativo de render de video IA.',
+    defaultLimit: 120,
+  },
+  {
+    id: 'luma',
+    name: 'Luma',
+    description: 'Render de video generativo para variacoes visuais.',
+    link: 'https://lumalabs.ai',
+    helper: 'Provider opcional para image-to-video.',
+    defaultLimit: 120,
+  },
+  {
+    id: 'minimax',
+    name: 'Minimax',
+    description: 'Fallback adicional para pipeline de video generativo.',
+    link: 'https://www.minimax.io',
+    helper: 'Mantem redundancia quando Runway/Kling falham.',
+    defaultLimit: 120,
+  },
+  {
+    id: 'removebg',
+    name: 'Remove.bg',
+    description: 'Remocao de fundo para assets e cenas compostas.',
+    link: 'https://www.remove.bg/api',
+    helper: 'Usado para recorte rapido de fundo no Video Studio.',
+    defaultLimit: 300,
+  },
+  {
+    id: 'replicate',
+    name: 'Replicate',
+    description: 'Enhancement, upscale e operadores visuais especializados.',
+    link: 'https://replicate.com',
+    helper: 'Necessario para pipelines de quality enhancement do Video Studio.',
+    defaultLimit: 200,
+  },
 ];
 
 const RSS_CATEGORIES = ['Tecnologia', 'Marketing', 'Negocios', 'Geral', 'Saude', 'Educacao'];
@@ -134,6 +202,13 @@ const SettingsPage = () => {
     gemini: createDraft('gemini'),
     firecrawl: createDraft('firecrawl'),
     steel: createDraft('steel'),
+    elevenlabs: createDraft('elevenlabs'),
+    runway: createDraft('runway'),
+    kling: createDraft('kling'),
+    luma: createDraft('luma'),
+    minimax: createDraft('minimax'),
+    removebg: createDraft('removebg'),
+    replicate: createDraft('replicate'),
   });
 
   const preferenceStorageKey = createPreferenceKey(workspace?.id);

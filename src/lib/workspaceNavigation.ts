@@ -4,6 +4,7 @@ import {
   Aperture,
   BookText,
   Bot,
+  Clapperboard,
   FileText,
   Globe,
   Grid2x2,
@@ -18,8 +19,11 @@ import {
   ShieldCheck,
   Settings,
   Sparkles,
+  TrendingUp,
+  UserCircle2,
   Wand2,
 } from "lucide-react";
+
 
 export type WorkspaceNavItem = {
   label: string;
@@ -41,14 +45,15 @@ export const WORKSPACE_NAV_ITEMS: WorkspaceNavItem[] = [
   { label: "Briefing", path: "briefing", icon: FileText, section: "Estrategia", description: "Contexto, estratégia e posicionamento" },
   { label: "Brand Kit", path: "brand-kit", icon: Palette, section: "Estrategia", description: "Cores, logo e identidade visual completa" },
   { label: "Cérebro da Marca (DNA)", path: "brand-dna", icon: Activity, section: "Estrategia", description: "Templates competitivos e DNA editorial" },
-  { label: "Personagem da Marca", path: "brand-character", icon: Bot, section: "Estrategia", description: "Character visual com consistência por IA" },
+  { label: "Personagem da Marca", path: "brand-character", icon: UserCircle2, section: "Estrategia", description: "Character visual com consistência por IA" },
 
-  { label: "Viral Analyzer", path: "viral-analyzer", icon: Activity, section: "Inteligencia", description: "Padrões virais mapeados pela IA" },
+  { label: "Viral Analyzer", path: "viral-analyzer", icon: TrendingUp, section: "Inteligencia", description: "Padrões virais mapeados pela IA" },
   { label: "SimLab", path: "simlab", icon: ShieldCheck, section: "Inteligencia", description: "Simula como sua audiência reage antes de publicar" },
   { label: "Squad Builder", path: "squads", icon: Bot, section: "Inteligencia", description: "Agentes de IA configurados por objetivo" },
   { label: "Squad de IA (Chat)", path: "chat", icon: MessageSquare, section: "Inteligencia", description: "Chat com squads especializados" },
 
   { label: "Gerador de Posts", path: "generator", icon: Wand2, section: "Estudio Criativo", description: "Posts com templates da marca" },
+  { label: "Video Studio", path: "video-studio", icon: Clapperboard, section: "Estudio Criativo", description: "Editor de video, geracao IA e motion sections" },
   { label: "Carousel Builder", path: "carousel-builder", icon: Layers3, section: "Estudio Criativo", description: "Carrosséis com storyboard por IA" },
   { label: "Slides & Decks", path: "slides", icon: Presentation, section: "Estudio Criativo", description: "Apresentações e pitch decks" },
   { label: "Image Studio", path: "image-prompts", icon: Sparkles, section: "Estudio Criativo", description: "Geração de imagens com IA" },
