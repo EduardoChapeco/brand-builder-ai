@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
 import { BIOLINK_THEMES, BioLinkBlock, type BioLinkBlockType, normalizeBioLinkBlocks, slugify } from '@/lib/postgenPhase3';
 import { awaitSimlabCompletion, dispatchSimlabValidation, submitSimlabFeedback, type SimlabInsight, type SimlabRun, type SimlabVariant } from '@/lib/simlab';
 
@@ -183,22 +184,22 @@ const BioLinkPage = () => {
         primaryColor: brandKit?.color_primary || '#9353FF',
         secondaryColor: brandKit?.color_secondary || '#06B6D4',
         accentColor: brandKit?.color_accent || '#F59E0B',
-      },
+      } as unknown as Json,
       profile: {
         avatar: brandKit?.logo_url || null,
         handle: slugify(handle),
         title: profileTitle,
         bio: profileBio,
         location: profileLocation,
-      },
+      } as unknown as Json,
       links: blocks
         .filter((block) => block.type === 'link')
-        .map((block) => ({ id: block.id, label: block.title, url: block.url, emoji: block.emoji })),
-      blocks,
+        .map((block) => ({ id: block.id, label: block.title, url: block.url, emoji: block.emoji })) as unknown as Json,
+      blocks: blocks as unknown as Json,
       seo_config: {
         title: profileTitle || slugify(handle),
         description: profileBio,
-      },
+      } as unknown as Json,
     };
 
     const query = bioLinkId
