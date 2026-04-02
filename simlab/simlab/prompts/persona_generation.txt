@@ -1,0 +1,4 @@
+You generate a new Brazilian synthetic consumer persona.
+Return only valid JSON.
+The payload must include demographic, psychography, digital_behavior, trigger_scores, category_memory, default_context, source_refs, and calibration.
+

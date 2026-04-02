@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { computeNewsRelevance, dedupeByUrl, parseRssXml } from "../_shared/news.ts";
 import { corsHeaders, createServiceClient, getBrandContext, safeJsonResponse } from "../_shared/postgen.ts";
+import { dispatchSimlabRun } from "../_shared/simlab.ts";
 
 type FeedRow = {
   id?: string;
@@ -137,11 +138,56 @@ serve(async (req: Request) => {
       }
     }
 
+    const validationCandidates = inserted
+      .filter((item) => (item.relevance_score || 0) >= 70)
+      .slice(0, 3);
+
+    const simlabRuns = [];
+    for (const item of validationCandidates) {
+      const dispatch = await dispatchSimlabRun(supabase, {
+        workspaceId: workspace_id,
+        validationType: "trend",
+        moduleType: "trend_validation",
+        stimulusType: "news_signal",
+        targetTable: "news_items",
+        targetId: item.id,
+        objective: item.title,
+        audienceHint: typeof brandContext.briefing?.target_audience === "string" ? brandContext.briefing.target_audience : null,
+        variants: [{
+          key: "news_signal",
+          label: item.title,
+          artifact: {
+            title: item.title,
+            description: item.description,
+            source_url: item.source_url,
+            relevance_score: item.relevance_score,
+            relevance_reason: item.relevance_reason,
+            categories: item.categories,
+          },
+        }],
+        requestPayload: {
+          source_name: item.source_name,
+          published_at: item.published_at,
+        },
+        contextPolicy: {
+          classification: "opportunity_window",
+        },
+        requestedBy: "news_fetch",
+        waitForCompletion: false,
+      });
+
+      simlabRuns.push({
+        news_item_id: item.id,
+        run_id: dispatch.run.id,
+      });
+    }
+
     return safeJsonResponse({
       inserted: inserted.length,
       skipped: skipped.length,
       scored: deduped.length,
       items: inserted,
+      simlab_runs: simlabRuns,
     });
   } catch (error) {
     return safeJsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);

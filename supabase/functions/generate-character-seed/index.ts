@@ -35,20 +35,6 @@ serve(async (req: Request) => {
       .eq("workspace_id", workspace_id)
       .maybeSingle();
 
-    const fallbackSeed = [
-      `Consistent character: ${character_draft.gender || "person"} ${character_draft.age_range ? `in ${character_draft.age_range}` : ""}`,
-      character_draft.ethnicity_notes || "",
-      ...(character_draft.physical_traits || []),
-      character_draft.style_notes || "",
-      character_draft.archetype ? `Archetype: ${character_draft.archetype}.` : "",
-      character_draft.expression_default ? `Expression: ${character_draft.expression_default}.` : "",
-      character_draft.signature_item ? `Always wearing or carrying ${character_draft.signature_item}.` : "",
-      brandKit
-        ? `Brand color reflections: ${brandKit.color_primary}, ${brandKit.color_secondary}, ${brandKit.color_accent}.`
-        : "",
-      "Photography style: Canon EOS R5, 85mm f/1.4, editorial quality, 8K, direct and engaging eye contact.",
-    ].filter(Boolean).join(" ");
-
     const systemPrompt = `Voce gera seed prompts consistentes para personagens visuais de marca.
 Responda apenas JSON valido no formato:
 {
@@ -77,11 +63,14 @@ Paleta da marca: ${brandKit ? `${brandKit.color_primary}, ${brandKit.color_secon
       systemPrompt,
       userPrompt,
       ["groq", "openrouter", "gemini"],
-      { seed_prompt: fallbackSeed },
     );
 
+    if (typeof result.seed_prompt !== "string" || result.seed_prompt.trim().length === 0) {
+      throw new Error("A IA nao retornou seed_prompt valido.");
+    }
+
     return safeJsonResponse({
-      seed_prompt: result.seed_prompt || fallbackSeed,
+      seed_prompt: result.seed_prompt.trim(),
     });
   } catch (error) {
     return safeJsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);

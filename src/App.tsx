@@ -15,6 +15,7 @@ import NotFound from "@/pages/NotFound";
 import BrandDNAPage from "@/pages/BrandDNAPage";
 import SlidesPage from "@/pages/SlidesPage";
 import DashboardPage from "@/pages/DashboardPage";
+import SquadsPage from "@/pages/SquadsPage";
 
 // Phase 4 New Modules
 import ViralAnalyzer from "@/pages/ViralAnalyzer";
@@ -31,6 +32,7 @@ import BlogManagerPage from "@/pages/BlogManagerPage";
 import WebClonerPage from "@/pages/WebClonerPage";
 import VibeCoderPage from "@/pages/VibeCoderPage";
 import SiteBuilderPage from "@/pages/SiteBuilderPage";
+import SimLabPage from "@/pages/SimLabPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -58,12 +60,14 @@ const App = () => (
           >
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard"       element={<DashboardPage />} />
+            <Route path="squads"          element={<SquadsPage />} />
             <Route path="site-builder"    element={<SiteBuilderPage />} />
             <Route path="generator"       element={<GeneratorPage />} />
             <Route path="carousel-builder" element={<CarouselBuilder />} />
             <Route path="image-prompts"   element={<PromptStudio />} />
             <Route path="product-shots"   element={<ProductShots />} />
             <Route path="viral-analyzer"  element={<ViralAnalyzer />} />
+            <Route path="simlab"          element={<SimLabPage />} />
             <Route path="news-portal"     element={<NewsPortalPage />} />
             <Route path="blog-manager"    element={<BlogManagerPage />} />
             <Route path="web-cloner"      element={<WebClonerPage />} />

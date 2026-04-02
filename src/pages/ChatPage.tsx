@@ -132,26 +132,6 @@ const ChatPage = () => {
     });
   }, [workspace?.id]);
 
-  const savePost = useCallback(async (postData: PostData, sourceTopic?: string | null) => {
-    if (!workspace?.id) return;
-
-    await supabase.from("posts_v2").insert({
-      workspace_id: workspace.id,
-      title: postData.title,
-      format: postData.format,
-      slides_html: postData.slides_html,
-      caption: postData.caption,
-      hashtags: postData.hashtags,
-      template_id: postData.template,
-      slides_count: postData.slides_html.length,
-      status: "generated",
-      source_topic: sourceTopic || null,
-      generation_meta: {
-        source: "chat_squad_runtime",
-      },
-    });
-  }, [workspace?.id]);
-
   const failRun = useCallback((message: string, runId?: string | null) => {
     if (runId) handledRunsRef.current.add(runId);
 
@@ -206,16 +186,13 @@ const ChatPage = () => {
     setActiveRunId(null);
     setRunTasks([]);
 
-    await Promise.all([
-      saveMessage("assistant", assistantMsg.content, finalPost),
-      savePost(finalPost, payload.original_prompt),
-    ]);
+    await saveMessage("assistant", assistantMsg.content, finalPost);
 
     toast({
       title: "Post gerado",
       description: `${finalPost.slides_html.length} slide(s) produzidos pelo squad real.`,
     });
-  }, [failRun, saveMessage, savePost, toast]);
+  }, [failRun, saveMessage, toast]);
 
   useEffect(() => {
     if (!activeRunId) return;
@@ -457,11 +434,6 @@ const ChatPage = () => {
                       )}
                       <span className="font-medium text-foreground">{task.label}</span>
                       <span className="text-muted-foreground">{taskStatusLabel[task.status]}</span>
-                      {task.is_fallback ? (
-                        <Badge variant="outline" className="ml-auto text-[10px]">
-                          fallback
-                        </Badge>
-                      ) : null}
                     </div>
                   ))}
                 </div>

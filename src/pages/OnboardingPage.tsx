@@ -165,7 +165,7 @@ const OnboardingPage = () => {
       });
 
       setStep(4);
-      setTimeout(() => navigate(`/workspace/${workspace.id}/generator`), 1800);
+      setTimeout(() => navigate(`/workspace/${workspace.id}/squads?setup=1`), 1800);
     } catch (error) {
       console.error(error);
       toast.error(error instanceof Error ? error.message : 'Erro ao criar workspace');
@@ -478,7 +478,7 @@ const OnboardingPage = () => {
                 Workspace pronto
               </h2>
               <p className="text-sm" style={{ color: 'var(--text-2)' }}>
-                Redirecionando para o gerador...
+                Redirecionando para a configuracao do squad...
               </p>
             </motion.div>
           )}

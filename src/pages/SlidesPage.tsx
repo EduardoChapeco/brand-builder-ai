@@ -4,11 +4,13 @@ import { Wand2, Download, RefreshCw, X, Save, FileImage, LayoutTemplate, Type, S
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
+import SimlabReviewPanel from '@/components/simlab/SimlabReviewPanel';
 import ArtboardStage from '@/components/canvas/ArtboardStage';
 import SlideFrame from '@/components/canvas/SlideFrame';
 import { BrandKit, DEFAULT_BRAND_KIT, getPresentationDimensions, PresentationFormat, PresentationSlide, createPresentationSlide } from '@/lib/canvasEngine';
 import { PRESENTATION_TEMPLATE_REGISTRY, getPresentationTemplate } from '@/lib/presentationTemplates';
 import { exportSlide, exportAllSlides, exportSlidesPDF, exportSlidesHTML } from '@/lib/exportPost';
+import { awaitSimlabCompletion, dispatchSimlabValidation, type SimlabInsight, type SimlabRun, type SimlabVariant } from '@/lib/simlab';
 
 const FORMATS: { id: PresentationFormat; label: string; aspect: string }[] = [
   { id: '16:9', label: 'Widescreen', aspect: '16:9' },
@@ -26,7 +28,7 @@ interface PresentationGenerationResponse {
 }
 
 const SlidesPage = () => {
-  const { workspace, brandKit: wsBrandKit } = useWorkspace();
+  const { workspace, briefing, brandKit: wsBrandKit } = useWorkspace();
   const brand: BrandKit = useMemo(() => (wsBrandKit ? { ...DEFAULT_BRAND_KIT, ...wsBrandKit } : DEFAULT_BRAND_KIT), [wsBrandKit]);
   
   // Wizards & Topic
@@ -48,6 +50,11 @@ const SlidesPage = () => {
   const [activeTab, setActiveTab] = useState<'visual' | 'media' | 'text' | 'export'>('visual');
   const [isSaving, setIsSaving] = useState(false);
   const [isGenImg, setIsGenImg] = useState(false);
+  const [simlabRun, setSimlabRun] = useState<SimlabRun | null>(null);
+  const [simlabInsight, setSimlabInsight] = useState<SimlabInsight | null>(null);
+  const [simlabVariants, setSimlabVariants] = useState<SimlabVariant[]>([]);
+  const [simlabLoading, setSimlabLoading] = useState(false);
+  const [simlabError, setSimlabError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { width, height } = getPresentationDimensions(format);
@@ -72,6 +79,7 @@ const SlidesPage = () => {
     setIsGenerating(true);
     setWizardStep(3);
     setGenStep('Estruturando roteiro...');
+    let completed = false;
 
     try {
       // 1. Gera conteúdo usando a mesma API base ajustada para apresentações (ou mockamos em demo caso falhe)
@@ -103,17 +111,14 @@ const SlidesPage = () => {
       const withHtml = startSlides.map(s => ({ ...s, html: renderHtml(s, width, height) }));
       setSlides(withHtml);
       setActiveIdx(0);
+      completed = true;
     } catch(e) {
-      toast.warning('Erro (Demo Mod). Fallback aplicado.');
-      const demo = Array.from({length: slideCount}).map((_, i) => createPresentationSlide({
-         layoutId: i === 0 ? 'title-hero' : 'content-bullets',
-         title: i === 0 ? topic : `Ponto ${i}`
-      }));
-      setSlides(demo.map(s => ({ ...s, html: renderHtml(s, width, height) })));
-      setActiveIdx(0);
+      const message = e instanceof Error ? e.message : 'Falha ao gerar apresentacao';
+      toast.error('Falha real na geracao: ' + message);
+      return;
     } finally {
       setIsGenerating(false);
-      setWizardStep(4);
+      setWizardStep(completed ? 4 : 2);
     }
   };
 

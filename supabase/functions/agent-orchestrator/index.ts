@@ -8,12 +8,14 @@ serve(async (req: Request) => {
   }
 
   try {
-    const { workspace_id, prompt, module_type, mode = "balanced", config } = await req.json() as {
+    const { workspace_id, prompt, module_type, mode = "balanced", config, squad_template_id, workspace_squad_id } = await req.json() as {
       workspace_id?: string;
       prompt?: string;
       module_type?: string;
       mode?: "fast" | "balanced" | "full";
       config?: Record<string, unknown>;
+      squad_template_id?: string;
+      workspace_squad_id?: string;
     };
 
     if (!workspace_id || !prompt || !module_type) {
@@ -27,6 +29,8 @@ serve(async (req: Request) => {
       prompt,
       mode,
       config: config || {},
+      squadTemplateId: squad_template_id,
+      workspaceSquadId: workspace_squad_id,
       identification: {
         queued_by: "agent-orchestrator",
       },

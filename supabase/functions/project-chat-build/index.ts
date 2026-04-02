@@ -7,8 +7,8 @@ const defaultFiles = {
     <main style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: "#09090f", color: "#f8fafc", fontFamily: "system-ui, sans-serif" }}>
       <section style={{ maxWidth: 760, padding: 32 }}>
         <p style={{ opacity: 0.72, letterSpacing: "0.18em", textTransform: "uppercase", fontSize: 12 }}>VibeCoder</p>
-        <h1 style={{ fontSize: 48, lineHeight: 1.04, margin: "12px 0 16px" }}>Descreva a pagina no chat.</h1>
-        <p style={{ fontSize: 18, opacity: 0.82 }}>Cada mensagem atualiza o projeto multi-arquivo do workspace.</p>
+        <h1 style={{ fontSize: 48, lineHeight: 1.04, margin: "12px 0 16px" }}>Describe the page in chat.</h1>
+        <p style={{ fontSize: 18, opacity: 0.82 }}>Each prompt updates the real multi-file project for this workspace.</p>
       </section>
     </main>
   );
@@ -22,29 +22,12 @@ createRoot(document.getElementById("root")!).render(<App />);
 `,
 };
 
-const fallbackApp = (prompt: string, brandName: string, accent: string) => `export default function App() {
-  return (
-    <main style={{ minHeight: "100vh", background: "#09090f", color: "#f8fafc", fontFamily: "system-ui, sans-serif" }}>
-      <section style={{ maxWidth: 1080, margin: "0 auto", padding: "72px 24px 48px" }}>
-        <p style={{ color: "${accent}", letterSpacing: "0.18em", textTransform: "uppercase", fontSize: 12, fontWeight: 700 }}>Projeto do workspace</p>
-        <h1 style={{ fontSize: 56, lineHeight: 1.02, margin: "16px 0 18px" }}>${brandName}</h1>
-        <p style={{ maxWidth: 760, fontSize: 20, lineHeight: 1.6, opacity: 0.82 }}>
-          ${prompt.replace(/`/g, "'")}
-        </p>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 18, marginTop: 32 }}>
-          {["Hero claro", "Prova social", "CTA principal"].map((item) => (
-            <article key={item} style={{ border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)", borderRadius: 24, padding: 20 }}>
-              <p style={{ color: "${accent}", fontSize: 12, letterSpacing: "0.14em", textTransform: "uppercase", margin: 0 }}>Section</p>
-              <h2 style={{ margin: "12px 0 10px", fontSize: 24 }}>{item}</h2>
-              <p style={{ margin: 0, lineHeight: 1.6, opacity: 0.78 }}>Ajuste esta secao pelo chat para evoluir a estrutura do app.</p>
-            </article>
-          ))}
-        </div>
-      </section>
-    </main>
-  );
-}
-`;
+const requireText = (value: unknown, field: string) => {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw new Error(`Campo obrigatorio ausente ou invalido: ${field}.`);
+  }
+  return value.trim();
+};
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -81,16 +64,9 @@ serve(async (req: Request) => {
       source_files_json && typeof source_files_json === "object" && Object.keys(source_files_json).length > 0
         ? source_files_json
         : project?.source_files_json && typeof project.source_files_json === "object"
-          ? project.source_files_json as Record<string, string>
+          ? (project.source_files_json as Record<string, string>)
           : defaultFiles
     );
-
-    const brandName = typeof brandContext.briefing?.company_name === "string"
-      ? brandContext.briefing.company_name
-      : "Nova Experiencia";
-    const accent = typeof brandContext.brandKit?.color_primary === "string"
-      ? brandContext.brandKit.color_primary
-      : "#9353FF";
 
     const generated = await runJsonTask<{
       summary?: string;
@@ -116,18 +92,26 @@ ${brandContext.system_context}`,
 Arquivos atuais:
 ${JSON.stringify(baseFiles).slice(0, 20000)}`,
       ["groq", "openrouter", "gemini"],
-      {
-        summary: "Atualizacao heuristica aplicada ao App principal.",
-        diagnostics: ["Fallback aplicado porque nenhum diff estruturado foi retornado pelo modelo."],
-        files: {
-          "/src/App.tsx": fallbackApp(message, brandName, accent),
-        },
-      },
     );
+
+    const summary = requireText(generated.summary, "summary");
+    const generatedFiles =
+      generated.files && typeof generated.files === "object" && !Array.isArray(generated.files)
+        ? Object.entries(generated.files).reduce<Record<string, string>>((acc, [path, content]) => {
+            if (typeof content === "string" && content.trim().length > 0) {
+              acc[path] = content;
+            }
+            return acc;
+          }, {})
+        : {};
+
+    if (Object.keys(generatedFiles).length === 0) {
+      throw new Error("A IA nao retornou arquivos validos para atualizar o projeto.");
+    }
 
     const nextFiles = {
       ...baseFiles,
-      ...(generated.files || {}),
+      ...generatedFiles,
     };
 
     const payload = {
@@ -138,7 +122,7 @@ ${JSON.stringify(baseFiles).slice(0, 20000)}`,
       entry_file: "/src/App.tsx",
       source_files_json: nextFiles,
       preview_meta: {
-        last_summary: generated.summary || null,
+        last_summary: summary,
         last_updated_at: new Date().toISOString(),
       },
     };
@@ -154,14 +138,14 @@ ${JSON.stringify(baseFiles).slice(0, 20000)}`,
       project_id: persisted.data.id,
       mode: "chat",
       user_message: message,
-      assistant_response: generated.summary || "Atualizacao aplicada ao projeto.",
+      assistant_response: summary,
       diff_summary: Array.isArray(generated.diagnostics) ? generated.diagnostics.join(" | ") : null,
     });
 
     return safeJsonResponse({
       project_id: persisted.data.id,
       source_files_json: nextFiles,
-      summary: generated.summary || "Atualizacao aplicada ao projeto.",
+      summary,
       diagnostics: Array.isArray(generated.diagnostics) ? generated.diagnostics : [],
     });
   } catch (error) {

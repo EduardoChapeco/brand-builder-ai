@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders, createServiceClient, listWorkspaceKeys, markKeyUsage, runJsonTask, safeJsonResponse } from "../_shared/postgen.ts";
+import { dispatchSimlabRun } from "../_shared/simlab.ts";
 
 const fetchFirecrawlMarkdown = async (
   supabase: ReturnType<typeof createServiceClient>,
@@ -181,9 +182,43 @@ ${preview || source_url || ""}`,
       })
       .eq("workspace_id", workspace_id);
 
+    const simlabDispatch = await dispatchSimlabRun(supabase, {
+      workspaceId: workspace_id,
+      validationType: "trend",
+      moduleType: "trend_validation",
+      stimulusType: "viral_pattern",
+      targetTable: null,
+      targetId: null,
+      objective: analysis.hook_formula || fallbackAnalysis.hook_formula,
+      audienceHint: typeof briefing?.target_audience === "string" ? briefing.target_audience : null,
+      variants: [{
+        key: "viral_pattern",
+        label: analysis.hook_formula || fallbackAnalysis.hook_formula,
+        artifact: {
+          hook_formula: analysis.hook_formula || fallbackAnalysis.hook_formula,
+          visual_style: analysis.visual_style || fallbackAnalysis.visual_style,
+          emotional_trigger: analysis.emotional_trigger || fallbackAnalysis.emotional_trigger,
+          content_type: analysis.content_type || fallbackAnalysis.content_type,
+          engagement_notes: analysis.engagement_notes || fallbackAnalysis.engagement_notes,
+          patterns_extracted: analysis.patterns_extracted || fallbackAnalysis.patterns_extracted,
+        },
+      }],
+      requestPayload: {
+        source_url: source_url || null,
+        source_account: source_account || null,
+        saved_analysis_id: savedAnalysis.id,
+      },
+      contextPolicy: {
+        classification: "viral_pattern",
+      },
+      requestedBy: "analyze_viral_patterns",
+      waitForCompletion: false,
+    });
+
     return safeJsonResponse({
       analysis: savedAnalysis,
       suggestions: analysis.suggestions || [],
+      simlab_run_id: simlabDispatch.run.id,
     });
   } catch (error) {
     return safeJsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);

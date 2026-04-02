@@ -15,6 +15,7 @@ import {
   Newspaper,
   Palette,
   Presentation,
+  ShieldCheck,
   Settings,
   Sparkles,
   Wand2,
@@ -43,6 +44,8 @@ export const WORKSPACE_NAV_ITEMS: WorkspaceNavItem[] = [
   { label: "Personas (Character)", path: "brand-character", icon: Bot, section: "Estrategia", description: "Personagens e consistencia visual" },
 
   { label: "Viral Analyzer", path: "viral-analyzer", icon: Activity, section: "Inteligencia", description: "Padroes virais e referencias" },
+  { label: "SimLab", path: "simlab", icon: ShieldCheck, section: "Inteligencia", description: "Validacao canonica por personas e politicas" },
+  { label: "Squad Builder", path: "squads", icon: Bot, section: "Inteligencia", description: "Onboarding e catalogo de squads" },
   { label: "Squad de IA (Chat)", path: "chat", icon: MessageSquare, section: "Inteligencia", description: "Chat de squad e criacao guiada" },
 
   { label: "Gerador de Posts", path: "generator", icon: Wand2, section: "Estudio Criativo", description: "Gerador principal de posts" },
@@ -73,4 +76,3 @@ export const getWorkspaceRouteMeta = (pathname: string) => {
   const path = match?.[1] || "dashboard";
   return WORKSPACE_NAV_ITEMS.find((item) => item.path === path) || WORKSPACE_NAV_ITEMS[0];
 };
-

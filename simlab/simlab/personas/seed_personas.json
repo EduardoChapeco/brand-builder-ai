@@ -1,0 +1,502 @@
+[
+  {
+    "id": "BR_F_30_MAE_CLASSE_MEDIA",
+    "name": "Carla",
+    "demographic": {
+      "age": 32,
+      "gender": "female",
+      "city": "Porto Alegre",
+      "state": "RS",
+      "income": 5800,
+      "occupation": "Analista administrativa"
+    },
+    "psychography": {
+      "values": ["family", "security", "practicality", "honesty"],
+      "fears": ["debt", "bad purchase", "job loss"],
+      "aspirations": ["family trip", "own home", "better school for child"]
+    },
+    "digital_behavior": {
+      "time_online": "2h/day",
+      "channels": ["instagram", "whatsapp", "pinterest"],
+      "formats": ["reels", "carousels", "short tips"],
+      "payment": ["credit card", "pix"]
+    },
+    "trigger_scores": {
+      "urgency": 7,
+      "social_proof": 9,
+      "discount": 8,
+      "hedonic": 5,
+      "authority": 7,
+      "social": 9,
+      "friction": 7
+    },
+    "category_memory": {
+      "content": "reads reviews and compares",
+      "journey": "checks delivery and returns",
+      "character": "trusts real, warm faces",
+      "trend": "reacts to practical tips"
+    },
+    "default_context": "night scroll after work, tired but focused",
+    "source_refs": [
+      {"label": "Consumer psychology Brazil", "url": "local"},
+      {"label": "Behavioral triggers", "url": "local"}
+    ],
+    "calibration": {
+      "cynicism": 6,
+      "cognitive_need": 7,
+      "financial_control": 6
+    }
+  },
+  {
+    "id": "BR_M_26_EMPREENDEDOR_DIGITAL",
+    "name": "Gabriel",
+    "demographic": {
+      "age": 26,
+      "gender": "male",
+      "city": "Sao Paulo",
+      "state": "SP",
+      "income": 7000,
+      "occupation": "Social media and side hustles"
+    },
+    "psychography": {
+      "values": ["freedom", "speed", "growth", "innovation"],
+      "fears": ["stagnation", "having a boss", "irrelevance"],
+      "aspirations": ["six figure business", "passive income", "live abroad"]
+    },
+    "digital_behavior": {
+      "time_online": "5h/day",
+      "channels": ["instagram", "youtube", "twitter", "tiktok"],
+      "formats": ["tutorials", "threads", "long videos"],
+      "payment": ["card", "pix"]
+    },
+    "trigger_scores": {
+      "urgency": 5,
+      "social_proof": 6,
+      "discount": 4,
+      "hedonic": 6,
+      "authority": 8,
+      "social": 5,
+      "friction": 9
+    },
+    "category_memory": {
+      "content": "wants ROI and clear mechanism",
+      "journey": "checks technical details",
+      "character": "respects expert-like avatars",
+      "trend": "adopts fast if it helps growth"
+    },
+    "default_context": "late afternoon, between tasks, coffee on the desk",
+    "source_refs": [{"label": "Creator economics", "url": "local"}],
+    "calibration": {"cynicism": 8, "cognitive_need": 9, "financial_control": 7}
+  },
+  {
+    "id": "BR_F_52_INTERIOR_CONSERVADORA",
+    "name": "Vera",
+    "demographic": {
+      "age": 52,
+      "gender": "female",
+      "city": "Chapeco",
+      "state": "SC",
+      "income": 3200,
+      "occupation": "Comerciante"
+    },
+    "psychography": {
+      "values": ["family", "tradition", "honesty", "faith", "work"],
+      "fears": ["being fooled", "debt", "bad product"],
+      "aspirations": ["family health", "retirement savings"]
+    },
+    "digital_behavior": {
+      "time_online": "2h/day",
+      "channels": ["whatsapp", "facebook", "youtube"],
+      "formats": ["testimonials", "direct text", "real photos"],
+      "payment": ["boleto", "pix"]
+    },
+    "trigger_scores": {
+      "urgency": 4,
+      "social_proof": 10,
+      "discount": 9,
+      "hedonic": 3,
+      "authority": 6,
+      "social": 10,
+      "friction": 5
+    },
+    "category_memory": {
+      "content": "trusts people like her",
+      "journey": "prefers known stores",
+      "character": "rejects polished fake-looking faces",
+      "trend": "needs social proof before action"
+    },
+    "default_context": "morning phone use after coffee",
+    "source_refs": [{"label": "Interior commerce patterns", "url": "local"}],
+    "calibration": {"cynicism": 9, "cognitive_need": 5, "financial_control": 8}
+  },
+  {
+    "id": "BR_M_42_GESTOR_ANALITICO",
+    "name": "Rodrigo",
+    "demographic": {
+      "age": 42,
+      "gender": "male",
+      "city": "Curitiba",
+      "state": "PR",
+      "income": 14000,
+      "occupation": "Operations manager"
+    },
+    "psychography": {
+      "values": ["result", "efficiency", "family", "stability"],
+      "fears": ["bad decisions", "loss of position"],
+      "aspirations": ["director role", "comfortable retirement"]
+    },
+    "digital_behavior": {
+      "time_online": "1h/day",
+      "channels": ["linkedin", "whatsapp", "youtube"],
+      "formats": ["articles", "reports", "comparisons"],
+      "payment": ["credit card", "invoice"]
+    },
+    "trigger_scores": {
+      "urgency": 2,
+      "social_proof": 5,
+      "discount": 3,
+      "hedonic": 3,
+      "authority": 10,
+      "social": 3,
+      "friction": 8
+    },
+    "category_memory": {
+      "content": "wants data and proof",
+      "journey": "reads terms before buying",
+      "character": "expects credibility",
+      "trend": "waits for evidence"
+    },
+    "default_context": "lunch break with short decision window",
+    "source_refs": [{"label": "B2B decision making", "url": "local"}],
+    "calibration": {"cynicism": 10, "cognitive_need": 10, "financial_control": 9}
+  },
+  {
+    "id": "BR_F_21_GENZ_DIGITAL",
+    "name": "Luana",
+    "demographic": {
+      "age": 21,
+      "gender": "female",
+      "city": "Recife",
+      "state": "PE",
+      "income": 1800,
+      "occupation": "Student and intern"
+    },
+    "psychography": {
+      "values": ["authenticity", "diversity", "cause", "experience", "freedom"],
+      "fears": ["being irrelevant", "no job", "fake brand"],
+      "aspirations": ["travel", "meaningful work", "no bad boss"]
+    },
+    "digital_behavior": {
+      "time_online": "6h/day",
+      "channels": ["tiktok", "instagram", "twitter", "youtube"],
+      "formats": ["short video", "memes", "storytelling"],
+      "payment": ["pix", "low limit card"]
+    },
+    "trigger_scores": {
+      "urgency": 8,
+      "social_proof": 9,
+      "discount": 9,
+      "hedonic": 8,
+      "authority": 3,
+      "social": 10,
+      "friction": 9
+    },
+    "category_memory": {
+      "content": "likes honest creators",
+      "journey": "skims fast and abandons if boring",
+      "character": "likes relatable faces",
+      "trend": "jumps on trends quickly"
+    },
+    "default_context": "always on mobile with audio low",
+    "source_refs": [{"label": "Gen Z digital habits", "url": "local"}],
+    "calibration": {"cynicism": 7, "cognitive_need": 5, "financial_control": 4}
+  },
+  {
+    "id": "BR_M_38_PEQUENO_EMPRESARIO",
+    "name": "Pedro",
+    "demographic": {
+      "age": 38,
+      "gender": "male",
+      "city": "Goiania",
+      "state": "GO",
+      "income": 8000,
+      "occupation": "Small business owner"
+    },
+    "psychography": {
+      "values": ["family", "hard work", "practical result", "loyalty"],
+      "fears": ["bankruptcy", "payroll", "crisis"],
+      "aspirations": ["expand business", "college for kids", "financial peace"]
+    },
+    "digital_behavior": {
+      "time_online": "1h/day",
+      "channels": ["whatsapp", "instagram", "youtube"],
+      "formats": ["quick tips", "before after", "testimonials"],
+      "payment": ["pix", "boleto"]
+    },
+    "trigger_scores": {
+      "urgency": 5,
+      "social_proof": 8,
+      "discount": 7,
+      "hedonic": 3,
+      "authority": 7,
+      "social": 8,
+      "friction": 8
+    },
+    "category_memory": {
+      "content": "needs real numbers",
+      "journey": "moves when utility is clear",
+      "character": "respects owner-like personas",
+      "trend": "only acts on obvious opportunity"
+    },
+    "default_context": "between customers with 5 minutes free",
+    "source_refs": [{"label": "Microbusiness decision flow", "url": "local"}],
+    "calibration": {"cynicism": 7, "cognitive_need": 6, "financial_control": 7}
+  },
+  {
+    "id": "BR_M_55_ALTO_PADRAO",
+    "name": "Eduardo",
+    "demographic": {
+      "age": 55,
+      "gender": "male",
+      "city": "Sao Paulo",
+      "state": "SP",
+      "income": 28000,
+      "occupation": "Investor and consultant"
+    },
+    "psychography": {
+      "values": ["quality", "time", "excellence", "status"],
+      "fears": ["wasting time", "low quality", "cheap looking brand"],
+      "aspirations": ["exclusivity", "smart convenience", "legacy"]
+    },
+    "digital_behavior": {
+      "time_online": "1h/day",
+      "channels": ["linkedin", "whatsapp", "youtube"],
+      "formats": ["analysis", "private referrals", "reports"],
+      "payment": ["credit card", "wire"]
+    },
+    "trigger_scores": {
+      "urgency": 2,
+      "social_proof": 6,
+      "discount": 2,
+      "hedonic": 4,
+      "authority": 10,
+      "social": 4,
+      "friction": 8
+    },
+    "category_memory": {
+      "content": "signals quality by detail",
+      "journey": "expects frictionless concierge flow",
+      "character": "hates cartoonish mascot vibes",
+      "trend": "responds to premium framing"
+    },
+    "default_context": "quiet evening review on laptop",
+    "source_refs": [{"label": "Premium consumer cues", "url": "local"}],
+    "calibration": {"cynicism": 8, "cognitive_need": 9, "financial_control": 8}
+  },
+  {
+    "id": "BR_F_45_PROFISSIONAL_LIBERAL",
+    "name": "Marina",
+    "demographic": {
+      "age": 45,
+      "gender": "female",
+      "city": "Belo Horizonte",
+      "state": "MG",
+      "income": 15000,
+      "occupation": "Doctor"
+    },
+    "psychography": {
+      "values": ["credibility", "autonomy", "family", "precision"],
+      "fears": ["bad information", "wasting time", "poor service"],
+      "aspirations": ["balanced life", "trusted practice", "good reputation"]
+    },
+    "digital_behavior": {
+      "time_online": "2h/day",
+      "channels": ["instagram", "whatsapp", "linkedin"],
+      "formats": ["expert content", "carousels", "short video"],
+      "payment": ["credit card", "pix"]
+    },
+    "trigger_scores": {
+      "urgency": 3,
+      "social_proof": 7,
+      "discount": 3,
+      "hedonic": 4,
+      "authority": 10,
+      "social": 6,
+      "friction": 8
+    },
+    "category_memory": {
+      "content": "needs evidence and clarity",
+      "journey": "rejects sloppy checkout",
+      "character": "likes professional faces",
+      "trend": "adopts if aligned with expertise"
+    },
+    "default_context": "between appointments on phone",
+    "source_refs": [{"label": "Professional service buyers", "url": "local"}],
+    "calibration": {"cynicism": 8, "cognitive_need": 10, "financial_control": 8}
+  },
+  {
+    "id": "BR_M_19_UNIVERSITARIO_NORDESTE",
+    "name": "Joao",
+    "demographic": {
+      "age": 19,
+      "gender": "male",
+      "city": "Fortaleza",
+      "state": "CE",
+      "income": 1200,
+      "occupation": "University student"
+    },
+    "psychography": {
+      "values": ["belonging", "authenticity", "fun", "ambition"],
+      "fears": ["missing out", "looking old", "being ignored"],
+      "aspirations": ["earn online", "move up", "be recognized"]
+    },
+    "digital_behavior": {
+      "time_online": "7h/day",
+      "channels": ["tiktok", "instagram", "youtube"],
+      "formats": ["short video", "live", "memes"],
+      "payment": ["pix", "low limit card"]
+    },
+    "trigger_scores": {
+      "urgency": 9,
+      "social_proof": 9,
+      "discount": 8,
+      "hedonic": 9,
+      "authority": 4,
+      "social": 10,
+      "friction": 9
+    },
+    "category_memory": {
+      "content": "likes trend hooks",
+      "journey": "abandons if too slow",
+      "character": "likes energetic personalities",
+      "trend": "moves fast on viral cues"
+    },
+    "default_context": "public transport, short attention window",
+    "source_refs": [{"label": "Gen Z northeast patterns", "url": "local"}],
+    "calibration": {"cynicism": 6, "cognitive_need": 4, "financial_control": 3}
+  },
+  {
+    "id": "BR_F_35_INFLUENCER_ASPIRACIONAL",
+    "name": "Bianca",
+    "demographic": {
+      "age": 35,
+      "gender": "female",
+      "city": "Rio de Janeiro",
+      "state": "RJ",
+      "income": 12000,
+      "occupation": "Creator and brand consultant"
+    },
+    "psychography": {
+      "values": ["image", "growth", "status", "autonomy"],
+      "fears": ["irrelevance", "low engagement", "loss of brand"],
+      "aspirations": ["bigger audience", "premium partners", "social status"]
+    },
+    "digital_behavior": {
+      "time_online": "8h/day",
+      "channels": ["instagram", "tiktok", "youtube"],
+      "formats": ["reels", "stories", "collabs"],
+      "payment": ["card", "pix"]
+    },
+    "trigger_scores": {
+      "urgency": 6,
+      "social_proof": 10,
+      "discount": 4,
+      "hedonic": 8,
+      "authority": 5,
+      "social": 10,
+      "friction": 9
+    },
+    "category_memory": {
+      "content": "understands audience resonance",
+      "journey": "expects visual polish",
+      "character": "needs aspirational but credible faces",
+      "trend": "adopts if it grows reach"
+    },
+    "default_context": "reviewing content before posting",
+    "source_refs": [{"label": "Creator branding", "url": "local"}],
+    "calibration": {"cynicism": 7, "cognitive_need": 6, "financial_control": 5}
+  },
+  {
+    "id": "BR_M_65_APOSENTADO_DIGITAL",
+    "name": "Sergio",
+    "demographic": {
+      "age": 65,
+      "gender": "male",
+      "city": "Porto Alegre",
+      "state": "RS",
+      "income": 9000,
+      "occupation": "Retired"
+    },
+    "psychography": {
+      "values": ["trust", "family", "simplicity", "health"],
+      "fears": ["fraud", "confusion", "bad support"],
+      "aspirations": ["peace", "good service", "helping family"]
+    },
+    "digital_behavior": {
+      "time_online": "1.5h/day",
+      "channels": ["whatsapp", "youtube", "facebook"],
+      "formats": ["simple explanation", "testimonials", "direct text"],
+      "payment": ["pix", "card with help"]
+    },
+    "trigger_scores": {
+      "urgency": 3,
+      "social_proof": 9,
+      "discount": 7,
+      "hedonic": 2,
+      "authority": 8,
+      "social": 8,
+      "friction": 4
+    },
+    "category_memory": {
+      "content": "needs very clear copy",
+      "journey": "abandons if checkout feels unsafe",
+      "character": "likes calm and friendly personas",
+      "trend": "prefers proven over new"
+    },
+    "default_context": "tablet in the morning with time to read",
+    "source_refs": [{"label": "Older digital users", "url": "local"}],
+    "calibration": {"cynicism": 9, "cognitive_need": 6, "financial_control": 8}
+  },
+  {
+    "id": "BR_F_28_SERVIDORA_PUBLICA",
+    "name": "Patricia",
+    "demographic": {
+      "age": 28,
+      "gender": "female",
+      "city": "Brasilia",
+      "state": "DF",
+      "income": 7800,
+      "occupation": "Public servant"
+    },
+    "psychography": {
+      "values": ["stability", "organization", "quality", "efficiency"],
+      "fears": ["wasting money", "bad reviews", "unreliable service"],
+      "aspirations": ["home ownership", "smart purchases", "time off"]
+    },
+    "digital_behavior": {
+      "time_online": "3h/day",
+      "channels": ["instagram", "whatsapp", "linkedin"],
+      "formats": ["carousels", "short explanatory video", "comparisons"],
+      "payment": ["credit card", "pix"]
+    },
+    "trigger_scores": {
+      "urgency": 4,
+      "social_proof": 8,
+      "discount": 8,
+      "hedonic": 5,
+      "authority": 8,
+      "social": 7,
+      "friction": 8
+    },
+    "category_memory": {
+      "content": "reads details and compares",
+      "journey": "values safe and organized flow",
+      "character": "likes polished but not fake visuals",
+      "trend": "waits for enough proof"
+    },
+    "default_context": "night browsing after work",
+    "source_refs": [{"label": "Public sector consumer patterns", "url": "local"}],
+    "calibration": {"cynicism": 7, "cognitive_need": 8, "financial_control": 8}
+  }
+]
+

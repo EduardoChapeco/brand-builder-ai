@@ -4,6 +4,7 @@ import { Wand2, Search, Upload, RefreshCw, Download, Copy, ChevronLeft, ChevronR
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
+import SimlabReviewPanel from '@/components/simlab/SimlabReviewPanel';
 import SlideFrame from '@/components/canvas/SlideFrame';
 import {
   ArtboardDimension, ArtboardFormat, BrandKit, DEFAULT_BRAND_KIT, SlideData,
@@ -12,6 +13,7 @@ import {
 import { TEMPLATE_REGISTRY, getTemplate } from '@/lib/templateRegistry';
 import { exportSlide, exportAllSlides, uploadSlideToStorage, exportSlidesPDF, exportSlidesHTML } from '@/lib/exportPost';
 import { BrandCharacterRecord, CAROUSEL_ARCS, MediaAssetRecord } from '@/lib/postgenPhase2';
+import { awaitSimlabCompletion, dispatchSimlabValidation, type SimlabInsight, type SimlabRun, type SimlabVariant } from '@/lib/simlab';
 
 // Performance Audit: Implement Lazy Loading
 const ArtboardStage = lazy(() => import('@/components/canvas/ArtboardStage'));
@@ -150,7 +152,7 @@ const extractSlideFields = (slideHtml: string): Partial<Record<EditableFieldName
 
 const GeneratorPage = () => {
   const location = useLocation();
-  const { workspace, brandKit: wsBrandKit } = useWorkspace();
+  const { workspace, briefing, brandKit: wsBrandKit } = useWorkspace();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const hydratedPostIdRef = useRef<string | null>(null);
   const consumedPreloadRef = useRef<string | null>(null);
@@ -209,6 +211,11 @@ const GeneratorPage = () => {
   // Misc
   const [isSavingLibrary, setIsSavingLibrary] = useState(false);
   const [isGenImg, setIsGenImg] = useState(false);
+  const [simlabRun, setSimlabRun] = useState<SimlabRun | null>(null);
+  const [simlabInsight, setSimlabInsight] = useState<SimlabInsight | null>(null);
+  const [simlabVariants, setSimlabVariants] = useState<SimlabVariant[]>([]);
+  const [simlabLoading, setSimlabLoading] = useState(false);
+  const [simlabError, setSimlabError] = useState<string | null>(null);
 
   const { width, height } = getArtboardDimensions(format);
   const selectedCharacter = useMemo(
@@ -495,6 +502,11 @@ const GeneratorPage = () => {
     if (!topic.trim()) { toast.error('Descreva o tópico primeiro'); return; }
     setIsGenerating(true);
     setWizardStep(3);
+    let completed = false;
+    setSimlabRun(null);
+    setSimlabInsight(null);
+    setSimlabVariants([]);
+    setSimlabError(null);
     setGenStep('📋 Analisando briefing...');
     
     try {
@@ -584,14 +596,63 @@ const GeneratorPage = () => {
       }
 
       configs = configs.map((cfg, i) => ({ ...cfg, html: renderSlideConfig(cfg, i, configs.length) }));
+
+      if (workspace?.id) {
+        setGenStep('Validando com SimLab...');
+        setSimlabLoading(true);
+
+        const dispatch = await dispatchSimlabValidation({
+          workspace_id: workspace.id,
+          validation_type: 'content',
+          module_type: 'content_post',
+          stimulus_type: configs.length > 1 ? 'social_carousel' : 'social_post',
+          objective: topic.trim(),
+          audience_hint: briefing?.target_audience || null,
+          variants: [{
+            key: 'primary_candidate',
+            label: data.post_title || topic,
+            artifact: {
+              post_title: data.post_title || topic,
+              caption: data.caption || '',
+              hashtags: data.hashtags || '',
+              slides: data.slides,
+              slides_html: configs.map((cfg) => cfg.html || ''),
+              funnel_type: funnel,
+              tone,
+              format,
+            },
+          }],
+          request_payload: {
+            source_url: selectedSourceUrl || null,
+            storyboard_id: activeStoryboardId || null,
+            character_id: selectedCharacterId !== 'none' ? selectedCharacterId : null,
+          },
+          context_policy: {
+            require_approval: true,
+          },
+          wait_for_completion: true,
+          timeout_ms: 95000,
+        });
+
+        const validated = await awaitSimlabCompletion(dispatch.run_id, 95000);
+        setSimlabRun(validated.run);
+        setSimlabInsight(validated.insight);
+        setSimlabVariants(validated.variants);
+
+        if (validated.run.verdict !== 'approved') {
+          setSimlabError(validated.insight?.executive_summary || validated.run.failure_reason || 'SimLab recomendou revisao antes de promover o post.');
+        }
+      }
       
       setSlideConfigs(configs);
       setActiveSlideIdx(0);
       
       await new Promise(r => setTimeout(r, 400));
+      completed = true;
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Erro na IA';
-      toast.warning('Erro (Modo Demo Ativo): ' + message);
+      toast.error('Falha real na geracao: ' + message);
+      return;
       
       const configs = Array.from({length: slideCount}).map((_, i) => createSlideConfig({
          templateId: globalTemplate,
@@ -608,8 +669,9 @@ const GeneratorPage = () => {
       setActiveSlideIdx(0);
     } finally {
       setIsGenerating(false);
+      setSimlabLoading(false);
       setGenStep('');
-      setWizardStep(4);
+      setWizardStep(completed ? 4 : 2);
     }
   };
 
@@ -699,7 +761,7 @@ const GeneratorPage = () => {
           storyboard_arc: activeStoryboardArc,
           media_asset_id: preloadedMediaAsset?.id || null,
         },
-        status: 'ready',
+        status: simlabRun?.verdict === 'approved' ? 'ready' : 'draft',
       };
 
       const saveQuery = editingPostId
@@ -726,6 +788,14 @@ const GeneratorPage = () => {
         await supabase.from('posts_v2').update({ image_urls: uploadedUrls }).eq('id', savedPost.id);
       }
 
+      if (simlabRun?.id) {
+        await supabase.from('posts_v2').update({
+          latest_simlab_run_id: simlabRun.id,
+          simlab_status: simlabRun.status,
+          simlab_validated_at: simlabRun.completed_at || new Date().toISOString(),
+        }).eq('id', savedPost.id);
+      }
+
       if (activeStoryboardId) {
         await supabase.from('carousel_storyboards').update({ post_id: savedPost.id }).eq('id', activeStoryboardId);
       }
@@ -737,6 +807,22 @@ const GeneratorPage = () => {
   };
 
   const removeHashtag = (tag: string) => setHashtags(prev => prev.filter(h => h !== tag));
+
+  const refreshSimlabRun = async () => {
+    if (!simlabRun?.id) return;
+    setSimlabLoading(true);
+    try {
+      const status = await awaitSimlabCompletion(simlabRun.id, 15000);
+      setSimlabRun(status.run);
+      setSimlabInsight(status.insight);
+      setSimlabVariants(status.variants);
+      setSimlabError(status.run.failure_reason || null);
+    } catch (error) {
+      setSimlabError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setSimlabLoading(false);
+    }
+  };
 
   if (wizardStep < 4) {
     return (
@@ -1019,6 +1105,17 @@ const GeneratorPage = () => {
 
       {/* ─── COLUNA 3: PAINEL DE PROPRIEDADES (Direita) ─── */}
       <div className="panel-right" style={{ width: 280, minWidth: 280 }}>
+          <div className="border-b p-4" style={{ borderColor: 'var(--border)' }}>
+             <SimlabReviewPanel
+                title="SimLab Gate"
+                run={simlabRun}
+                insight={simlabInsight}
+                variants={simlabVariants}
+                loading={simlabLoading}
+                error={simlabError}
+                onRefresh={simlabRun?.id ? refreshSimlabRun : null}
+             />
+          </div>
           {/* TABS HEADER */}
           <div className="flex border-b text-[10px] font-bold uppercase tracking-widest shrink-0" style={{ borderColor: 'var(--border)' }}>
              <button onClick={() => setActiveTab('visual')} className={`flex-1 py-3.5 flex flex-col items-center gap-1.5 border-b-2 transition-colors ${activeTab==='visual'?'border-purple-500 text-purple-400':'border-transparent text-[color:var(--text-3)] hover:bg-white/5'}`}><LayoutTemplate size={14}/>Visual</button>

@@ -1,19 +1,18 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders, createServiceClient, runJsonTask, safeJsonResponse } from "../_shared/postgen.ts";
 
-const ARC_BY_FUNNEL: Record<string, string> = {
-  Awareness: "hook_reveal",
-  Educativo: "educational_thread",
-  "Captar Leads": "before_after",
-  Vendas: "social_proof_stack",
-  Engajamento: "manifesto",
-};
-
 type StoryboardSlide = {
   role: string;
   headline_draft: string;
   notes: string;
   template_suggestion: string;
+};
+
+const requireText = (value: unknown, field: string) => {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw new Error(`Campo obrigatorio ausente ou invalido: ${field}.`);
+  }
+  return value.trim();
 };
 
 serve(async (req: Request) => {
@@ -35,22 +34,6 @@ serve(async (req: Request) => {
 
     const supabase = createServiceClient();
     const requestedSlides = Math.max(3, Math.min(Number(slides_count) || 6, 10));
-    const fallbackArc = ARC_BY_FUNNEL[funnel_type || ""] || "hook_reveal";
-
-    const fallbackRoles: Record<string, string[]> = {
-      hook_reveal: ["hook", "agitation", "discovery", "solution", "proof", "cta"],
-      educational_thread: ["hook_question", "concept_intro", "deep_dive_1", "deep_dive_2", "common_mistake", "key_insight", "cta"],
-      before_after: ["before_problem", "agitation", "turning_point", "transformation", "after_result", "cta"],
-      social_proof_stack: ["claim", "testimonial_1", "testimonial_2", "data_point", "guarantee_cta"],
-      manifesto: ["declaration", "argument_1", "argument_2", "argument_3", "vulnerable_moment", "cta"],
-    };
-    const roles = (fallbackRoles[fallbackArc] || fallbackRoles.hook_reveal).slice(0, requestedSlides);
-    const fallbackSlides = roles.map((role, index) => ({
-      role,
-      headline_draft: index === 0 ? topic.slice(0, 60) : `${role.replace(/_/g, " ")}: ${topic.slice(0, 40)}`,
-      notes: role === "cta" ? "Feche com uma chamada clara e objetiva." : `Conecte este slide ao tema ${topic}.`,
-      template_suggestion: index === 0 ? "viral-hook" : index === roles.length - 1 ? "clean-white" : "data-insight",
-    }));
 
     const result = await runJsonTask<{
       arc_type?: string;
@@ -76,19 +59,25 @@ Regras:
 Objetivo/funil: ${funnel_type || "Awareness"}
 Numero de slides: ${requestedSlides}`,
       ["groq", "openrouter", "gemini"],
-      {
-        arc_type: fallbackArc,
-        rationale: `Arco sugerido por heuristica para o funil ${funnel_type || "Awareness"}.`,
-        slides_plan: fallbackSlides,
-      },
     );
 
+    const slidesPlan = Array.isArray(result.slides_plan)
+      ? result.slides_plan.map((slide, index) => ({
+          role: requireText(slide.role, `slides_plan[${index}].role`),
+          headline_draft: requireText(slide.headline_draft, `slides_plan[${index}].headline_draft`),
+          notes: requireText(slide.notes, `slides_plan[${index}].notes`),
+          template_suggestion: requireText(slide.template_suggestion, `slides_plan[${index}].template_suggestion`),
+        }))
+      : [];
+
+    if (slidesPlan.length !== requestedSlides) {
+      throw new Error("A IA nao retornou a quantidade exata de slides solicitada.");
+    }
+
     return safeJsonResponse({
-      arc_type: result.arc_type || fallbackArc,
-      rationale: result.rationale || `Arco sugerido por heuristica para o funil ${funnel_type || "Awareness"}.`,
-      slides_plan: Array.isArray(result.slides_plan) && result.slides_plan.length
-        ? result.slides_plan.slice(0, requestedSlides)
-        : fallbackSlides,
+      arc_type: requireText(result.arc_type, "arc_type"),
+      rationale: requireText(result.rationale, "rationale"),
+      slides_plan: slidesPlan,
     });
   } catch (error) {
     return safeJsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);

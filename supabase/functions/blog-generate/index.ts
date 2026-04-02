@@ -1,5 +1,13 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { corsHeaders, createServiceClient, getBrandContext, runJsonTask, safeJsonResponse, scrapeDomWithFirecrawl } from "../_shared/postgen.ts";
+import {
+  corsHeaders,
+  createServiceClient,
+  getBrandContext,
+  runJsonTask,
+  safeJsonResponse,
+  scrapeDomWithFirecrawl,
+} from "../_shared/postgen.ts";
+import { dispatchSimlabRun } from "../_shared/simlab.ts";
 
 const slugify = (value: string) =>
   value
@@ -10,22 +18,33 @@ const slugify = (value: string) =>
     .replace(/^-+|-+$/g, "")
     .slice(0, 96);
 
-const markdownToHtml = (markdown: string) => markdown
-  .split(/\n{2,}/)
-  .map((block) => {
-    const trimmed = block.trim();
-    if (!trimmed) return "";
-    if (trimmed.startsWith("### ")) return `<h3>${trimmed.slice(4)}</h3>`;
-    if (trimmed.startsWith("## ")) return `<h2>${trimmed.slice(3)}</h2>`;
-    if (trimmed.startsWith("# ")) return `<h1>${trimmed.slice(2)}</h1>`;
-    if (trimmed.startsWith("- ")) {
-      const items = trimmed.split("\n").map((line) => `<li>${line.replace(/^- /, "")}</li>`).join("");
-      return `<ul>${items}</ul>`;
-    }
-    return `<p>${trimmed.replace(/\n/g, "<br />")}</p>`;
-  })
-  .filter(Boolean)
-  .join("\n");
+const markdownToHtml = (markdown: string) =>
+  markdown
+    .split(/\n{2,}/)
+    .map((block) => {
+      const trimmed = block.trim();
+      if (!trimmed) return "";
+      if (trimmed.startsWith("### ")) return `<h3>${trimmed.slice(4)}</h3>`;
+      if (trimmed.startsWith("## ")) return `<h2>${trimmed.slice(3)}</h2>`;
+      if (trimmed.startsWith("# ")) return `<h1>${trimmed.slice(2)}</h1>`;
+      if (trimmed.startsWith("- ")) {
+        const items = trimmed
+          .split("\n")
+          .map((line) => `<li>${line.replace(/^- /, "")}</li>`)
+          .join("");
+        return `<ul>${items}</ul>`;
+      }
+      return `<p>${trimmed.replace(/\n/g, "<br />")}</p>`;
+    })
+    .filter(Boolean)
+    .join("\n");
+
+const requireText = (value: unknown, field: string) => {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw new Error(`Campo obrigatorio ausente ou invalido: ${field}.`);
+  }
+  return value.trim();
+};
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -74,18 +93,6 @@ serve(async (req: Request) => {
       articleMarkdown = scraped.markdown || "";
     }
 
-    const fallbackTitle = sourceTopic || "Novo artigo";
-    const fallbackMarkdown = `# ${fallbackTitle}
-
-## Contexto
-${articleMarkdown.slice(0, 800) || "Use este espaço para desenvolver a análise da marca sobre o tema."}
-
-## Perspectiva da marca
-Conecte a notícia ao problema central do público e explique o impacto prático.
-
-## Próximos passos
-Finalize com uma recomendação clara e coerente com o CTA da marca.`;
-
     const generated = await runJsonTask<{
       title?: string;
       slug?: string;
@@ -114,27 +121,26 @@ ${brandContext.system_context}`,
       `Tema principal: ${sourceTopic || topic || "nao informado"}
 URL de referencia: ${resolvedSourceUrl || "nao informada"}
 Material base:
-${articleMarkdown.slice(0, 12000) || "Sem artigo completo. Gere um draft editorial com base no tema."}`,
+${articleMarkdown.slice(0, 12000) || "Sem artigo completo. Gere o artigo a partir do tema informado."}`,
       ["groq", "openrouter", "gemini"],
-      {
-        title: fallbackTitle,
-        slug: slugify(fallbackTitle),
-        meta_description: `${fallbackTitle} com a perspectiva da marca e orientacao pratica.`,
-        keywords: [brandContext.briefing?.segment, sourceTopic].filter(Boolean) as string[],
-        content_markdown: fallbackMarkdown,
-        layout_template: "medium_clean",
-      },
     );
+
+    const title = requireText(generated.title, "title");
+    const contentMarkdown = requireText(generated.content_markdown, "content_markdown");
+    const metaDescription = requireText(generated.meta_description, "meta_description");
 
     const payload = {
       workspace_id,
-      title: generated.title || fallbackTitle,
-      slug: generated.slug || slugify(generated.title || fallbackTitle),
-      meta_description: generated.meta_description || `${fallbackTitle} com perspectiva editorial da marca.`,
+      title,
+      slug: typeof generated.slug === "string" && generated.slug.trim().length > 0 ? slugify(generated.slug) : slugify(title),
+      meta_description: metaDescription,
       keywords: Array.isArray(generated.keywords) ? generated.keywords : [],
-      content_markdown: generated.content_markdown || fallbackMarkdown,
-      content_html: markdownToHtml(generated.content_markdown || fallbackMarkdown),
-      layout_template: generated.layout_template || "medium_clean",
+      content_markdown: contentMarkdown,
+      content_html: markdownToHtml(contentMarkdown),
+      layout_template:
+        typeof generated.layout_template === "string" && generated.layout_template.trim().length > 0
+          ? generated.layout_template
+          : "medium_clean",
       status: "draft",
       source_type: linkedNewsItemId ? "from_news" : resolvedSourceUrl ? "from_url" : "manual",
       source_url: resolvedSourceUrl || null,
@@ -150,15 +156,44 @@ ${articleMarkdown.slice(0, 12000) || "Sem artigo completo. Gere um draft editori
     if (insertError) throw insertError;
 
     if (linkedNewsItemId) {
-      await supabase
-        .from("news_items")
-        .update({ blog_article_id: article.id })
-        .eq("id", linkedNewsItemId);
+      await supabase.from("news_items").update({ blog_article_id: article.id }).eq("id", linkedNewsItemId);
     }
+
+    const simlabDispatch = await dispatchSimlabRun(supabase, {
+      workspaceId: workspace_id,
+      validationType: "content",
+      moduleType: "blog_article",
+      stimulusType: "blog_article",
+      targetTable: "blog_articles",
+      targetId: article.id,
+      objective: sourceTopic || topic || "Validar artigo",
+      audienceHint: typeof brandContext.briefing?.target_audience === "string" ? brandContext.briefing.target_audience : null,
+      variants: [{
+        key: "draft_v1",
+        label: title,
+        artifact: {
+          title,
+          meta_description: metaDescription,
+          content_markdown: contentMarkdown,
+          content_html: markdownToHtml(contentMarkdown),
+          layout_template: payload.layout_template,
+        },
+      }],
+      requestPayload: {
+        source_topic: sourceTopic || topic || null,
+        source_url: resolvedSourceUrl || null,
+      },
+      contextPolicy: {
+        require_approval: true,
+      },
+      requestedBy: "blog_generate",
+      waitForCompletion: false,
+    });
 
     return safeJsonResponse({
       blog_article_id: article.id,
       draft: article,
+      simlab_run_id: simlabDispatch.run.id,
     });
   } catch (error) {
     return safeJsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);

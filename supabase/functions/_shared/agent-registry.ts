@@ -3,7 +3,7 @@ export type AgentModuleType = "content_post";
 export type RegisteredAgent = {
   id: string;
   label: string;
-  role: "strategy" | "copy" | "design" | "qa";
+  role: "strategy" | "copy" | "design" | "qa" | "validation";
   moduleTypes: AgentModuleType[];
   promptVersion: number;
   personaStyle: string;
@@ -65,6 +65,17 @@ export const AGENT_REGISTRY: Record<string, RegisteredAgent> = {
     capabilities: ["quality.review", "brand.consistency", "payload.assembly"],
     allowedTools: ["llm"],
   },
+  simlab_validator: {
+    id: "simlab_validator",
+    label: "SimLab Validator",
+    role: "validation",
+    moduleTypes: ["content_post"],
+    promptVersion: 1,
+    personaStyle: "Consumer-brain validation grounded in real persona runs.",
+    promptTemplate: "Dispatches the content payload to SimLab and returns the market validation verdict.",
+    capabilities: ["simlab.validate", "persona.panel", "market.readiness"],
+    allowedTools: ["simlab"],
+  },
 };
 
 export const getRegisteredAgent = (agentId: string) => AGENT_REGISTRY[agentId] || null;
@@ -76,6 +87,7 @@ export const getContentTaskPlan = (
   const strategistId = crypto.randomUUID();
   const writerId = crypto.randomUUID();
   const designerId = crypto.randomUUID();
+  const simlabId = crypto.randomUUID();
   const qaId = crypto.randomUUID();
 
   return [
@@ -107,10 +119,19 @@ export const getContentTaskPlan = (
       },
     },
     {
-      id: qaId,
-      agentId: "content_qa",
+      id: simlabId,
+      agentId: "simlab_validator",
       taskOrder: 4,
       dependsOnTaskId: designerId,
+      inputPayload: {
+        prompt,
+      },
+    },
+    {
+      id: qaId,
+      agentId: "content_qa",
+      taskOrder: 5,
+      dependsOnTaskId: simlabId,
       inputPayload: {
         prompt,
       },

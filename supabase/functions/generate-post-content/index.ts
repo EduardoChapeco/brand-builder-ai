@@ -32,57 +32,42 @@ type GeneratedPost = {
   hashtags: string;
 };
 
-const createDemoResponse = (topic: string, slideCount: number): GeneratedPost => ({
-  post_title: topic,
-  slides: Array.from({ length: slideCount }, (_, index) => ({
-    index,
-    type: index === 0 ? "hook" : "content",
-    headline: index === 0 ? topic.slice(0, 40) : `Ponto ${index + 1}`,
-    body: "Configure suas chaves de IA em Configuracoes.",
-    cta: index === slideCount - 1 ? "Siga para mais" : null,
-    bg_prompt_hint: `Uma cena editorial em alta definicao sobre ${topic}, parte ${index + 1}.`,
-  })),
-  caption: `${topic}\n\nComente sua opiniao abaixo!`,
-  hashtags: "#ia #marketing #socialmedia #conteudo",
-});
+const requireText = (value: unknown, field: string) => {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw new Error(`Campo obrigatorio ausente ou invalido: ${field}.`);
+  }
+  return value.trim();
+};
 
 const normalizeGeneratedPost = (
   raw: unknown,
-  topic: string,
   slideCount: number,
 ): GeneratedPost => {
   if (!raw || typeof raw !== "object") {
-    return createDemoResponse(topic, slideCount);
+    throw new Error("Resposta da IA invalida para geracao de post.");
   }
 
   const candidate = raw as Partial<GeneratedPost>;
-  const fallback = createDemoResponse(topic, slideCount);
   const slides = Array.isArray(candidate.slides) && candidate.slides.length > 0
     ? candidate.slides.slice(0, slideCount).map((slide, index) => ({
-      index,
-      type: typeof slide?.type === "string" ? slide.type : index === 0 ? "hook" : "content",
-      headline: typeof slide?.headline === "string" && slide.headline.trim()
-        ? slide.headline.trim()
-        : fallback.slides[index]?.headline || `Slide ${index + 1}`,
-      body: typeof slide?.body === "string" ? slide.body.trim() : "",
-      cta: typeof slide?.cta === "string" ? slide.cta.trim() : null,
-      bg_prompt_hint: typeof slide?.bg_prompt_hint === "string" && slide.bg_prompt_hint.trim()
-        ? slide.bg_prompt_hint.trim()
-        : fallback.slides[index]?.bg_prompt_hint || topic,
-    }))
-    : fallback.slides;
+        index,
+        type: requireText(slide?.type, `slides[${index}].type`),
+        headline: requireText(slide?.headline, `slides[${index}].headline`),
+        body: requireText(slide?.body, `slides[${index}].body`),
+        cta: typeof slide?.cta === "string" ? slide.cta.trim() : null,
+        bg_prompt_hint: requireText(slide?.bg_prompt_hint, `slides[${index}].bg_prompt_hint`),
+      }))
+    : [];
+
+  if (slides.length !== slideCount) {
+    throw new Error("Quantidade de slides retornada nao corresponde ao solicitado.");
+  }
 
   return {
-    post_title: typeof candidate.post_title === "string" && candidate.post_title.trim()
-      ? candidate.post_title.trim()
-      : fallback.post_title,
+    post_title: requireText(candidate.post_title, "post_title"),
     slides,
-    caption: typeof candidate.caption === "string" && candidate.caption.trim()
-      ? candidate.caption.trim()
-      : fallback.caption,
-    hashtags: typeof candidate.hashtags === "string" && candidate.hashtags.trim()
-      ? candidate.hashtags.trim()
-      : fallback.hashtags,
+    caption: requireText(candidate.caption, "caption"),
+    hashtags: requireText(candidate.hashtags, "hashtags"),
   };
 };
 
@@ -283,7 +268,7 @@ Se houver arquivo de storyboard, use-o. Siga as instrucoes.`;
         if (res.ok) {
           const payload = await res.json();
           const responseText = payload?.choices?.[0]?.message?.content || "{}";
-          const result = normalizeGeneratedPost(extractJson(responseText), topic, slideCount);
+          const result = normalizeGeneratedPost(extractJson(responseText), slideCount);
 
           return new Response(JSON.stringify(result), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -296,9 +281,7 @@ Se houver arquivo de storyboard, use-o. Siga as instrucoes.`;
       }
     }
 
-    return new Response(JSON.stringify(createDemoResponse(topic, slideCount)), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    throw new Error("Nenhum provedor de IA retornou um payload valido para generate-post-content.");
   } catch (error) {
     return new Response(JSON.stringify({ error: String(error) }), {
       status: 500,
