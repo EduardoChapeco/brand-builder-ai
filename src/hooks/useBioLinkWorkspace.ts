@@ -41,7 +41,7 @@ const useBioLinkWorkspaceController = (): BioLinkWorkspaceValue => {
       setVersions(result.versions);
     } catch (error) {
       console.error(error);
-      toast.error("NÃ£o foi possÃ­vel carregar o Bio Link.");
+      toast.error("Não foi possível carregar o Bio Link.");
     } finally {
       setLoading(false);
     }
@@ -77,7 +77,7 @@ export const BioLinkWorkspaceProvider = ({ children }: { children: ReactNode }) 
 export const useBioLinkWorkspace = () => {
   const context = useContext(BioLinkWorkspaceContext);
   if (!context) {
-    throw new Error("useBioLinkWorkspace must be used within BioLinkWorkspaceProvider");
+    throw new Error("useBioLinkWorkspace deve ser usado dentro de BioLinkWorkspaceProvider");
   }
   return context;
 };

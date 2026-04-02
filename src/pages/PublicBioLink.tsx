@@ -10,6 +10,16 @@ import {
 import { loadPublishedBioLinkBySlug } from "@/lib/biolink/service";
 import { trackBioLinkEvent } from "@/lib/biolink/tracking";
 
+// Slug prefixes that belong to the app workspace router — never resolve as Bio Links
+const APP_PATH_PREFIXES = [
+  "workspace",
+  "workspaces",
+  "onboarding",
+  "dashboard",
+  "settings",
+  "b",
+];
+
 const PublicBioLink = () => {
   const { slug } = useParams<{ slug: string }>();
   const normalizedSlug = useMemo(() => slugifyBioLink(slug || ""), [slug]);
@@ -22,13 +32,14 @@ const PublicBioLink = () => {
 
     const fetchBioLink = async () => {
       if (!normalizedSlug) {
-        setError("Bio Link nao encontrado.");
+        setError("Bio Link não encontrado.");
         setLoading(false);
         return;
       }
 
-      if (isReservedBioLinkSlug(normalizedSlug)) {
-        setError("Slug reservado pela aplicacao.");
+      // Guard against routing into app prefixes
+      if (isReservedBioLinkSlug(normalizedSlug) || APP_PATH_PREFIXES.includes(normalizedSlug)) {
+        setError("Slug reservado pela aplicação.");
         setLoading(false);
         return;
       }
@@ -37,8 +48,8 @@ const PublicBioLink = () => {
         const data = await loadPublishedBioLinkBySlug(normalizedSlug);
         if (!active) return;
 
-        if (!data || data.status === "draft") {
-          setError("Bio Link nao encontrado.");
+        if (!data) {
+          setError("Bio Link não encontrado ou ainda não publicado.");
           return;
         }
 
@@ -48,12 +59,13 @@ const PublicBioLink = () => {
           eventType: "page_view",
           metadata: {
             path: window.location.pathname,
+            referrer: document.referrer,
           },
         });
       } catch (err) {
         console.error(err);
         if (active) {
-          setError("Ocorreu um erro ao carregar.");
+          setError("Ocorreu um erro ao carregar o Bio Link.");
         }
       } finally {
         if (active) {
@@ -69,6 +81,7 @@ const PublicBioLink = () => {
     };
   }, [normalizedSlug]);
 
+  // SEO meta tag management
   useEffect(() => {
     if (!snapshot) return;
 
@@ -84,11 +97,40 @@ const PublicBioLink = () => {
       metaDescription.setAttribute("content", description);
     }
 
+    // Open Graph tags
+    const og = [
+      { property: "og:title", content: title },
+      { property: "og:description", content: description },
+      ...(snapshot.seo.imageUrl ? [{ property: "og:image", content: snapshot.seo.imageUrl }] : []),
+      { property: "og:type", content: "profile" },
+    ];
+    const createdMeta: HTMLMetaElement[] = [];
+    og.forEach(({ property, content }) => {
+      let el = document.querySelector<HTMLMetaElement>(`meta[property="${property}"]`);
+      if (!el) {
+        el = document.createElement("meta");
+        el.setAttribute("property", property);
+        document.head.appendChild(el);
+        createdMeta.push(el);
+      }
+      el.setAttribute("content", content);
+    });
+
+    // Meta Pixel (Facebook/Meta)
+    if (snapshot.tracking.metaPixelId) {
+      const script = document.createElement("script");
+      script.id = "meta-pixel";
+      script.innerHTML = `!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','${snapshot.tracking.metaPixelId}');fbq('track','PageView');`;
+      document.head.appendChild(script);
+      createdMeta.push(script as unknown as HTMLMetaElement);
+    }
+
     return () => {
       document.title = previousTitle;
       if (metaDescription && previousDescription !== null) {
         metaDescription.setAttribute("content", previousDescription);
       }
+      createdMeta.forEach((el) => el.parentNode?.removeChild(el));
     };
   }, [snapshot]);
 
@@ -108,14 +150,14 @@ const PublicBioLink = () => {
       <div className="grid min-h-screen place-items-center bg-[var(--surface-1)] px-6 text-[var(--text-primary)]">
         <div className="text-center">
           <h1 className="mb-3 text-3xl font-bold">404</h1>
-          <p className="mx-auto max-w-md text-sm text-[var(--text-muted)]">{error || "Bio Link nao encontrado."}</p>
+          <p className="mx-auto max-w-md text-sm text-[var(--text-muted)]">{error || "Bio Link não encontrado."}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[var(--surface-1)]">
+    <div className="min-h-screen">
       <BioLinkRenderer snapshot={snapshot} mode="public" />
     </div>
   );

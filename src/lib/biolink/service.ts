@@ -18,6 +18,61 @@ import {
 
 type BioLinkClient = SupabaseClient<Database>;
 
+// Explicit column selects — avoids loading heavy legacy JSONB on every request
+const BIO_LINK_COLUMNS = [
+  "id",
+  "workspace_id",
+  "slug",
+  "status",
+  "display_name",
+  "username",
+  "bio_text",
+  "avatar_url",
+  "header_config",
+  "background_config",
+  "theme_key",
+  "theme_tokens",
+  "layout_template_key",
+  "social_links",
+  "cta_enabled",
+  "cta_text",
+  "cta_url",
+  "seo_title",
+  "seo_description",
+  "seo_image_url",
+  "meta_pixel_id",
+  "ga4_measurement_id",
+  "tiktok_pixel_id",
+  "gtm_id",
+  "published_at",
+  "published_version_id",
+  "latest_version_number",
+  // Legacy columns still needed for normalization / first-time backfill
+  "profile",
+  "links",
+  "blocks",
+  "theme_id",
+  "theme_config",
+  "seo_config",
+  "is_published",
+].join(",");
+
+const BIO_LINK_BLOCK_COLUMNS = [
+  "id",
+  "bio_link_id",
+  "workspace_id",
+  "block_type",
+  "size",
+  "config",
+  "position",
+  "is_visible",
+  "layout_slot",
+  "visibility_rules",
+  "draft_only",
+  "created_at",
+  "updated_at",
+].join(",");
+
 export type BioLinkWorkspaceState = {
   bioLink: BioLinkRow;
   blocks: BioLinkBlock[];
@@ -38,14 +93,14 @@ const ensureBuilderRecord = async (
     briefing,
   });
 
-  const { data, error } = await client.from("bio_links").insert(draft.bioLink).select("*").single();
+  const { data, error } = await client.from("bio_links").insert(draft.bioLink).select(BIO_LINK_COLUMNS).single();
   if (error || !data) throw error || new Error("Não foi possível inicializar o Bio Link.");
 
   const payload = draft.blocks.map((block) => serializeBlockForInsert(data.id, workspace.id, block));
   const { error: blockError } = await client.from("bio_link_blocks").upsert(payload);
   if (blockError) throw blockError;
 
-  return { bioLink: data, blocks: draft.blocks };
+  return { bioLink: data as unknown as BioLinkRow, blocks: draft.blocks };
 };
 
 export const loadWorkspaceBioLink = async (
@@ -56,7 +111,7 @@ export const loadWorkspaceBioLink = async (
 ): Promise<BioLinkWorkspaceState> => {
   const { data: bioLink, error } = await client
     .from("bio_links")
-    .select("*")
+    .select(BIO_LINK_COLUMNS)
     .eq("workspace_id", workspace.id)
     .maybeSingle();
 
@@ -70,13 +125,13 @@ export const loadWorkspaceBioLink = async (
   const [{ data: blockRows, error: blocksError }, { data: versions, error: versionsError }] = await Promise.all([
     client
       .from("bio_link_blocks")
-      .select("*")
-      .eq("bio_link_id", bioLink.id)
+      .select(BIO_LINK_BLOCK_COLUMNS)
+      .eq("bio_link_id", (bioLink as unknown as BioLinkRow).id)
       .order("position", { ascending: true }),
     client
       .from("bio_link_versions")
-      .select("*")
-      .eq("bio_link_id", bioLink.id)
+      .select("id,bio_link_id,workspace_id,version_number,status,summary,created_at,created_by")
+      .eq("bio_link_id", (bioLink as unknown as BioLinkRow).id)
       .order("version_number", { ascending: false })
       .limit(20),
   ]);
@@ -84,10 +139,11 @@ export const loadWorkspaceBioLink = async (
   if (blocksError) throw blocksError;
   if (versionsError) throw versionsError;
 
+  const row = bioLink as unknown as BioLinkRow;
   return {
-    bioLink,
-    blocks: normalizeBioLinkBlocks(blockRows || [], bioLink.blocks, bioLink.links),
-    versions: versions || [],
+    bioLink: row,
+    blocks: normalizeBioLinkBlocks(blockRows || [], row.blocks, row.links),
+    versions: (versions || []) as unknown as BioLinkVersionRow[],
   };
 };
 
@@ -106,22 +162,25 @@ export const saveWorkspaceBioLink = async (params: {
   };
 
   const rowQuery = params.bioLinkId
-    ? client.from("bio_links").update(payload).eq("id", params.bioLinkId).select("*").single()
-    : client.from("bio_links").insert(payload).select("*").single();
+    ? client.from("bio_links").update(payload).eq("id", params.bioLinkId).select(BIO_LINK_COLUMNS).single()
+    : client.from("bio_links").insert(payload).select(BIO_LINK_COLUMNS).single();
 
   const { data: row, error } = await rowQuery;
   if (error || !row) throw error || new Error("Falha ao salvar Bio Link.");
 
+  const bioLinkRow = row as unknown as BioLinkRow;
+
   const normalizedBlocks = params.blocks.map((block, index) => ({ ...block, position: index }));
-  const upsertPayload = normalizedBlocks.map((block) => serializeBlockForInsert(row.id, params.workspaceId, block));
+  const upsertPayload = normalizedBlocks.map((block) => serializeBlockForInsert(bioLinkRow.id, params.workspaceId, block));
 
   const { error: blockError } = await client.from("bio_link_blocks").upsert(upsertPayload);
   if (blockError) throw blockError;
 
+  // Prune blocks removed in the editor
   const { data: dbBlocks, error: currentBlocksError } = await client
     .from("bio_link_blocks")
     .select("id")
-    .eq("bio_link_id", row.id);
+    .eq("bio_link_id", bioLinkRow.id);
   if (currentBlocksError) throw currentBlocksError;
 
   const keepIds = new Set(normalizedBlocks.map((block) => block.id));
@@ -131,7 +190,7 @@ export const saveWorkspaceBioLink = async (params: {
     if (deleteError) throw deleteError;
   }
 
-  return { bioLink: row, blocks: normalizedBlocks };
+  return { bioLink: bioLinkRow, blocks: normalizedBlocks };
 };
 
 export const publishBioLink = async (workspaceId: string, bioLinkId: string) => {
@@ -170,20 +229,25 @@ export const restoreBioLinkVersion = async (workspaceId: string, bioLinkId: stri
 };
 
 export const loadPublishedBioLinkBySlug = async (slug: string, client: BioLinkClient = supabase): Promise<BioLinkPublicSnapshot | null> => {
+  // Allow any status — if a published_version_id exists we serve that snapshot
+  // even if the workspace later moved back to draft
   const { data: row, error } = await client
     .from("bio_links")
-    .select("*")
+    .select(BIO_LINK_COLUMNS)
     .eq("slug", slug)
     .maybeSingle();
 
   if (error) throw error;
   if (!row) return null;
 
-  if (row.published_version_id) {
+  const bioLinkRow = row as unknown as BioLinkRow;
+
+  // If there is a published snapshot, always serve it (even if status is now draft)
+  if (bioLinkRow.published_version_id) {
     const { data: version, error: versionError } = await client
       .from("bio_link_versions")
-      .select("*")
-      .eq("id", row.published_version_id)
+      .select("id,snapshot,status")
+      .eq("id", bioLinkRow.published_version_id)
       .maybeSingle();
 
     if (versionError) throw versionError;
@@ -192,12 +256,15 @@ export const loadPublishedBioLinkBySlug = async (slug: string, client: BioLinkCl
     }
   }
 
+  // No published version — only show if status = published
+  if (bioLinkRow.status !== "published") return null;
+
   const { data: blocks, error: blocksError } = await client
     .from("bio_link_blocks")
-    .select("*")
-    .eq("bio_link_id", row.id)
+    .select(BIO_LINK_BLOCK_COLUMNS)
+    .eq("bio_link_id", bioLinkRow.id)
     .order("position", { ascending: true });
   if (blocksError) throw blocksError;
 
-  return buildBioLinkSnapshot(row, normalizeBioLinkBlocks(blocks || [], row.blocks, row.links));
+  return buildBioLinkSnapshot(bioLinkRow, normalizeBioLinkBlocks(blocks || [], bioLinkRow.blocks, bioLinkRow.links));
 };

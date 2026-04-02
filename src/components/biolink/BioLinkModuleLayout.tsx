@@ -5,11 +5,11 @@ import { cn } from "@/lib/utils";
 
 const tabs = [
   { path: "", label: "Builder", icon: Layers3 },
-  { path: "themes", label: "Themes", icon: PaintBucket },
+  { path: "themes", label: "Temas", icon: PaintBucket },
   { path: "crm", label: "CRM", icon: Users },
   { path: "analytics", label: "Analytics", icon: BarChart3 },
-  { path: "settings", label: "Settings", icon: Settings2 },
-  { path: "versions", label: "Versions", icon: History },
+  { path: "settings", label: "Config", icon: Settings2 },
+  { path: "versions", label: "Versões", icon: History },
 ];
 
 const BioLinkModuleLayout = () => {
@@ -22,10 +22,10 @@ const BioLinkModuleLayout = () => {
         <div className="page-hero">
           <div className="flex items-start justify-between gap-6">
             <div>
-              <p className="page-hero-eyebrow">PublicaÃ§Ãµes â€¢ Bio Link Inteligente</p>
+              <p className="page-hero-eyebrow">Publicações • Bio Link Inteligente</p>
               <h1 className="page-hero-title">Bio Link</h1>
               <p className="page-hero-description">
-                Builder visual, tema, CRM, analytics e publicaÃ§Ã£o pÃºblica em um Ãºnico mÃ³dulo.
+                Builder visual, tema, CRM, analytics e publicação pública em um único módulo.
               </p>
             </div>
             <div
@@ -39,7 +39,7 @@ const BioLinkModuleLayout = () => {
                 <Link2 size={22} />
               </div>
               <div>
-                <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">MÃ³dulo</p>
+                <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">Módulo</p>
                 <p className="text-sm font-semibold text-[var(--text-primary)]">Central da marca</p>
               </div>
             </div>
