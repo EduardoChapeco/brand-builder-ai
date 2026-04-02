@@ -33,10 +33,10 @@ export const WORKSPACE_NAV_ITEMS: WorkspaceNavItem[] = [
 
   { label: "Dashboard", path: "dashboard", icon: Grid2x2, section: "Painel", description: "Visao geral do workspace" },
 
+  { label: "Bio Link Oficial", path: "biolink", icon: Link2, section: "Publicacoes", description: "Link da bio centralizador (Agregador)" },
   { label: "Site Institucional", path: "site-builder", icon: Globe, section: "Publicacoes", description: "Construtor de sites multiplas paginas" },
   { label: "Blog Manager", path: "blog-manager", icon: BookText, section: "Publicacoes", description: "Artigos e portal de conteudos" },
   { label: "News Portal RSS", path: "news-portal", icon: Newspaper, section: "Publicacoes", description: "Curadoria de noticias para o site" },
-  { label: "Bio Link Oficial", path: "biolink", icon: Link2, section: "Publicacoes", description: "Link da bio (Instagram/TikTok)" },
 
   { label: "Briefing", path: "briefing", icon: FileText, section: "Estrategia", description: "Contexto e estrategia da marca" },
   { label: "Brand Kit", path: "brand-kit", icon: Palette, section: "Estrategia", description: "Cores, logo e identidade visual" },
