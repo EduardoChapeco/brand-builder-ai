@@ -1,81 +1,92 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Bot, Globe, LayoutTemplate, Layers, Loader2, MousePointer2, Plus } from "lucide-react";
-import AppSectionLabel from "@/components/shared/AppSectionLabel";
-import EmptyState from "@/components/shared/EmptyState";
-import PageHeader from "@/components/shared/PageHeader";
-import SectionCard from "@/components/shared/SectionCard";
-import SubtleBadge from "@/components/shared/SubtleBadge";
-import { Button } from "@/components/ui/button";
-import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { fromTable } from "@/integrations/supabase/db-custom";
-
-type SiteRow = {
-  id: string;
-  name: string;
-  domain?: string | null;
-  status?: string | null;
-};
-
-type SitePageRow = {
-  website_id: string;
-};
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  Bot,
+  Globe,
+  LayoutTemplate,
+  Layers,
+  Loader2,
+  MousePointer2,
+  Plus,
+  Sparkles,
+} from 'lucide-react';
+import { toast } from 'sonner';
+import AppSectionLabel from '@/components/shared/AppSectionLabel';
+import EmptyState from '@/components/shared/EmptyState';
+import PageHeader from '@/components/shared/PageHeader';
+import SectionCard from '@/components/shared/SectionCard';
+import SubtleBadge from '@/components/shared/SubtleBadge';
+import { Button } from '@/components/ui/button';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
+import { listWebsites } from '@/lib/websites/service';
+import type { WebsiteRecord } from '@/lib/websites/types';
 
 export default function SiteBuilderPage() {
-  const { workspace } = useWorkspace();
   const navigate = useNavigate();
-  const [sites, setSites] = useState<SiteRow[]>([]);
-  const [sitePages, setSitePages] = useState<SitePageRow[]>([]);
+  const { workspace, canEdit } = useWorkspace();
+  const [sites, setSites] = useState<WebsiteRecord[]>([]);
+  const [pageCountBySite, setPageCountBySite] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!workspace?.id) return;
-
     const load = async () => {
-      setLoading(true);
-      const [{ data: siteRows, error: siteError }, { data: pageRows, error: pageError }] = await Promise.all([
-        fromTable("websites")
-          .select("id,name,domain,status")
-          .eq("workspace_id", workspace.id)
-          .order("updated_at", { ascending: false }),
-        fromTable("website_pages")
-          .select("website_id")
-          .in(
-            "website_id",
-            (
-              await fromTable("websites")
-                .select("id")
-                .eq("workspace_id", workspace.id)
-            ).data?.map((site: { id: string }) => site.id) || ["00000000-0000-0000-0000-000000000000"],
-          ),
-      ]);
+      if (!workspace?.id) {
+        setLoading(false);
+        return;
+      }
 
-      if (!siteError) setSites((siteRows || []) as SiteRow[]);
-      if (!pageError) setSitePages((pageRows || []) as SitePageRow[]);
-      setLoading(false);
+      setLoading(true);
+      try {
+        const result = await listWebsites(workspace.id);
+        setSites(result.websites);
+        setPageCountBySite(result.pageCountBySite);
+      } catch (error) {
+        console.error(error);
+        toast.error('Nao foi possivel carregar a biblioteca de sites.');
+      } finally {
+        setLoading(false);
+      }
     };
 
     void load();
   }, [workspace?.id]);
 
-  const pagesBuilt = useMemo(() => sitePages.length, [sitePages.length]);
+  const totalPages = useMemo(
+    () => Object.values(pageCountBySite).reduce((sum, count) => sum + count, 0),
+    [pageCountBySite],
+  );
+
+  const publishedSites = useMemo(
+    () => sites.filter((site) => site.status === 'published').length,
+    [sites],
+  );
+
+  const draftSites = sites.length - publishedSites;
 
   return (
     <div className="page-layout">
       <div className="page-content">
         <div className="page-inner flex max-w-none flex-col gap-6 py-6">
           <PageHeader
-            eyebrow="Site Builder"
-            title="Builder visual conectado ao squad de site"
-            description="O builder visual continua disponivel, mas agora pode disparar o fluxo spec-driven no chat para gerar projetos multi-arquivo vinculados ao site."
+            eyebrow="Website Builder"
+            title="Biblioteca de sites conectada ao editor visual e ao chat"
+            description="O builder agora opera com paginas e secoes canonicamente estruturadas, mantendo compatibilidade com o legado e abrindo o fluxo spec-driven quando o projeto precisa de execucao multi-arquivo."
             className="shadow-none"
             action={
               <div className="flex flex-wrap gap-2">
-                <Button variant="outline" className="rounded-xl shadow-none" onClick={() => navigate("../vibe-coder")}>
+                <Button
+                  variant="outline"
+                  className="rounded-xl shadow-none"
+                  onClick={() => navigate('../vibe-coder')}
+                >
                   <Bot size={14} />
                   Abrir chat spec-driven
                 </Button>
-                <Button className="rounded-xl shadow-none" onClick={() => navigate("new")}>
+                <Button
+                  className="rounded-xl shadow-none"
+                  onClick={() => navigate('new')}
+                  disabled={!canEdit}
+                >
                   <Plus size={14} />
                   Novo site visual
                 </Button>
@@ -87,25 +98,31 @@ export default function SiteBuilderPage() {
             <SectionCard className="shadow-none">
               <AppSectionLabel>Sites</AppSectionLabel>
               <p className="mt-3 text-4xl font-semibold tracking-[-0.05em] text-[var(--text-primary)]">
-                {loading ? "-" : sites.length}
+                {loading ? '-' : sites.length}
               </p>
-              <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">Sites publicados ou em rascunho ligados ao workspace.</p>
+              <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                Instancias visuais conectadas ao runtime publico do workspace.
+              </p>
             </SectionCard>
 
             <SectionCard className="shadow-none">
               <AppSectionLabel>Paginas</AppSectionLabel>
               <p className="mt-3 text-4xl font-semibold tracking-[-0.05em] text-[var(--text-primary)]">
-                {loading ? "-" : pagesBuilt}
+                {loading ? '-' : totalPages}
               </p>
-              <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">Paginas estruturadas dentro do builder visual.</p>
+              <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                Paginas ativas sob a camada de builder com retrocompatibilidade de schema.
+              </p>
             </SectionCard>
 
             <SectionCard className="shadow-none">
-              <AppSectionLabel>Execucao</AppSectionLabel>
+              <AppSectionLabel>Pipeline</AppSectionLabel>
               <p className="mt-3 text-4xl font-semibold tracking-[-0.05em] text-[var(--text-primary)]">
-                {loading ? "-" : sites.length > 0 ? "Ativa" : "Inicial"}
+                {loading ? '-' : `${publishedSites}/${draftSites}`}
               </p>
-              <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">Use o chat spec-driven para gerar a camada multi-arquivo vinculada a um site visual.</p>
+              <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                Sites publicados versus rascunhos em operacao dentro deste workspace.
+              </p>
             </SectionCard>
           </div>
 
@@ -121,21 +138,29 @@ export default function SiteBuilderPage() {
             </div>
 
             {loading ? (
-              <div className="flex min-h-[260px] items-center justify-center">
+              <div className="flex min-h-[280px] items-center justify-center">
                 <Loader2 className="animate-spin text-[var(--text-muted)]" size={28} />
               </div>
             ) : sites.length === 0 ? (
               <EmptyState
                 title="Nenhum site encontrado"
-                description="Crie o primeiro site visual ou inicie pelo chat spec-driven para gerar um projeto vinculado."
+                description="Crie o primeiro site visual ou inicie pelo chat spec-driven para produzir a primeira estrutura completa vinculada ao workspace."
                 icon={LayoutTemplate}
                 action={
                   <div className="flex flex-wrap justify-center gap-3">
-                    <Button variant="outline" className="rounded-xl shadow-none" onClick={() => navigate("../vibe-coder")}>
+                    <Button
+                      variant="outline"
+                      className="rounded-xl shadow-none"
+                      onClick={() => navigate('../vibe-coder')}
+                    >
                       <Bot size={14} />
                       Chat spec-driven
                     </Button>
-                    <Button className="rounded-xl shadow-none" onClick={() => navigate("new")}>
+                    <Button
+                      className="rounded-xl shadow-none"
+                      onClick={() => navigate('new')}
+                      disabled={!canEdit}
+                    >
                       <Plus size={14} />
                       Novo site visual
                     </Button>
@@ -144,39 +169,60 @@ export default function SiteBuilderPage() {
               />
             ) : (
               <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {sites.map((site) => (
-                  <div
-                    key={site.id}
-                    className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-5"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-lg font-semibold tracking-[-0.03em] text-[var(--text-primary)]">{site.name}</p>
-                        <p className="mt-2 text-sm text-[var(--text-secondary)]">
-                          {site.domain || "Sem dominio vinculado"}
-                        </p>
-                      </div>
-                      <SubtleBadge variant={site.status === "published" ? "brand" : "outline"}>
-                        {site.status || "draft"}
-                      </SubtleBadge>
-                    </div>
+                {sites.map((site) => {
+                  const pageCount = pageCountBySite[site.id] || 0;
+                  const isPublished = site.status === 'published';
 
-                    <div className="mt-5 flex flex-wrap gap-2">
-                      <Button variant="outline" className="rounded-xl shadow-none" onClick={() => navigate(site.id)}>
-                        <LayoutTemplate size={14} />
-                        Editor visual
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="rounded-xl shadow-none"
-                        onClick={() => navigate("../vibe-coder", { state: { websiteId: site.id, websiteName: site.name } })}
-                      >
-                        <Bot size={14} />
-                        Abrir no chat
-                      </Button>
+                  return (
+                    <div
+                      key={site.id}
+                      className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-5"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-lg font-semibold tracking-[-0.03em] text-[var(--text-primary)]">
+                            {site.name}
+                          </p>
+                          <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                            {site.domain || 'Sem dominio vinculado'}
+                          </p>
+                        </div>
+                        <SubtleBadge variant={isPublished ? 'brand' : 'outline'}>
+                          {site.status}
+                        </SubtleBadge>
+                      </div>
+
+                      <div className="mt-5 flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                        <span>{pageCount} pagina(s)</span>
+                        <span>•</span>
+                        <span>{isPublished ? 'publicado' : 'rascunho'}</span>
+                      </div>
+
+                      <div className="mt-5 flex flex-wrap gap-2">
+                        <Button
+                          variant="outline"
+                          className="rounded-xl shadow-none"
+                          onClick={() => navigate(site.id)}
+                        >
+                          <LayoutTemplate size={14} />
+                          Editor visual
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="rounded-xl shadow-none"
+                          onClick={() =>
+                            navigate('../vibe-coder', {
+                              state: { websiteId: site.id, websiteName: site.name },
+                            })
+                          }
+                        >
+                          <Bot size={14} />
+                          Abrir no chat
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </SectionCard>
@@ -188,8 +234,10 @@ export default function SiteBuilderPage() {
                   <Globe size={18} className="text-[var(--text-secondary)]" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-[var(--text-primary)]">Site visual</p>
-                  <p className="text-sm text-[var(--text-secondary)]">Builder estruturado com paginas e blocos.</p>
+                  <p className="text-sm font-semibold text-[var(--text-primary)]">Runtime publico</p>
+                  <p className="text-sm leading-6 text-[var(--text-secondary)]">
+                    O site visual segue pronto para publicacao e leitura publica por slug.
+                  </p>
                 </div>
               </div>
             </SectionCard>
@@ -200,8 +248,10 @@ export default function SiteBuilderPage() {
                   <Layers size={18} className="text-[var(--text-secondary)]" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-[var(--text-primary)]">Projeto multi-arquivo</p>
-                  <p className="text-sm text-[var(--text-secondary)]">Executado no target `project_vfs` com preview ao vivo.</p>
+                  <p className="text-sm font-semibold text-[var(--text-primary)]">Secoes canonicas</p>
+                  <p className="text-sm leading-6 text-[var(--text-secondary)]">
+                    Novos sites persistem em `website_sections` e continuam espelhados para o legado.
+                  </p>
                 </div>
               </div>
             </SectionCard>
@@ -209,15 +259,54 @@ export default function SiteBuilderPage() {
             <SectionCard className="shadow-none">
               <div className="flex items-center gap-3">
                 <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
-                  <MousePointer2 size={18} className="text-[var(--text-secondary)]" />
+                  <Sparkles size={18} className="text-[var(--text-secondary)]" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-[var(--text-primary)]">Aprovacao obrigatoria</p>
-                  <p className="text-sm text-[var(--text-secondary)]">Nenhum build sai sem spec validada e aprovada.</p>
+                  <p className="text-sm font-semibold text-[var(--text-primary)]">Spec-driven bridge</p>
+                  <p className="text-sm leading-6 text-[var(--text-secondary)]">
+                    O mesmo site pode abrir o squad de criacao no chat sem perder o contexto do builder.
+                  </p>
                 </div>
               </div>
             </SectionCard>
           </div>
+
+          <SectionCard className="shadow-none">
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-5">
+                <p className="text-sm font-semibold text-[var(--text-primary)]">Editor visual</p>
+                <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                  Selecione o site, organize paginas, reordene secoes e edite o conteudo diretamente no preview.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-5">
+                <p className="text-sm font-semibold text-[var(--text-primary)]">Chat conectado</p>
+                <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                  Quando o escopo exigir aplicacao multi-arquivo, o chat recebe `websiteId` e segue o fluxo aprovado.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-5">
+                <p className="text-sm font-semibold text-[var(--text-primary)]">Migracao gradual</p>
+                <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                  Sites legados continuam abrindo enquanto o editor novo converte a estrutura para o modelo canonico.
+                </p>
+              </div>
+            </div>
+          </SectionCard>
+
+          <SectionCard className="shadow-none">
+            <div className="flex items-center gap-3">
+              <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
+                <MousePointer2 size={18} className="text-[var(--text-secondary)]" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-[var(--text-primary)]">Aprovacao e controle</p>
+                <p className="text-sm leading-6 text-[var(--text-secondary)]">
+                  O builder visual continua livre para edicao direta; o chat segue com gate de spec antes de executar builds mais amplos.
+                </p>
+              </div>
+            </div>
+          </SectionCard>
         </div>
       </div>
     </div>

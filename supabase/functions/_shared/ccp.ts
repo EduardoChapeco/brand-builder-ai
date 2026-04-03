@@ -72,6 +72,42 @@ export interface CCPModulePolicy {
   agents_per_persona: number;
 }
 
+export interface CCPSnapshot {
+  workspace_id: string;
+  snapshot_version: number;
+  generated_at: string;
+  completeness_score: number;
+  company_name: string;
+  tagline: string | null;
+  segment: string | null;
+  target_audience: string | null;
+  audience_age_range: string | null;
+  tone_of_voice: string | null;
+  brand_personality: string | null;
+  main_differentials: string | null;
+  avoid_topics: string | null;
+  content_pillars: string[];
+  keywords: string[];
+  colors: {
+    primary: string;
+    secondary: string;
+    accent: string;
+    bg_dark: string;
+    bg_light: string;
+  };
+  fonts: {
+    heading: string;
+    body: string;
+  };
+  logo_url: string | null;
+  brand_dna: string | null;
+}
+
+export interface CCPSnapshotBundle {
+  snapshot: CCPSnapshot;
+  xml: string;
+}
+
 // ─── Serialização XML (para prompts de IA) ─────────────────────────────────────
 
 /**
@@ -127,6 +163,11 @@ const strArr = (v: unknown): string[] =>
 
 const num = (v: unknown, fallback: number): number =>
   typeof v === "number" && Number.isFinite(v) ? v : fallback;
+
+export const escXml = (val: string | null | undefined): string => {
+  if (!val) return "";
+  return val.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+};
 
 // ─── Snapshot Builder ──────────────────────────────────────────────────────────
 
@@ -202,6 +243,94 @@ export const getCCPSnapshot = async (
 
   SNAPSHOT_CACHE.set(workspaceId, { data: snap, exp: Date.now() + ttlMs });
   return snap;
+};
+
+export const updateCCPCompletenessScore = async (
+  workspaceId: string,
+  supabase: ReturnType<typeof createClient>,
+): Promise<number> => {
+  const { data } = await supabase
+    .from("briefings")
+    .select("company_name,segment,tone_of_voice,target_audience,main_differentials,brand_dna,content_pillars,keywords")
+    .eq("workspace_id", workspaceId)
+    .maybeSingle();
+
+  const briefing = (data || null) as Record<string, unknown> | null;
+  if (!briefing) return 0;
+
+  let score = 0;
+  if (str(briefing.company_name)) score += 15;
+  if (str(briefing.segment)) score += 10;
+  if (str(briefing.tone_of_voice)) score += 15;
+  if (str(briefing.target_audience)) score += 15;
+  if (str(briefing.main_differentials)) score += 10;
+  if (str(briefing.brand_dna)) score += 15;
+  if (strArr(briefing.content_pillars).length >= 3) score += 10;
+  if (strArr(briefing.keywords).length >= 5) score += 10;
+
+  const { error } = await supabase
+    .from("briefings")
+    .update({ updated_at: new Date().toISOString() })
+    .eq("workspace_id", workspaceId);
+
+  if (error) {
+    console.warn("[ccp] could not touch briefing updated_at after completeness refresh:", error.message);
+  }
+
+  return score;
+};
+
+export const getCCPSnapshotBundle = async (
+  supabase: ReturnType<typeof createClient>,
+  workspaceId: string,
+  ttlMs = 30_000,
+): Promise<CCPSnapshotBundle> => {
+  const snap = await getCCPSnapshot(supabase, workspaceId, ttlMs);
+  const completenessScore = await updateCCPCompletenessScore(workspaceId, supabase);
+
+  const snapshot: CCPSnapshot = {
+    workspace_id: workspaceId,
+    snapshot_version: 1,
+    generated_at: new Date().toISOString(),
+    completeness_score: completenessScore,
+    company_name: snap.brand_name,
+    tagline: null,
+    segment: snap.segment || null,
+    target_audience: snap.audience || null,
+    audience_age_range: null,
+    tone_of_voice: snap.tone || null,
+    brand_personality: null,
+    main_differentials: snap.differentials || null,
+    avoid_topics: snap.avoid || null,
+    content_pillars: snap.pillars,
+    keywords: snap.keywords,
+    colors: {
+      primary: snap.color_primary,
+      secondary: snap.color_secondary,
+      accent: snap.color_accent,
+      bg_dark: "#09090F",
+      bg_light: "#FFFFFF",
+    },
+    fonts: {
+      heading: snap.font_headline,
+      body: snap.font_body,
+    },
+    logo_url: snap.logo_url,
+    brand_dna: snap.brand_dna_summary || null,
+  };
+
+  const xml = `<ccp v="${snapshot.snapshot_version}" ws="${workspaceId}">
+  <brand name="${escXml(snapshot.company_name)}" segment="${escXml(snapshot.segment)}" score="${snapshot.completeness_score}"/>
+  <voice tone="${escXml(snapshot.tone_of_voice)}" personality="${escXml(snapshot.brand_personality)}"/>
+  <audience target="${escXml(snapshot.target_audience)}" age="${escXml(snapshot.audience_age_range)}"/>
+  <position differentials="${escXml(snapshot.main_differentials)}" avoid="${escXml(snapshot.avoid_topics)}"/>
+  <pillars>${snapshot.content_pillars.map((item) => `<p>${escXml(item)}</p>`).join("")}</pillars>
+  <keywords>${snapshot.keywords.map((item) => `<k>${escXml(item)}</k>`).join("")}</keywords>
+  <visual primary="${snapshot.colors.primary}" secondary="${snapshot.colors.secondary}" accent="${snapshot.colors.accent}" font_h="${escXml(snapshot.fonts.heading)}" font_b="${escXml(snapshot.fonts.body)}"/>
+  ${snapshot.brand_dna ? `<dna>${escXml(snapshot.brand_dna.substring(0, 1000))}</dna>` : ""}
+</ccp>`;
+
+  return { snapshot, xml };
 };
 
 /**

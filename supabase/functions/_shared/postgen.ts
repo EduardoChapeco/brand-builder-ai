@@ -11,9 +11,12 @@ export type WorkspaceApiKey = {
   provider: string;
   alias?: string | null;
   key_value: string;
+  key_preview?: string | null;
+  key_encrypted?: string | null;
   calls_today: number | null;
   daily_limit: number | null;
   is_active: boolean | null;
+  last_429_at?: string | null;
 };
 
 export type BrandContext = {
@@ -63,14 +66,41 @@ export const listWorkspaceKeys = async (
 ) => {
   const { data, error } = await supabase
     .from("api_keys")
-    .select("*")
+    .select("id,provider,alias,key_value,key_preview,key_encrypted,calls_today,daily_limit,is_active,last_429_at")
     .eq("workspace_id", workspaceId)
     .eq("is_active", true)
     .in("provider", providers)
+    .is("deleted_at", null)
     .order("calls_today", { ascending: true });
 
   if (error) throw error;
-  return (data || []) as WorkspaceApiKey[];
+
+  const appSecret = Deno.env.get("APP_ENCRYPTION_SECRET");
+  const keys = (data || []) as Array<WorkspaceApiKey & { key_encrypted?: string | null }>;
+
+  const resolved = await Promise.all(
+    keys.map(async (key) => {
+      if (key.key_encrypted && appSecret) {
+        const { data: decrypted, error: decryptError } = await supabase.rpc("get_api_key", {
+          p_key_id: key.id,
+          p_app_secret: appSecret,
+        });
+
+        if (!decryptError && typeof decrypted === "string" && decrypted.length > 0) {
+          return {
+            ...key,
+            key_value: decrypted,
+          };
+        }
+      }
+
+      return key.key_value
+        ? key
+        : null;
+    }),
+  );
+
+  return resolved.filter((item): item is WorkspaceApiKey => Boolean(item));
 };
 
 export const selectWorkspaceKey = async (

@@ -10,7 +10,7 @@ export const SectionCard = ({
 }) => (
   <section
     className={cn(
-      "rounded-2xl border border-[var(--border)] bg-[var(--surface-card)] p-6 shadow-[var(--shadow-card)]",
+      "rounded-2xl border border-[var(--border)] bg-[var(--surface-card)] p-6 shadow-none",
       className,
     )}
   >
@@ -19,4 +19,3 @@ export const SectionCard = ({
 );
 
 export default SectionCard;
-

@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
+import { MCPProvider } from "@/contexts/MCPContext";
 import AppShell from "@/components/AppShell";
 import WorkspacesPage from "@/pages/WorkspacesPage";
 import OnboardingPage from "@/pages/OnboardingPage";
@@ -67,7 +68,9 @@ const App = () => (
             path="/workspace/:workspaceId/*"
             element={
               <WorkspaceProvider>
-                <AppShell />
+                <MCPProvider>
+                  <AppShell />
+                </MCPProvider>
               </WorkspaceProvider>
             }
           >

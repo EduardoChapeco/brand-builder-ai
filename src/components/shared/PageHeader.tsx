@@ -16,7 +16,7 @@ export const PageHeader = ({
 }) => (
   <header
     className={cn(
-      "rounded-2xl border border-[var(--border)] bg-[linear-gradient(180deg,var(--surface-card)_0%,var(--surface-2)_100%)] px-6 py-6 shadow-[var(--shadow-card)]",
+      "rounded-2xl border border-[var(--border)] bg-[linear-gradient(180deg,var(--surface-card)_0%,var(--surface-2)_100%)] px-6 py-6 shadow-none",
       className,
     )}
   >
@@ -42,4 +42,3 @@ export const PageHeader = ({
 );
 
 export default PageHeader;
-

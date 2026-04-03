@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Eye, EyeOff, Key, Plus, Rss, Settings, Trash2 } from 'lucide-react';
+import { Key, Plus, Rss, Settings, Trash2 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import AppSectionLabel from '@/components/shared/AppSectionLabel';
@@ -12,6 +12,8 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { supabase } from '@/integrations/supabase/client';
+import { fromTable } from '@/integrations/supabase/db-custom';
+import { archiveSecureApiKey, createSecureApiKey } from '@/lib/apiKeys';
 
 type ProviderId =
   | 'groq'
@@ -31,7 +33,7 @@ interface ApiKeyRecord {
   id: string;
   provider: ProviderId;
   alias: string | null;
-  key_value: string;
+  key_preview: string | null;
   calls_today: number | null;
   daily_limit: number | null;
   is_active: boolean | null;
@@ -188,7 +190,6 @@ const SettingsPage = () => {
 
   const [apiKeys, setApiKeys] = useState<ApiKeyRecord[]>([]);
   const [rssFeeds, setRssFeeds] = useState<RssFeedRecord[]>([]);
-  const [showValues, setShowValues] = useState<Record<string, boolean>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [newFeed, setNewFeed] = useState({ name: '', url: '', category: 'Tecnologia' });
   const [preferences, setPreferences] = useState<GenerationPreferences>({
@@ -224,8 +225,8 @@ const SettingsPage = () => {
     setIsLoading(true);
     try {
       const [{ data: keyRows, error: keyError }, { data: feedRows, error: feedError }] = await Promise.all([
-        supabase.from('api_keys').select('*').eq('workspace_id', workspace.id).order('created_at'),
-        supabase.from('rss_feeds').select('*').eq('workspace_id', workspace.id).order('created_at'),
+        fromTable('api_keys').select('id,provider,alias,key_preview,calls_today,daily_limit,is_active').eq('workspace_id', workspace.id).is('deleted_at', null).order('created_at'),
+        supabase.from('rss_feeds').select('id,name,url,category,is_active').eq('workspace_id', workspace.id).order('created_at'),
       ]);
 
       if (keyError) throw keyError;
@@ -278,39 +279,35 @@ const SettingsPage = () => {
       return;
     }
 
-    const { data, error } = await supabase
-      .from('api_keys')
-      .insert({
-        workspace_id: workspace.id,
+    try {
+      const data = await createSecureApiKey({
+        workspaceId: workspace.id,
         provider,
         alias: draft.alias.trim(),
-        key_value: draft.key_value.trim(),
-        daily_limit: draft.daily_limit,
-      })
-      .select()
-      .single();
+        keyValue: draft.key_value.trim(),
+        dailyLimit: draft.daily_limit,
+      });
 
-    if (error) {
+      setApiKeys((current) => [...current, data as ApiKeyRecord]);
+      setKeyDrafts((current) => ({ ...current, [provider]: createDraft(provider) }));
+      toast.success(`Chave ${provider} adicionada`);
+    } catch (error) {
       toast.error('Erro ao salvar a chave');
-      return;
+      console.error(error);
     }
-
-    setApiKeys((current) => [...current, data as ApiKeyRecord]);
-    setKeyDrafts((current) => ({ ...current, [provider]: createDraft(provider) }));
-    toast.success(`Chave ${provider} adicionada`);
   };
 
   const deleteKey = async (id: string) => {
-    if (!confirm('Remover esta chave?')) return;
+    if (!workspace?.id) return;
 
-    const { error } = await supabase.from('api_keys').delete().eq('id', id);
-    if (error) {
+    try {
+      await archiveSecureApiKey({ workspaceId: workspace.id, keyId: id });
+      setApiKeys((current) => current.filter((item) => item.id !== id));
+      toast.success('Chave removida');
+    } catch (error) {
       toast.error('Erro ao remover a chave');
-      return;
+      console.error(error);
     }
-
-    setApiKeys((current) => current.filter((item) => item.id !== id));
-    toast.success('Chave removida');
   };
 
   const toggleKey = async (id: string, nextValue: boolean) => {
@@ -393,10 +390,7 @@ const SettingsPage = () => {
     [apiKeys, rssFeeds],
   );
 
-  const renderKeyValue = (key: ApiKeyRecord) => {
-    if (showValues[key.id]) return key.key_value;
-    return `${'*'.repeat(16)}${key.key_value.slice(-6)}`;
-  };
+  const renderKeyValue = (key: ApiKeyRecord) => `••••••••••••${key.key_preview || '----'}`;
 
   return (
     <div className="page-layout">
@@ -489,9 +483,6 @@ const SettingsPage = () => {
                               <span className="text-xs font-mono text-[var(--text-muted)]">
                                 {key.calls_today || 0}/{key.daily_limit || 0}
                               </span>
-                              <Button variant="ghost" size="icon" onClick={() => setShowValues((current) => ({ ...current, [key.id]: !current[key.id] }))}>
-                                {showValues[key.id] ? <EyeOff size={16} /> : <Eye size={16} />}
-                              </Button>
                               <Button variant="ghost" size="icon" onClick={() => toggleKey(key.id, !key.is_active)}>
                                 <Settings size={16} />
                               </Button>

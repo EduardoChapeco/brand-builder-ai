@@ -14,7 +14,7 @@ export const MetricCard = ({
 }) => (
   <div
     className={cn(
-      "rounded-2xl border border-[var(--border)] bg-[var(--surface-card)] p-5 shadow-[var(--shadow-card)]",
+      "rounded-2xl border border-[var(--border)] bg-[var(--surface-card)] p-5 shadow-none",
       className,
     )}
   >
@@ -35,4 +35,3 @@ export const MetricCard = ({
 );
 
 export default MetricCard;
-

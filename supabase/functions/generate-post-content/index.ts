@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { getNextKey } from "../_shared/key-orchestrator.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -84,22 +85,14 @@ const fetchArticleContext = async (
 ): Promise<ArticleContext | null> => {
   if (!sourceUrl) return null;
 
-  const { data: key } = await supabase
-    .from("api_keys")
-    .select("id,key_value,calls_today")
-    .eq("workspace_id", workspaceId)
-    .eq("provider", "firecrawl")
-    .eq("is_active", true)
-    .order("calls_today", { ascending: true })
-    .maybeSingle();
-
-  if (!key?.key_value) return null;
+  const key = await getNextKey({ workspaceId, provider: "firecrawl" }, supabase);
+  if (!key) return null;
 
   try {
     const response = await fetch(FIRECRAWL_API, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${key.key_value}`,
+        Authorization: `Bearer ${key.keyDecrypted}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -117,10 +110,9 @@ const fetchArticleContext = async (
     await supabase
       .from("api_keys")
       .update({
-        calls_today: ((key.calls_today as number) || 0) + 1,
         last_used_at: new Date().toISOString(),
       })
-      .eq("id", key.id as string);
+      .eq("id", key.keyId);
 
     if (!markdown) return null;
     return { markdown, title };
@@ -159,12 +151,12 @@ serve(async (req: Request) => {
     const [{ data: briefing }, { data: brandKit }, { data: recentPosts }] = await Promise.all([
       supabase
         .from("briefings")
-        .select("*")
+        .select("company_name,segment,target_audience,main_differentials,content_pillars,tone_of_voice,viral_patterns_cache")
         .eq("workspace_id", workspace_id)
         .maybeSingle(),
       supabase
         .from("brand_kits")
-        .select("*")
+        .select("color_primary,color_secondary,color_accent")
         .eq("workspace_id", workspace_id)
         .maybeSingle(),
       supabase

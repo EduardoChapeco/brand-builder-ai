@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { listWorkspaceKeys, markKeyUsage } from "../_shared/postgen.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -8,14 +9,6 @@ const corsHeaders = {
 
 const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 type SupabaseClient = ReturnType<typeof createClient>;
-
-type ApiKeyRow = {
-  id: string;
-  provider: string;
-  key_value: string;
-  calls_today: number | null;
-  daily_limit: number | null;
-};
 
 type ScrapeResult = {
   markdown: string;
@@ -37,39 +30,22 @@ const markKeyError = async (
     .eq("id", keyId);
 };
 
-const incrementKeyUsage = async (
-  supabase: SupabaseClient,
-  key: ApiKeyRow,
-) => {
-  await supabase
-    .from("api_keys")
-    .update({
-      calls_today: (key.calls_today || 0) + 1,
-      last_used_at: new Date().toISOString(),
-      last_error: null,
-    })
-    .eq("id", key.id);
-};
-
 const scrapeUrl = async (
   supabase: SupabaseClient,
   workspaceId: string,
   url: string,
 ): Promise<ScrapeResult> => {
-  const { data: keys } = await supabase
-    .from("api_keys")
-    .select("*")
-    .eq("workspace_id", workspaceId)
-    .eq("provider", "firecrawl")
-    .eq("is_active", true)
-    .order("calls_today", { ascending: true })
-    .limit(3);
+  const keys = await listWorkspaceKeys(
+    supabase as never,
+    workspaceId,
+    ["firecrawl"],
+  );
 
   if (!keys?.length) {
     throw new Error("Nenhuma chave Firecrawl configurada. Adicione em Integrações & APIs.");
   }
 
-  for (const key of keys as ApiKeyRow[]) {
+  for (const key of keys) {
     if ((key.calls_today || 0) >= (key.daily_limit || 0)) continue;
 
     try {
@@ -104,7 +80,7 @@ const scrapeUrl = async (
         throw new Error("Firecrawl retornou markdown vazio.");
       }
 
-      await incrementKeyUsage(supabase, key);
+      await markKeyUsage(supabase as never, key);
 
       return {
         markdown: markdown.slice(0, 14000),

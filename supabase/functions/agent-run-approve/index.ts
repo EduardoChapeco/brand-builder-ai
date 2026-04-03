@@ -26,7 +26,7 @@ serve(async (req: Request) => {
     const supabase = createServiceClient();
     const { data: run, error: runError } = await supabase
       .from("agent_prds")
-      .select("*")
+      .select("id,workspace_id,module_type,status,identification,original_prompt,mode")
       .eq("id", body.prd_id)
       .single();
 
@@ -44,7 +44,7 @@ serve(async (req: Request) => {
 
     const { data: latestSpecArtifact, error: artifactError } = await supabase
       .from("agent_artifacts")
-      .select("*")
+      .select("id,prd_id,workspace_id,artifact_kind,version_number,status")
       .eq("prd_id", run.id)
       .eq("workspace_id", run.workspace_id)
       .eq("artifact_kind", "spec")

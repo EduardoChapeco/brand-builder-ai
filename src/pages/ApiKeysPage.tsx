@@ -1,14 +1,19 @@
-import { useCallback, useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useWorkspace } from '@/contexts/WorkspaceContext';
-import { Key, Plus, Trash2, CheckCircle, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { AlertCircle, Key, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import PageHeader from '@/components/shared/PageHeader';
+import SectionCard from '@/components/shared/SectionCard';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
+import { fromTable } from '@/integrations/supabase/db-custom';
+import { archiveSecureApiKey, createSecureApiKey } from '@/lib/apiKeys';
 
 type ApiKeyRow = {
   id: string;
   provider: string;
   alias: string | null;
-  key_value: string;
+  key_preview: string | null;
   is_active: boolean;
 };
 
@@ -28,184 +33,198 @@ export default function ApiKeysPage() {
   const workspaceId = workspace?.id;
   const [keys, setKeys] = useState<ApiKeyRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  
   const [newProvider, setNewProvider] = useState('groq');
   const [newKeyValue, setNewKeyValue] = useState('');
   const [newAlias, setNewAlias] = useState('');
-  const [showKey, setShowKey] = useState<string | null>(null);
 
   const loadKeys = useCallback(async () => {
+    if (!workspaceId) return;
+
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('api_keys')
-        .select('*')
-        .eq('workspace_id', workspaceId!)
+      const { data, error } = await fromTable('api_keys')
+        .select('id,provider,alias,key_preview,is_active')
+        .eq('workspace_id', workspaceId)
+        .is('deleted_at', null)
         .order('provider', { ascending: true });
-        
+
       if (error) throw error;
-      setKeys(data || []);
+      setKeys((data || []) as ApiKeyRow[]);
     } catch (error) {
-      toast.error('Erro ao carregar chaves: ' + getErrorMessage(error));
+      toast.error(`Erro ao carregar chaves: ${getErrorMessage(error)}`);
     } finally {
       setIsLoading(false);
     }
   }, [workspaceId]);
 
   useEffect(() => {
-    if (workspaceId) {
-      loadKeys();
-    }
-  }, [workspaceId, loadKeys]);
+    void loadKeys();
+  }, [loadKeys]);
 
   const handleAddKey = async () => {
+    if (!workspaceId) return;
     if (!newKeyValue.trim()) {
-      toast.warning('Insira uma chave válida');
+      toast.warning('Insira uma chave valida');
       return;
     }
-    
+
     try {
-      const { error } = await supabase.from('api_keys').insert({
-        workspace_id: workspaceId!,
+      await createSecureApiKey({
+        workspaceId,
         provider: newProvider,
-        key_value: newKeyValue.trim(),
         alias: newAlias.trim() || null,
-        is_active: true
+        keyValue: newKeyValue.trim(),
+        dailyLimit: 200,
       });
-      
-      if (error) throw error;
-      
-      toast.success('Chave adicionada com sucesso!');
+
       setNewKeyValue('');
       setNewAlias('');
-      loadKeys();
+      await loadKeys();
+      toast.success('Chave adicionada com sucesso.');
     } catch (error) {
-      toast.error('Erro ao adicionar chave: ' + getErrorMessage(error));
+      toast.error(`Erro ao adicionar chave: ${getErrorMessage(error)}`);
     }
   };
 
   const handleRemoveKey = async (id: string) => {
+    if (!workspaceId) return;
+
     try {
-      const { error } = await supabase.from('api_keys').delete().eq('id', id);
-      if (error) throw error;
-      toast.success('Chave removida');
-      loadKeys();
+      await archiveSecureApiKey({ workspaceId, keyId: id });
+      await loadKeys();
+      toast.success('Chave removida.');
     } catch (error) {
-      toast.error('Erro ao remover chave: ' + getErrorMessage(error));
+      toast.error(`Erro ao remover chave: ${getErrorMessage(error)}`);
     }
   };
 
   return (
-    <div className="flex-1 overflow-y-auto page-transition pb-24" style={{ backgroundColor: 'var(--bg-app)' }}>
-      <header className="px-6 py-8 border-b" style={{ borderColor: 'var(--border)' }}>
-        <h1 className="text-2xl font-bold tracking-tight mb-2" style={{ color: 'var(--text-1)' }}>Integrações & APIs</h1>
-        <p style={{ color: 'var(--text-3)' }}>
-          Configure as chaves do seu esquadrão de agentes de IA e raspagem de dados.
-        </p>
-      </header>
+    <div className="page-layout">
+      <div className="page-content no-scrollbar">
+        <div className="page-inner space-y-6 py-6">
+          <PageHeader
+            eyebrow="Seguranca"
+            title="Chaves e integracoes"
+            description="As credenciais do workspace agora seguem write-path seguro com criptografia e preview mascarado."
+          />
 
-      <div className="p-6 max-w-4xl mx-auto space-y-8">
-        {/* ADD NEW KEY */}
-        <div className="p-6 rounded-2xl border" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)' }}>
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--text-1)' }}>
-            <Key size={18} style={{ color: 'var(--primary)' }} />
-            Adicionar Nova Chave
-          </h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-            <div className="space-y-2">
-              <label className="text-xs font-medium" style={{ color: 'var(--text-2)' }}>Provedor</label>
-              <select 
-                value={newProvider} 
-                onChange={e => setNewProvider(e.target.value)}
-                className="w-full text-sm rounded-xl py-2 px-3 border outline-none"
-                style={{ backgroundColor: 'var(--bg-elevated)', borderColor: 'var(--border)', color: 'var(--text-1)' }}
-              >
-                {PROVIDERS.map(p => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
-            </div>
-            
-            <div className="space-y-2 md:col-span-2">
-              <label className="text-xs font-medium" style={{ color: 'var(--text-2)' }}>API Key</label>
-              <input 
-                type="password" 
-                value={newKeyValue} 
-                onChange={e => setNewKeyValue(e.target.value)}
-                placeholder="sk-..."
-                className="w-full text-sm rounded-xl py-2 px-3 border outline-none"
-                style={{ backgroundColor: 'var(--bg-elevated)', borderColor: 'var(--border)', color: 'var(--text-1)' }}
-              />
+          <SectionCard className="space-y-5">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface-2)] text-[var(--workspace-brand)]">
+                <Key size={18} />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-[var(--text-primary)]">Adicionar nova chave</h2>
+                <p className="text-sm text-[var(--text-secondary)]">Somente o preview fica disponivel no cliente.</p>
+              </div>
             </div>
 
-            <button 
-              onClick={handleAddKey}
-              className="flex items-center justify-center gap-2 py-2 px-4 rounded-xl text-sm font-semibold transition-transform hover:scale-[1.02]"
-              style={{ backgroundColor: 'var(--primary)', color: '#fff' }}
-            >
-              <Plus size={16} /> Adicionar
-            </button>
-          </div>
-          <p className="text-xs mt-3" style={{ color: 'var(--text-3)' }}>
-            * As chaves são armazenadas associadas a este Workspace. Nossos módulos vão tentar usar suas chaves usando estratégia round-robin se houver mais de uma.
-          </p>
-        </div>
+            <div className="grid gap-4 md:grid-cols-[180px_1fr_200px]">
+              <label className="space-y-2">
+                <span className="text-xs font-medium uppercase tracking-[0.16em] text-[var(--text-muted)]">Provider</span>
+                <select
+                  value={newProvider}
+                  onChange={(event) => setNewProvider(event.target.value)}
+                  className="h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 text-sm text-[var(--text-primary)]"
+                >
+                  {PROVIDERS.map((provider) => (
+                    <option key={provider.id} value={provider.id}>
+                      {provider.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
 
-        {/* LIST KEYS */}
-        <div>
-          <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-2)' }}>Chaves Ativas</h3>
-          
-          {isLoading ? (
-            <p className="text-sm" style={{ color: 'var(--text-3)' }}>Carregando...</p>
-          ) : keys.length === 0 ? (
-            <div className="text-center py-10 rounded-2xl border border-dashed" style={{ borderColor: 'var(--border)' }}>
-              <AlertCircle size={32} className="mx-auto mb-3 opacity-20" />
-              <p className="text-sm" style={{ color: 'var(--text-2)' }}>Nenhuma chave configurada ainda.</p>
+              <label className="space-y-2">
+                <span className="text-xs font-medium uppercase tracking-[0.16em] text-[var(--text-muted)]">API key</span>
+                <Input
+                  type="password"
+                  value={newKeyValue}
+                  onChange={(event) => setNewKeyValue(event.target.value)}
+                  placeholder="sk-..."
+                  className="h-11 rounded-xl bg-[var(--surface-2)]"
+                />
+              </label>
+
+              <label className="space-y-2">
+                <span className="text-xs font-medium uppercase tracking-[0.16em] text-[var(--text-muted)]">Alias</span>
+                <Input
+                  value={newAlias}
+                  onChange={(event) => setNewAlias(event.target.value)}
+                  placeholder="Alias interno"
+                  className="h-11 rounded-xl bg-[var(--surface-2)]"
+                />
+              </label>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {keys.map(k => {
-                const providerInfo = PROVIDERS.find(p => p.id === k.provider) || { name: k.provider };
-                const isShowing = showKey === k.id;
-                
-                return (
-                  <div key={k.id} className="p-4 rounded-xl flex flex-col gap-3 border" style={{ backgroundColor: 'var(--bg-elevated)', borderColor: 'var(--border)' }}>
-                    <div className="flex justify-between items-start">
+
+            <div className="flex justify-end">
+              <Button onClick={handleAddKey} className="rounded-xl px-5 shadow-none">
+                <Plus size={14} />
+                Adicionar chave
+              </Button>
+            </div>
+          </SectionCard>
+
+          <SectionCard className="space-y-4">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold text-[var(--text-primary)]">Chaves ativas</h2>
+                <p className="text-sm text-[var(--text-secondary)]">Visualizacao mascarada e sem surfaces hardcoded.</p>
+              </div>
+            </div>
+
+            {isLoading ? (
+              <div className="rounded-2xl border border-dashed border-[var(--border)] bg-[var(--surface-2)] px-4 py-8 text-sm text-[var(--text-secondary)]">
+                Carregando chaves...
+              </div>
+            ) : keys.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-[var(--border)] bg-[var(--surface-2)] px-4 py-10 text-center">
+                <AlertCircle size={32} className="mx-auto mb-3 text-[var(--text-muted)]" />
+                <p className="text-sm text-[var(--text-secondary)]">Nenhuma chave configurada ainda.</p>
+              </div>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2">
+                {keys.map((key) => {
+                  const providerInfo = PROVIDERS.find((provider) => provider.id === key.provider) || {
+                    name: key.provider,
+                  };
+
+                  return (
+                    <div
+                      key={key.id}
+                      className="flex flex-col gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4"
+                    >
+                      <div className="flex items-start justify-between gap-3">
                         <div>
-                          <p className="text-sm font-semibold" style={{ color: 'var(--text-1)' }}>{providerInfo.name}</p>
-                          <p className="text-[10px] uppercase font-bold tracking-wider" style={{ color: 'var(--primary)' }}>
-                            {k.is_active ? 'ATIVO' : 'INATIVO'}
+                          <p className="text-sm font-semibold text-[var(--text-primary)]">{providerInfo.name}</p>
+                          <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--workspace-brand)]">
+                            {key.is_active ? 'Ativa' : 'Pausada'}
                           </p>
                         </div>
-                        <button 
-                          onClick={() => handleRemoveKey(k.id)}
-                          className="p-1.5 rounded-md hover:bg-red-500/10 text-red-500 transition-colors"
-                          title="Remover chave"
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-red-500 shadow-none hover:bg-red-500/10 hover:text-red-600"
+                          onClick={() => void handleRemoveKey(key.id)}
                         >
                           <Trash2 size={14} />
-                        </button>
-                    </div>
-                    
-                    <div className="flex items-center gap-2 p-2 rounded-lg bg-black/5 dark:bg-black/30">
-                      <code className="text-xs font-mono flex-1 truncate" style={{ color: 'var(--text-2)' }}>
-                        {isShowing ? k.key_value : '••••••••••••••••••••••••••••••••'}
-                      </code>
-                      <button 
-                        onClick={() => setShowKey(isShowing ? null : k.id)}
-                        className="p-1 opacity-50 hover:opacity-100 transition-opacity"
-                        style={{ color: 'var(--text-2)' }}
-                      >
-                        {isShowing ? <EyeOff size={14} /> : <Eye size={14} />}
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+                        </Button>
+                      </div>
 
+                      <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-card)] px-3 py-2">
+                        <code className="block truncate text-xs text-[var(--text-secondary)]">
+                          {`••••••••••••${key.key_preview || '----'}`}
+                        </code>
+                      </div>
+
+                      <p className="text-xs text-[var(--text-muted)]">{key.alias || 'Sem alias definido'}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </SectionCard>
+        </div>
       </div>
     </div>
   );

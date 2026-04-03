@@ -509,7 +509,7 @@ const BioLinkPage = () => {
         </div>
 
         {/* Phone frame */}
-        <div className="w-full max-w-[420px] overflow-hidden rounded-[36px] border-4 border-[var(--border)] shadow-2xl">
+        <div className="w-full max-w-[420px] overflow-hidden rounded-[36px] border-4 border-[var(--border)] shadow-none">
           <BioLinkRenderer
             snapshot={snapshot}
             mode="preview"
