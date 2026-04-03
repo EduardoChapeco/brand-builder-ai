@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import { Globe, Save, Shield, Zap } from "lucide-react";
+import { Globe, Save, Shield, Zap, Loader2, ExternalLink, Copy } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,7 +8,7 @@ import { useBioLinkWorkspace } from "@/hooks/useBioLinkWorkspace";
 import { saveWorkspaceBioLink } from "@/lib/biolink/service";
 import { slugifyBioLink } from "@/lib/biolink/registry";
 
-const BioLinkSettingsPage = () => {
+export default function BioLinkSettingsPage() {
   const { workspace, bioLink, blocks, refresh } = useBioLinkWorkspace();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
@@ -38,14 +37,16 @@ const BioLinkSettingsPage = () => {
   }, [bioLink]);
 
   if (!workspace || !bioLink) {
-    return <div className="page-inner">Carregando configuracoes...</div>;
+    return (
+      <div className="flex items-center justify-center py-20 text-stone-500">
+        <Loader2 size={20} className="animate-spin mr-2"/> Carregando configurações...
+      </div>
+    );
   }
 
   const publicUrl = `${window.location.origin}/${form.slug || bioLink.slug}`;
-
-  const updateField = (field: keyof typeof form, value: string) => {
-    setForm((current) => ({ ...current, [field]: value }));
-  };
+  const updateField = (field: keyof typeof form, value: string) =>
+    setForm((f) => ({ ...f, [field]: value }));
 
   const saveSettings = async () => {
     setSaving(true);
@@ -53,6 +54,7 @@ const BioLinkSettingsPage = () => {
       await saveWorkspaceBioLink({
         bioLinkId: bioLink.id,
         workspaceId: workspace.id,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         bioLink: {
           ...bioLink,
           slug: slugifyBioLink(form.slug),
@@ -63,109 +65,119 @@ const BioLinkSettingsPage = () => {
           ga4_measurement_id: form.ga4MeasurementId || null,
           tiktok_pixel_id: form.tiktokPixelId || null,
           gtm_id: form.gtmId || null,
-        },
+        } as Parameters<typeof saveWorkspaceBioLink>[0]['bioLink'],
         blocks,
       });
-      toast.success("Configuracoes salvas.");
+      toast.success("Configurações salvas com sucesso.");
       await refresh();
-    } catch (error) {
-      console.error(error);
-      toast.error("Nao foi possivel salvar as configuracoes.");
+    } catch (err) {
+      console.error(err);
+      toast.error("Não foi possível salvar as configurações.");
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <div className="page-inner space-y-6">
-      <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-        <div className="space-y-6 rounded-3xl border border-[var(--border)] bg-[var(--surface-card)] p-6">
+    <div className="space-y-6">
+      
+      {/* URL Card */}
+      <div className="bg-[#0a0a0a] border border-[#1f1f1f] rounded-[28px] p-6">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-stone-500 mb-1">URL Pública do BioLink</p>
+        <div className="flex items-center gap-2 mt-3">
+          <div className="flex-1 font-mono text-xs text-[#3b82f6] bg-black border border-[#222] px-4 py-3 rounded-[14px] truncate">
+            {publicUrl}
+          </div>
+          <button onClick={() => { void navigator.clipboard.writeText(publicUrl); toast.success("URL copiada!"); }} className="p-3 border border-[#222] rounded-[14px] text-stone-400 hover:text-white hover:bg-white/5 transition-all">
+            <Copy size={14}/>
+          </button>
+          <a href={publicUrl} target="_blank" rel="noreferrer" className="p-3 border border-[#222] rounded-[14px] text-stone-400 hover:text-white hover:bg-white/5 transition-all">
+            <ExternalLink size={14}/>
+          </a>
+        </div>
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-[3fr_2fr]">
+
+        {/* Settings Form */}
+        <div className="bg-[#0a0a0a] border border-[#1f1f1f] rounded-[28px] p-6 space-y-5">
           <div>
-            <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">Publicacao</p>
-            <h2 className="mt-1 text-xl font-semibold text-[var(--text-primary)]">Dominio, SEO e pixels</h2>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-stone-500 mb-1">Configuração</p>
+            <h2 className="text-lg font-semibold text-white">Domínio, SEO e Pixels</h2>
           </div>
 
+          {/* Slug */}
           <div className="space-y-2">
-            <Label htmlFor="slug">Slug publico</Label>
-            <Input id="slug" value={form.slug} onChange={(event) => updateField("slug", slugifyBioLink(event.target.value))} />
-            <p className="text-xs text-[var(--text-muted)]">Rota oficial: {publicUrl}</p>
+            <Label htmlFor="slug" className="text-xs font-bold text-stone-400">Slug público</Label>
+            <Input id="slug" value={form.slug}
+              onChange={(e) => updateField("slug", slugifyBioLink(e.target.value))}
+              className="bg-black border-[#333] text-white font-mono"
+              placeholder="meu-link"
+            />
           </div>
 
+          {/* SEO */}
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="seo-title">SEO title</Label>
-              <Input id="seo-title" value={form.seoTitle} onChange={(event) => updateField("seoTitle", event.target.value)} />
+              <Label htmlFor="seo-title" className="text-xs font-bold text-stone-400">SEO Title</Label>
+              <Input id="seo-title" value={form.seoTitle} onChange={(e) => updateField("seoTitle", e.target.value)} className="bg-black border-[#333] text-white" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="seo-image">SEO image URL</Label>
-              <Input id="seo-image" value={form.seoImageUrl} onChange={(event) => updateField("seoImageUrl", event.target.value)} />
+              <Label htmlFor="seo-image" className="text-xs font-bold text-stone-400">SEO OG Image URL</Label>
+              <Input id="seo-image" value={form.seoImageUrl} onChange={(e) => updateField("seoImageUrl", e.target.value)} className="bg-black border-[#333] text-white" placeholder="https://..." />
             </div>
           </div>
-
           <div className="space-y-2">
-            <Label htmlFor="seo-description">SEO description</Label>
-            <Textarea id="seo-description" value={form.seoDescription} onChange={(event) => updateField("seoDescription", event.target.value)} className="min-h-[140px]" />
+            <Label htmlFor="seo-desc" className="text-xs font-bold text-stone-400">SEO Description</Label>
+            <Textarea id="seo-desc" value={form.seoDescription} onChange={(e) => updateField("seoDescription", e.target.value)} className="min-h-[100px] bg-black border-[#333] text-white resize-none" />
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="meta-pixel">Meta Pixel ID</Label>
-              <Input id="meta-pixel" value={form.metaPixelId} onChange={(event) => updateField("metaPixelId", event.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="ga4">GA4 Measurement ID</Label>
-              <Input id="ga4" value={form.ga4MeasurementId} onChange={(event) => updateField("ga4MeasurementId", event.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="tiktok-pixel">TikTok Pixel ID</Label>
-              <Input id="tiktok-pixel" value={form.tiktokPixelId} onChange={(event) => updateField("tiktokPixelId", event.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="gtm">Google Tag Manager ID</Label>
-              <Input id="gtm" value={form.gtmId} onChange={(event) => updateField("gtmId", event.target.value)} />
+          {/* Tracking */}
+          <div className="border-t border-[#1f1f1f] pt-5">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-stone-500 mb-4">Tracking & Pixels</p>
+            <div className="grid gap-4 md:grid-cols-2">
+              {[
+                { id: "meta-pixel", label: "Meta Pixel ID", field: "metaPixelId" as const },
+                { id: "ga4", label: "GA4 Measurement ID", field: "ga4MeasurementId" as const },
+                { id: "tiktok-pixel", label: "TikTok Pixel ID", field: "tiktokPixelId" as const },
+                { id: "gtm", label: "Google Tag Manager ID", field: "gtmId" as const },
+              ].map(({ id, label, field }) => (
+                <div key={id} className="space-y-2">
+                  <Label htmlFor={id} className="text-xs font-bold text-stone-400">{label}</Label>
+                  <Input id={id} value={form[field]} onChange={(e) => updateField(field, e.target.value)} className="bg-black border-[#333] text-white font-mono text-xs" placeholder="ID..." />
+                </div>
+              ))}
             </div>
           </div>
 
-          <Button onClick={saveSettings} disabled={saving}>
-            <Save size={16} />
-            Salvar configuracoes
-          </Button>
+          <button onClick={saveSettings} disabled={saving} className="w-full flex items-center justify-center gap-2 py-3 bg-white hover:bg-stone-100 text-black font-bold text-sm rounded-[16px] transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50">
+            {saving ? <Loader2 size={16} className="animate-spin"/> : <Save size={16}/>}
+            {saving ? "Salvando…" : "Salvar Configurações"}
+          </button>
         </div>
 
+        {/* Info Cards */}
         <div className="space-y-4">
           {[
-            {
-              icon: Globe,
-              title: "Rota publica",
-              description: "O runtime oficial usa /:slug, com /b/:slug mantido como compatibilidade temporaria.",
-            },
-            {
-              icon: Shield,
-              title: "SEO e preview",
-              description: "Titulo, descricao e imagem alimentam o snapshot publicado e o head da pagina publica.",
-            },
-            {
-              icon: Zap,
-              title: "Pixels e tracking",
-              description: "IDs de Meta, GA4, TikTok e GTM ficam centralizados aqui para o runtime publico.",
-            },
+            { icon: Globe, title: "Rota Pública", description: "A URL canônica usa /:slug. Posts compartilhados e analytics apontam para este endereço.", color: "#3b82f6" },
+            { icon: Shield, title: "SEO & Open Graph", description: "Título, descrição e OG image alimentam o snapshot publicado e o <head> da página pública.", color: "#a855f7" },
+            { icon: Zap, title: "Pixels & Tracking", description: "IDs de Meta, GA4, TikTok e GTM são injetados somente na versão pública, jamais no editor.", color: "#f59e0b" },
           ].map((card) => (
-            <div key={card.title} className="rounded-3xl border border-[var(--border)] bg-[var(--surface-card)] p-5">
+            <div key={card.title} className="bg-[#0a0a0a] border border-[#1f1f1f] rounded-[24px] p-5">
               <div className="flex items-start gap-4">
-                <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[var(--workspace-brand-soft)] text-[var(--workspace-brand)]">
-                  <card.icon size={18} />
+                <div className="shrink-0 p-2.5 rounded-xl" style={{ background: card.color + '15' }}>
+                  <card.icon size={16} style={{ color: card.color }} />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-[var(--text-primary)]">{card.title}</p>
-                  <p className="mt-1 text-sm text-[var(--text-muted)]">{card.description}</p>
+                  <p className="text-sm font-semibold text-white">{card.title}</p>
+                  <p className="text-xs text-stone-500 mt-1 leading-relaxed">{card.description}</p>
                 </div>
               </div>
             </div>
           ))}
         </div>
+
       </div>
     </div>
   );
-};
-
-export default BioLinkSettingsPage;
+}
