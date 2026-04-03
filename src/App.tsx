@@ -7,6 +7,7 @@ import { MCPProvider } from "@/contexts/MCPContext";
 import AppShell from "@/components/AppShell";
 import WorkspacesPage from "@/pages/WorkspacesPage";
 import OnboardingPage from "@/pages/OnboardingPage";
+import AuthPage from "@/pages/AuthPage";
 import GeneratorPage from "@/pages/GeneratorPage";
 import LibraryPage from "@/pages/LibraryPage";
 import BrandKitPage from "@/pages/BrandKitPage";
@@ -60,6 +61,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Navigate to="/workspaces" replace />} />
+          <Route path="/auth/login" element={<AuthPage />} />
           <Route path="/workspaces" element={<WorkspacesPage />} />
           <Route path="/onboarding" element={<OnboardingPage />} />
           <Route path="/b/:slug" element={<PublicBioLink />} />
