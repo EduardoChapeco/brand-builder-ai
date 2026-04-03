@@ -1,47 +1,55 @@
 import { useEffect, useMemo, useState } from "react";
-import { Download, Mail, MessageSquare, CalendarDays, Users2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Download, Mail, MessageSquare, CalendarDays, Users2, ChevronLeft, Search, Filter, MoreVertical } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type Row = Record<string, unknown>;
 
-const Table = ({ rows, columns }: { rows: Row[]; columns: Array<{ key: string; label: string }> }) => (
-  <div className="overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--surface-card)]">
-    <div className="overflow-x-auto">
+const GlassTable = ({ rows, columns }: { rows: Row[]; columns: Array<{ key: string; label: string }> }) => (
+  <div className="overflow-hidden rounded-[24px] border border-[#222] bg-[#111]/50 backdrop-blur-md">
+    <div className="overflow-x-auto no-scrollbar">
       <table className="min-w-full text-sm">
-        <thead className="bg-[var(--surface-2)] text-left text-[var(--text-muted)]">
+        <thead className="border-b border-[#222] bg-black/40">
           <tr>
             {columns.map((column) => (
-              <th key={column.key} className="px-4 py-3 font-medium">{column.label}</th>
+              <th key={column.key} className="px-6 py-4 text-left text-xs font-bold text-stone-500 uppercase tracking-widest">{column.label}</th>
             ))}
           </tr>
         </thead>
-        <tbody>
+        <tbody className="divide-y divide-[#1f1f1f]">
           {rows.map((row, rowIndex) => (
-            <tr key={String(row.id || rowIndex)} className="border-t border-[var(--border)]">
+            <tr key={String(row.id || rowIndex)} className="transition-colors hover:bg-white/5">
               {columns.map((column) => (
-                <td key={column.key} className="px-4 py-3 text-[var(--text-primary)]">
+                <td key={column.key} className="px-6 py-4 text-stone-300 font-medium whitespace-nowrap">
                   {String(row[column.key] ?? "—")}
                 </td>
               ))}
             </tr>
           ))}
-          {rows.length === 0 ? (
+          {rows.length === 0 && (
             <tr>
-              <td className="px-4 py-8 text-center text-[var(--text-muted)]" colSpan={columns.length}>
-                Sem dados neste momento.
+              <td className="px-6 py-12 text-center text-stone-500" colSpan={columns.length}>
+                <div className="flex flex-col items-center justify-center gap-3">
+                  <div className="w-12 h-12 rounded-full border border-dashed border-[#333] flex items-center justify-center"><Search size={20} className="text-stone-600"/></div>
+                  <p>Sem registros encontrados neste filtro.</p>
+                </div>
               </td>
             </tr>
-          ) : null}
+          )}
         </tbody>
       </table>
     </div>
   </div>
 );
 
-const BioLinkCRMPage = () => {
+type CrmTab = "contacts" | "messages" | "bookings" | "events" | "downloads";
+
+export default function BioLinkCRMPage() {
+  const navigate = useNavigate();
   const { workspace } = useWorkspace();
+  
+  const [activeTab, setActiveTab] = useState<CrmTab>("contacts");
   const [contacts, setContacts] = useState<Row[]>([]);
   const [messages, setMessages] = useState<Row[]>([]);
   const [bookings, setBookings] = useState<Row[]>([]);
@@ -67,55 +75,81 @@ const BioLinkCRMPage = () => {
 
   const cards = useMemo(
     () => [
-      { label: "Contatos", value: contacts.length, icon: Users2 },
-      { label: "Mensagens", value: messages.length, icon: MessageSquare },
-      { label: "Agendamentos", value: bookings.length, icon: CalendarDays },
-      { label: "Downloads", value: downloads.length, icon: Download },
-      { label: "E-mails", value: contacts.filter((item) => item.primary_email).length, icon: Mail },
+      { id: "contacts", label: "Audience Base", value: contacts.length, icon: Users2, color: "text-[#3b82f6]" },
+      { id: "messages", label: "Inbox Messages", value: messages.length, icon: MessageSquare, color: "text-[#a855f7]" },
+      { id: "bookings", label: "Active Bookings", value: bookings.length, icon: CalendarDays, color: "text-[#10b981]" },
+      { id: "events", label: "Event Regs", value: events.length, icon: CalendarDays, color: "text-[#f59e0b]" },
+      { id: "downloads", label: "Asset Downloads", value: downloads.length, icon: Download, color: "text-[#ec4899]" },
     ],
-    [bookings.length, contacts, downloads.length, messages.length],
+    [bookings.length, contacts.length, downloads.length, events.length, messages.length]
   );
 
   return (
-    <div className="page-inner space-y-6">
-      <div className="grid gap-4 md:grid-cols-5">
-        {cards.map((card) => (
-          <div key={card.label} className="rounded-3xl border border-[var(--border)] bg-[var(--surface-card)] p-5">
-            <div className="flex items-center justify-between">
-              <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">{card.label}</p>
-              <card.icon size={16} className="text-[var(--workspace-brand)]" />
-            </div>
-            <p className="mt-4 text-3xl font-semibold text-[var(--text-primary)]">{card.value}</p>
+    <div className="flex flex-col h-screen bg-[#050505] text-white font-sans overflow-hidden">
+      
+      {/* Topbar */}
+      <div className="h-[72px] border-b border-[#1f1f1f] bg-black/60 backdrop-blur-2xl flex items-center justify-between px-8 shrink-0">
+        <div className="flex items-center gap-4">
+          <button onClick={() => navigate('../biolink')} className="p-2 border border-[#222] rounded-full hover:bg-white/10 transition-colors text-stone-400 hover:text-white">
+            <ChevronLeft size={16}/>
+          </button>
+          <div>
+             <h1 className="text-sm font-bold bg-gradient-to-r from-white to-stone-400 bg-clip-text text-transparent">Centro de Relacionamento (CRM)</h1>
+             <p className="text-[10px] text-stone-500 tracking-widest uppercase font-mono mt-0.5">Visão Unificada do BioLink</p>
           </div>
-        ))}
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-500" />
+            <input placeholder="Buscar no CRM..." className="w-64 bg-[#111] border border-[#222] rounded-full text-xs text-white px-9 py-2 outline-none focus:border-[#3b82f6] transition-colors" />
+          </div>
+          <button className="px-4 py-2 bg-[#111] border border-[#222] rounded-full text-xs font-bold text-stone-300 hover:text-white flex items-center gap-2"><Filter size={14}/> Filtrar</button>
+        </div>
       </div>
 
-      <Tabs defaultValue="contacts" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="contacts">Contatos</TabsTrigger>
-          <TabsTrigger value="messages">Mensagens</TabsTrigger>
-          <TabsTrigger value="bookings">Agendamentos</TabsTrigger>
-          <TabsTrigger value="events">Eventos</TabsTrigger>
-          <TabsTrigger value="downloads">Downloads</TabsTrigger>
-        </TabsList>
-        <TabsContent value="contacts">
-          <Table rows={contacts} columns={[{ key: "name", label: "Nome" }, { key: "primary_email", label: "Email" }, { key: "phone", label: "Telefone" }, { key: "status", label: "Status" }, { key: "created_at", label: "Data" }]} />
-        </TabsContent>
-        <TabsContent value="messages">
-          <Table rows={messages} columns={[{ key: "subject", label: "Assunto" }, { key: "status", label: "Status" }, { key: "created_at", label: "Data" }, { key: "body", label: "Mensagem" }]} />
-        </TabsContent>
-        <TabsContent value="bookings">
-          <Table rows={bookings} columns={[{ key: "service_name", label: "Serviço" }, { key: "scheduled_at", label: "Agendado para" }, { key: "status", label: "Status" }, { key: "created_at", label: "Criado" }]} />
-        </TabsContent>
-        <TabsContent value="events">
-          <Table rows={events} columns={[{ key: "event_name", label: "Evento" }, { key: "event_date", label: "Data" }, { key: "status", label: "Status" }, { key: "created_at", label: "Inscrição" }]} />
-        </TabsContent>
-        <TabsContent value="downloads">
-          <Table rows={downloads} columns={[{ key: "asset_name", label: "Asset" }, { key: "asset_url", label: "URL" }, { key: "created_at", label: "Data" }]} />
-        </TabsContent>
-      </Tabs>
+      <div className="flex-1 overflow-y-auto w-full max-w-[1440px] mx-auto p-8 flex flex-col gap-8">
+        
+        {/* Metric Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          {cards.map((card) => (
+            <button key={card.id} onClick={() => setActiveTab(card.id as CrmTab)} className={`flex flex-col text-left rounded-[24px] border border-[#222] p-5 transition-all w-full ${activeTab === card.id ? 'bg-[#111] ring-1 ring-[#3b82f6] shadow-[0_0_20px_rgba(59,130,246,0.1)]' : 'bg-[#0a0a0a] hover:bg-[#111]'}`}>
+              <div className="flex items-center justify-between w-full mb-4">
+                <p className="text-[10px] uppercase font-bold tracking-widest text-stone-500">{card.label}</p>
+                <card.icon size={16} className={card.color} />
+              </div>
+              <p className="text-3xl font-light text-white font-mono">{card.value}</p>
+            </button>
+          ))}
+        </div>
+
+        {/* Selected Data View */}
+        <div className="flex-1 flex flex-col min-h-0 bg-[#0a0a0a] border border-[#1f1f1f] rounded-[32px] p-2">
+           <div className="px-6 py-5 flex items-center justify-between border-b border-[#1f1f1f]">
+             <h2 className="text-sm font-bold text-white capitalize">{activeTab} Details</h2>
+             <button className="p-2 text-stone-500 hover:text-white transition-colors"><MoreVertical size={16}/></button>
+           </div>
+           
+           <div className="p-4 flex-1">
+             {activeTab === "contacts" && (
+                <GlassTable rows={contacts} columns={[{ key: "name", label: "Nome" }, { key: "primary_email", label: "E-mail Principal" }, { key: "phone", label: "Telefone" }, { key: "status", label: "Status" }, { key: "created_at", label: "Data de Criação" }]} />
+             )}
+             {activeTab === "messages" && (
+                <GlassTable rows={messages} columns={[{ key: "subject", label: "Tópico / Assunto" }, { key: "status", label: "Status de Leitura" }, { key: "created_at", label: "Data" }, { key: "body", label: "Conteúdo" }]} />
+             )}
+             {activeTab === "bookings" && (
+                <GlassTable rows={bookings} columns={[{ key: "service_name", label: "Serviço Retido" }, { key: "scheduled_at", label: "Data Agendada" }, { key: "status", label: "Status" }, { key: "created_at", label: "Criado Em" }]} />
+             )}
+             {activeTab === "events" && (
+                <GlassTable rows={events} columns={[{ key: "event_name", label: "Nome do Evento" }, { key: "event_date", label: "Data" }, { key: "status", label: "Status Inscrição" }, { key: "created_at", label: "Registro" }]} />
+             )}
+             {activeTab === "downloads" && (
+                <GlassTable rows={downloads} columns={[{ key: "asset_name", label: "Arquivo" }, { key: "asset_url", label: "Link" }, { key: "created_at", label: "Data Download" }]} />
+             )}
+           </div>
+        </div>
+
+      </div>
+
     </div>
   );
-};
-
-export default BioLinkCRMPage;
+}

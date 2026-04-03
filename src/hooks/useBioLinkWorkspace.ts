@@ -1,49 +1,93 @@
-import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+/**
+ * useBioLinkWorkspace.ts
+ * Full-featured hook for the BioLink editor.
+ * Exposes all CRUD mutations needed by BioLinkPage's 3-column glassmorphism UI.
+ */
+import {
+  createContext,
+  createElement,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { toast } from "sonner";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import type { BioLinkBlock, BioLinkRow, BioLinkVersionRow } from "@/lib/biolink/registry";
-import { loadWorkspaceBioLink } from "@/lib/biolink/service";
+import type { BioLinkBlock, BioLinkBlockType, BioLinkRow, BioLinkVersionRow } from "@/lib/biolink/registry";
+import { createBioLinkBlock } from "@/lib/biolink/registry";
+import { loadWorkspaceBioLink, saveWorkspaceBioLink } from "@/lib/biolink/service";
+
+// ─── Public API ──────────────────────────────────────────────────────────────
 
 type BioLinkWorkspaceValue = {
   workspace: ReturnType<typeof useWorkspace>["workspace"];
   brandKit: ReturnType<typeof useWorkspace>["brandKit"];
   briefing: ReturnType<typeof useWorkspace>["briefing"];
+
   bioLink: BioLinkRow | null;
-  setBioLink: React.Dispatch<React.SetStateAction<BioLinkRow | null>>;
   blocks: BioLinkBlock[];
-  setBlocks: React.Dispatch<React.SetStateAction<BioLinkBlock[]>>;
   versions: BioLinkVersionRow[];
-  setVersions: React.Dispatch<React.SetStateAction<BioLinkVersionRow[]>>;
-  loading: boolean;
+
+  isLoading: boolean;
+  isSaving: boolean;
+  isDirty: boolean;
+
+  // Mutations
+  updateBioLink: (patch: Partial<BioLinkRow>) => void;
+  updateTheme: (themeId: string) => void;
+  addBlock: (type: BioLinkBlockType) => void;
+  updateBlock: (blockId: string, patch: Partial<BioLinkBlock["config"]>) => void;
+  removeBlock: (blockId: string) => void;
+  reorderBlocks: (orderedIds: string[]) => void;
+  toggleBlockVisibility: (blockId: string) => void;
+  save: () => Promise<string | null>;
   refresh: () => Promise<void>;
 };
 
+// ─── Context ─────────────────────────────────────────────────────────────────
+
 const BioLinkWorkspaceContext = createContext<BioLinkWorkspaceValue | null>(null);
+
+// ─── Controller (internal) ───────────────────────────────────────────────────
 
 const useBioLinkWorkspaceController = (): BioLinkWorkspaceValue => {
   const { workspace, brandKit, briefing } = useWorkspace();
+
   const [bioLink, setBioLink] = useState<BioLinkRow | null>(null);
   const [blocks, setBlocks] = useState<BioLinkBlock[]>([]);
   const [versions, setVersions] = useState<BioLinkVersionRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
 
+  // Track saved state to compute isDirty without extra renders
+  const savedRef = useRef<{ bioLink: BioLinkRow | null; blocks: BioLinkBlock[] }>({
+    bioLink: null,
+    blocks: [],
+  });
+
+  // ── Loader ────────────────────────────────────────────────────────────────
   const refresh = useCallback(async () => {
     if (!workspace) {
-      setLoading(false);
+      setIsLoading(false);
       return;
     }
-
-    setLoading(true);
+    setIsLoading(true);
     try {
       const result = await loadWorkspaceBioLink(workspace, brandKit, briefing);
       setBioLink(result.bioLink);
       setBlocks(result.blocks);
       setVersions(result.versions);
-    } catch (error) {
-      console.error(error);
+      savedRef.current = { bioLink: result.bioLink, blocks: result.blocks };
+      setIsDirty(false);
+    } catch (err) {
+      console.error(err);
       toast.error("Não foi possível carregar o Bio Link.");
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   }, [brandKit, briefing, workspace]);
 
@@ -51,30 +95,119 @@ const useBioLinkWorkspaceController = (): BioLinkWorkspaceValue => {
     void refresh();
   }, [refresh]);
 
+  // ── Generic dirty setter ──────────────────────────────────────────────────
+  const markDirty = () => setIsDirty(true);
+
+  // ── Mutations ─────────────────────────────────────────────────────────────
+
+  const updateBioLink = useCallback((patch: Partial<BioLinkRow>) => {
+    setBioLink((prev) => (prev ? { ...prev, ...patch } : prev));
+    markDirty();
+  }, []);
+
+  const updateTheme = useCallback((themeId: string) => {
+    setBioLink((prev) => (prev ? { ...prev, theme_id: themeId, theme_key: themeId } : prev));
+    markDirty();
+  }, []);
+
+  const addBlock = useCallback((type: BioLinkBlockType) => {
+    const newBlock = createBioLinkBlock(type);
+    setBlocks((prev) => [...prev, newBlock]);
+    markDirty();
+  }, []);
+
+  const updateBlock = useCallback((blockId: string, patch: Partial<BioLinkBlock["config"]>) => {
+    setBlocks((prev) =>
+      prev.map((b) => (b.id === blockId ? { ...b, config: { ...b.config, ...patch } } : b))
+    );
+    markDirty();
+  }, []);
+
+  const removeBlock = useCallback((blockId: string) => {
+    setBlocks((prev) => prev.filter((b) => b.id !== blockId));
+    markDirty();
+  }, []);
+
+  const reorderBlocks = useCallback((orderedIds: string[]) => {
+    setBlocks((prev) => {
+      const map = new Map(prev.map((b) => [b.id, b]));
+      return orderedIds.map((id, i) => ({ ...map.get(id)!, position: i })).filter(Boolean);
+    });
+    markDirty();
+  }, []);
+
+  const toggleBlockVisibility = useCallback((blockId: string) => {
+    setBlocks((prev) =>
+      prev.map((b) => (b.id === blockId ? { ...b, isVisible: !b.isVisible } : b))
+    );
+    markDirty();
+  }, []);
+
+  // ── Save (upsert) ─────────────────────────────────────────────────────────
+  const save = useCallback(async (): Promise<string | null> => {
+    if (!workspace || !bioLink) return null;
+    setIsSaving(true);
+    try {
+      const result = await saveWorkspaceBioLink({
+        bioLinkId: bioLink.id ?? null,
+        workspaceId: workspace.id,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        bioLink: bioLink as any,
+        blocks,
+      });
+      setBioLink(result.bioLink);
+      setBlocks(result.blocks);
+      savedRef.current = { bioLink: result.bioLink, blocks: result.blocks };
+      setIsDirty(false);
+      toast.success("Bio Link salvo com sucesso!");
+      return result.bioLink.id;
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao salvar Bio Link.");
+      return null;
+    } finally {
+      setIsSaving(false);
+    }
+  }, [bioLink, blocks, workspace]);
+
   return useMemo(
     () => ({
       workspace,
       brandKit,
       briefing,
       bioLink,
-      setBioLink,
       blocks,
-      setBlocks,
       versions,
-      setVersions,
-      loading,
+      isLoading,
+      isSaving,
+      isDirty,
+      updateBioLink,
+      updateTheme,
+      addBlock,
+      updateBlock,
+      removeBlock,
+      reorderBlocks,
+      toggleBlockVisibility,
+      save,
       refresh,
     }),
-    [bioLink, blocks, brandKit, briefing, loading, refresh, versions, workspace],
+    [
+      addBlock, bioLink, blocks, brandKit, briefing, isDirty, isLoading, isSaving,
+      refresh, removeBlock, reorderBlocks, save, toggleBlockVisibility, updateBioLink, updateBlock, updateTheme, versions, workspace,
+    ]
   );
 };
+
+// ─── Provider ────────────────────────────────────────────────────────────────
 
 export const BioLinkWorkspaceProvider = ({ children }: { children: ReactNode }) => {
   const value = useBioLinkWorkspaceController();
   return createElement(BioLinkWorkspaceContext.Provider, { value }, children);
 };
 
-export const useBioLinkWorkspace = () => {
+// ─── Consumer ────────────────────────────────────────────────────────────────
+
+export const useBioLinkWorkspace = (_workspaceId?: string) => {
   const context = useContext(BioLinkWorkspaceContext);
   if (!context) {
     throw new Error("useBioLinkWorkspace deve ser usado dentro de BioLinkWorkspaceProvider");
