@@ -130,6 +130,8 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         data: { user },
       } = await supabase.auth.getUser();
 
+      /* 
+      // DEV BYPASS: Sem login por enquanto, comentado a pedidos
       if (!user) {
         navigate('/auth/login');
         return;
@@ -147,6 +149,10 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         navigate('/workspaces');
         return;
       }
+      */
+      
+      // Assume "owner" temporarily when bypassing auth
+      const bypassedRole: WorkspaceRole = 'owner';
 
       const [wsRes, bkRes, brRes] = await Promise.all([
         supabase
@@ -169,7 +175,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       setWorkspace(wsRes.data as unknown as Workspace);
       setBrandKit(bkRes.data as unknown as BrandKit | null);
       setBriefing(brRes.data as unknown as Briefing | null);
-      setRole(member.role);
+      setRole(bypassedRole);
     } catch (error) {
       console.error(error);
       toast.error('Erro ao carregar workspace');
