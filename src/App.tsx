@@ -1,56 +1,49 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
-import { Toaster } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
-import { MCPProvider } from "@/contexts/MCPContext";
-import AppShell from "@/components/AppShell";
-import WorkspacesPage from "@/pages/WorkspacesPage";
-import OnboardingPage from "@/pages/OnboardingPage";
-import AuthPage from "@/pages/AuthPage";
-import GeneratorPage from "@/pages/GeneratorPage";
-import LibraryPage from "@/pages/LibraryPage";
-import BrandKitPage from "@/pages/BrandKitPage";
-import BriefingPage from "@/pages/BriefingPage";
-import SettingsPage from "@/pages/SettingsPage";
-import NotFound from "@/pages/NotFound";
-import BrandDNAPage from "@/pages/BrandDNAPage";
-import SlidesPage from "@/pages/SlidesPage";
-import DashboardPage from "@/pages/DashboardPage";
-import SquadsPage from "@/pages/SquadsPage";
-
-// Phase 4 New Modules
-import ViralAnalyzer from "@/pages/ViralAnalyzer";
-import PromptStudio from "@/pages/PromptStudio";
-import CarouselBuilder from "@/pages/CarouselBuilder";
-import ProductShots from "@/pages/ProductShots";
-import BrandCharacter from "@/pages/BrandCharacter";
-import ChatPage from "@/pages/ChatPage";
-import FeedSimulatorPage from "@/pages/FeedSimulatorPage";
-import BioLinkModuleLayout from "@/components/biolink/BioLinkModuleLayout";
-import BioLinkPage from "@/pages/BioLinkPage";
-import BioLinkThemesPage from "@/pages/BioLinkThemesPage";
-import BioLinkCRMPage from "@/pages/BioLinkCRMPage";
-import BioLinkAnalyticsPage from "@/pages/BioLinkAnalyticsPage";
-import BioLinkSettingsPage from "@/pages/BioLinkSettingsPage";
-import BioLinkVersionsPage from "@/pages/BioLinkVersionsPage";
-import PublicBioLink from "@/pages/PublicBioLink";
-import NewsPortalPage from "@/pages/NewsPortalPage";
-import BlogManagerPage from "@/pages/BlogManagerPage";
-import WebClonerPage from "@/pages/WebClonerPage";
-import VibeCoderPage from "@/pages/VibeCoderPage";
-import SiteBuilderPage from "@/pages/SiteBuilderPage";
-import SiteEditorPage from "@/pages/SiteEditorPage";
-import SimLabPage from "@/pages/SimLabPage";
-import VideoStudioPage from "@/pages/VideoStudioPage";
-import VideoStudioEditorPage from "@/pages/VideoStudioEditorPage";
-import VideoStudioGeneratePage from "@/pages/VideoStudioGeneratePage";
-import VideoStudioMotionPage from "@/pages/VideoStudioMotionPage";
-import VideoStudioMotionStudioPage from "@/pages/VideoStudioMotionStudioPage";
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import AppShell from '@/components/AppShell';
+import { Toaster } from '@/components/ui/sonner';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { WorkspaceProvider } from '@/contexts/WorkspaceContext';
+import AdminPage from '@/pages/AdminPage';
+import AgentsPage from '@/pages/AgentsPage';
+import AnalyticsPage from '@/pages/AnalyticsPage';
+import AuthPage from '@/pages/AuthPage';
+import BillingPage from '@/pages/BillingPage';
+import BioLinkAnalyticsPage from '@/pages/BioLinkAnalyticsPage';
+import BioLinkCRMPage from '@/pages/BioLinkCRMPage';
+import BioLinkPage from '@/pages/BioLinkPage';
+import BioLinkSettingsPage from '@/pages/BioLinkSettingsPage';
+import BioLinkThemesPage from '@/pages/BioLinkThemesPage';
+import BlogManagerPage from '@/pages/BlogManagerPage';
+import BrandKitPage from '@/pages/BrandKitPage';
+import BriefingPage from '@/pages/BriefingPage';
+import CRMPage from '@/pages/CRMPage';
+import DashboardPage from '@/pages/DashboardPage';
+import GeneratorPage from '@/pages/GeneratorPage';
+import HelpPage from '@/pages/HelpPage';
+import HubPage from '@/pages/HubPage';
+import LibraryPage from '@/pages/LibraryPage';
+import NewsPortalPage from '@/pages/NewsPortalPage';
+import NotFound from '@/pages/NotFound';
+import OnboardingPage from '@/pages/OnboardingPage';
+import PublicBioLink from '@/pages/PublicBioLink';
+import SettingsPage from '@/pages/SettingsPage';
+import SiteBuilderPage from '@/pages/SiteBuilderPage';
+import SiteEditorPage from '@/pages/SiteEditorPage';
+import SupportPage from '@/pages/SupportPage';
+import VideoStudioEditorPage from '@/pages/VideoStudioEditorPage';
+import VideoStudioGeneratePage from '@/pages/VideoStudioGeneratePage';
+import VideoStudioMotionPage from '@/pages/VideoStudioMotionPage';
+import VideoStudioPage from '@/pages/VideoStudioPage';
+import WorkspacesPage from '@/pages/WorkspacesPage';
+import BioLinkModuleLayout from '@/components/biolink/BioLinkModuleLayout';
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: { staleTime: 1000 * 60 * 5, retry: 1 },
+    queries: {
+      staleTime: 1000 * 60 * 5,
+      retry: 1,
+    },
   },
 });
 
@@ -65,57 +58,70 @@ const App = () => (
           <Route path="/workspaces" element={<WorkspacesPage />} />
           <Route path="/onboarding" element={<OnboardingPage />} />
           <Route path="/b/:slug" element={<PublicBioLink />} />
-          <Route path="/:slug" element={<PublicBioLink />} />
+          <Route path="/l/:slug" element={<PublicBioLink />} />
+          <Route path="/admin" element={<AdminPage />} />
+
           <Route
             path="/workspace/:workspaceId/*"
-            element={
+            element={(
               <WorkspaceProvider>
-                <MCPProvider>
-                  <AppShell />
-                </MCPProvider>
+                <AppShell />
               </WorkspaceProvider>
-            }
+            )}
           >
-            <Route index element={<Navigate to="dashboard" replace />} />
-            <Route path="dashboard"       element={<DashboardPage />} />
-            <Route path="squads"          element={<SquadsPage />} />
-            <Route path="site-builder"    element={<SiteBuilderPage />} />
-            <Route path="site-builder/:siteId" element={<SiteEditorPage />} />
-            <Route path="video-studio"    element={<VideoStudioPage />} />
-            <Route path="video-studio/editor/:projectId" element={<VideoStudioEditorPage />} />
-            <Route path="video-studio/generate" element={<VideoStudioGeneratePage />} />
-            <Route path="video-studio/motion-studio" element={<VideoStudioMotionStudioPage />} />
-            <Route path="video-studio/motion" element={<VideoStudioMotionPage />} />
-            <Route path="generator"       element={<GeneratorPage />} />
-            <Route path="carousel-builder" element={<CarouselBuilder />} />
-            <Route path="image-prompts"   element={<PromptStudio />} />
-            <Route path="product-shots"   element={<ProductShots />} />
-            <Route path="viral-analyzer"  element={<ViralAnalyzer />} />
-            <Route path="simlab"          element={<SimLabPage />} />
-            <Route path="news-portal"     element={<NewsPortalPage />} />
-            <Route path="blog-manager"    element={<BlogManagerPage />} />
-            <Route path="web-cloner"      element={<WebClonerPage />} />
-            <Route path="vibe-coder"      element={<VibeCoderPage />} />
-            <Route path="brand-character" element={<BrandCharacter />} />
-            <Route path="chat"            element={<ChatPage />} />
-            <Route path="feed-preview"    element={<FeedSimulatorPage />} />
-            <Route path="biolink"         element={<BioLinkModuleLayout />}>
+            <Route index element={<Navigate to="painel" replace />} />
+
+            <Route path="painel" element={<DashboardPage />} />
+            <Route path="hub" element={<HubPage />} />
+
+            <Route path="sites" element={<SiteBuilderPage />} />
+            <Route path="sites/:siteId" element={<SiteEditorPage />} />
+
+            <Route path="biolinks" element={<BioLinkModuleLayout />}>
               <Route index element={<BioLinkPage />} />
-              <Route path="themes" element={<BioLinkThemesPage />} />
+              <Route path="temas" element={<BioLinkThemesPage />} />
               <Route path="crm" element={<BioLinkCRMPage />} />
               <Route path="analytics" element={<BioLinkAnalyticsPage />} />
-              <Route path="settings" element={<BioLinkSettingsPage />} />
-              <Route path="versions" element={<BioLinkVersionsPage />} />
+              <Route path="config" element={<BioLinkSettingsPage />} />
             </Route>
-            <Route path="slides"          element={<SlidesPage />} />
-            <Route path="library"         element={<LibraryPage />} />
-            <Route path="brand-kit"       element={<BrandKitPage />} />
-            <Route path="briefing"        element={<BriefingPage />} />
-            <Route path="brand-dna"       element={<BrandDNAPage />} />
-            <Route path="api-keys"        element={<Navigate to="../settings?tab=keys" replace />} />
-            <Route path="settings"        element={<SettingsPage />} />
-            <Route path="*"               element={<Navigate to="dashboard" replace />} />
+
+            <Route path="blog" element={<BlogManagerPage />} />
+            <Route path="noticias" element={<NewsPortalPage />} />
+            <Route path="posts" element={<GeneratorPage />} />
+
+            <Route path="video" element={<VideoStudioPage />} />
+            <Route path="video/editor/:projectId" element={<VideoStudioEditorPage />} />
+            <Route path="video/gerar" element={<VideoStudioGeneratePage />} />
+            <Route path="video/motion" element={<VideoStudioMotionPage />} />
+
+            <Route path="agents" element={<AgentsPage />} />
+            <Route path="simlab" element={<Navigate to="../agents" replace />} />
+
+            <Route path="crm" element={<CRMPage />} />
+            <Route path="analytics" element={<AnalyticsPage />} />
+
+            <Route path="brand-kit" element={<BrandKitPage />} />
+            <Route path="briefing" element={<BriefingPage />} />
+            <Route path="assets" element={<LibraryPage />} />
+            <Route path="cobranca" element={<BillingPage />} />
+            <Route path="config" element={<SettingsPage />} />
+            <Route path="ajuda" element={<HelpPage />} />
+            <Route path="suporte" element={<SupportPage />} />
+
+            <Route path="dashboard" element={<Navigate to="../painel" replace />} />
+            <Route path="site-builder" element={<Navigate to="../sites" replace />} />
+            <Route path="video-studio" element={<Navigate to="../video" replace />} />
+            <Route path="blog-manager" element={<Navigate to="../blog" replace />} />
+            <Route path="news-portal" element={<Navigate to="../noticias" replace />} />
+            <Route path="settings" element={<Navigate to="../config" replace />} />
+            <Route path="library" element={<Navigate to="../assets" replace />} />
+            <Route path="billing" element={<Navigate to="../cobranca" replace />} />
+            <Route path="help" element={<Navigate to="../ajuda" replace />} />
+            <Route path="support" element={<Navigate to="../suporte" replace />} />
+
+            <Route path="*" element={<Navigate to="painel" replace />} />
           </Route>
+
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

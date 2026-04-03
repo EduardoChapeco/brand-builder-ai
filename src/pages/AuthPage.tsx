@@ -65,13 +65,16 @@ export default function AuthPage() {
     <div className="flex min-h-screen items-center justify-center p-4 bg-muted/40">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">
-            {isSignUp ? "Criar Conta" : "Login"}
+          <div className="flex justify-center mb-6">
+            <div className="sw-logo" style={{ height: 32 }} />
+          </div>
+          <CardTitle className="text-xl font-bold text-center">
+            {isSignUp ? "Criar Sua Conta Simwork" : "Bem-vindo ao Simwork"}
           </CardTitle>
           <CardDescription className="text-center">
             {isSignUp 
-              ? "Insira seu email e senha para criar sua conta" 
-              : "Insira suas credenciais para acessar a plataforma"}
+              ? "Comece hoje sua jornada de criador multifacetado" 
+              : "Identifique-se para continuar suas operações"}
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleAuth}>

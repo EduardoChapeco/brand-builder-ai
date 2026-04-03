@@ -91,7 +91,7 @@ export default function SiteEditorPage() {
   const handleSave = async () => {
     const persistedId = await save();
     if (persistedId && siteId === 'new' && workspace?.id) {
-      navigate(\`/workspace/\${workspace.id}/site-builder/\${persistedId}\`, { replace: true });
+      navigate(`/workspace/${workspace.id}/sites/${persistedId}`, { replace: true });
     }
   };
 
@@ -108,7 +108,7 @@ export default function SiteEditorPage() {
         
         {/* Pages Header */}
         <div className="p-6 border-b border-[#1f1f1f] bg-black/50 backdrop-blur">
-          <button onClick={() => navigate('../site-builder')} className="text-stone-500 hover:text-white text-xs font-bold uppercase tracking-widest flex items-center gap-2 mb-4 transition-colors">
+          <button onClick={() => navigate('../sites')} className="text-stone-500 hover:text-white text-xs font-bold uppercase tracking-widest flex items-center gap-2 mb-4 transition-colors">
             <ChevronLeft size={14}/> Voltar aos Projetos
           </button>
           <h2 className="text-xl font-bold bg-gradient-to-r from-white to-stone-500 bg-clip-text text-transparent">Site Structure</h2>

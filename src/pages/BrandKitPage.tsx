@@ -386,9 +386,16 @@ const FontSelect = ({ label, val, options, set }: any) => (
     <label className="block text-[10px] font-bold mb-2 uppercase tracking-widest text-[#777] font-mono">{label}</label>
     <div className="grid grid-cols-2 gap-2">
       {options.map((opt: string) => (
-        <button key={opt} onClick={() => set(opt)}
-          className={\`py-3 px-3 rounded-xl border text-sm transition-all focus:outline-none \${val === opt ? 'bg-[#a855f7]/10 border-[#a855f7] text-white shadow-[0_0_15px_rgba(168,85,247,0.15)] font-bold' : 'bg-[#1a1a1a] border-[#333] text-stone-400 hover:border-[#555]'}\`}>
-          <span style={{ fontFamily: \`'\${opt}', sans-serif\` }}>{opt}</span>
+        <button
+          key={opt}
+          onClick={() => set(opt)}
+          className={`py-3 px-3 rounded-xl border text-sm transition-all focus:outline-none ${
+            val === opt
+              ? 'bg-[#a855f7]/10 border-[#a855f7] text-white font-bold'
+              : 'bg-[#1a1a1a] border-[#333] text-stone-400 hover:border-[#555]'
+          }`}
+        >
+          <span style={{ fontFamily: `'${opt}', sans-serif` }}>{opt}</span>
         </button>
       ))}
     </div>

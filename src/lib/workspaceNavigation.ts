@@ -1,83 +1,185 @@
-import type { LucideIcon } from "lucide-react";
+import type { LucideIcon } from 'lucide-react';
 import {
-  Activity,
-  Aperture,
-  BookText,
+  BarChart3,
   Bot,
-  Clapperboard,
+  BriefcaseBusiness,
+  Building2,
   FileText,
+  FolderKanban,
   Globe,
-  Grid2x2,
-  Images,
-  Layers3,
+  HelpCircle,
+  LayoutGrid,
+  LifeBuoy,
   Link2,
-  MessageSquare,
-  MonitorSmartphone,
   Newspaper,
   Palette,
-  Presentation,
-  ShieldCheck,
   Settings,
   Sparkles,
-  TrendingUp,
-  UserCircle2,
-  Wand2,
-} from "lucide-react";
-
+  Video,
+  Wallet,
+} from 'lucide-react';
 
 export type WorkspaceNavItem = {
   label: string;
   path: string;
   icon: LucideIcon;
-  section: "Painel" | "Publicacoes" | "Estrategia" | "Inteligencia" | "Estudio Criativo" | "Gestao" | "Sistema";
-  description?: string;
+  section: 'Operação' | 'Criar' | 'Workspace' | 'Suporte';
+  description: string;
+  adminOnly?: boolean;
+  helpTitle?: string;
+  helpBody?: string;
 };
 
 export const WORKSPACE_NAV_ITEMS: WorkspaceNavItem[] = [
-
-  { label: "Dashboard", path: "dashboard", icon: Grid2x2, section: "Painel", description: "Visão geral e recomendações do workspace" },
-
-  { label: "Bio Link Oficial", path: "biolink", icon: Link2, section: "Publicacoes", description: "Link da bio — hub central da marca" },
-  { label: "Site Institucional", path: "site-builder", icon: Globe, section: "Publicacoes", description: "Construtor de sites com scroll 3D" },
-  { label: "Blog Manager", path: "blog-manager", icon: BookText, section: "Publicacoes", description: "Artigos SEO conectados ao briefing" },
-  { label: "News Portal RSS", path: "news-portal", icon: Newspaper, section: "Publicacoes", description: "Curadoria de notícias em 1 clique" },
-
-  { label: "Briefing", path: "briefing", icon: FileText, section: "Estrategia", description: "Contexto, estratégia e posicionamento" },
-  { label: "Brand Kit", path: "brand-kit", icon: Palette, section: "Estrategia", description: "Cores, logo e identidade visual completa" },
-  { label: "Cérebro da Marca (DNA)", path: "brand-dna", icon: Activity, section: "Estrategia", description: "Templates competitivos e DNA editorial" },
-  { label: "Personagem da Marca", path: "brand-character", icon: UserCircle2, section: "Estrategia", description: "Character visual com consistência por IA" },
-
-  { label: "Viral Analyzer", path: "viral-analyzer", icon: TrendingUp, section: "Inteligencia", description: "Padrões virais mapeados pela IA" },
-  { label: "SimLab", path: "simlab", icon: ShieldCheck, section: "Inteligencia", description: "Simula como sua audiência reage antes de publicar" },
-  { label: "Squad Builder", path: "squads", icon: Bot, section: "Inteligencia", description: "Agentes de IA configurados por objetivo" },
-  { label: "Squad de IA (Chat)", path: "chat", icon: MessageSquare, section: "Inteligencia", description: "Chat com squads especializados" },
-
-  { label: "Gerador de Posts", path: "generator", icon: Wand2, section: "Estudio Criativo", description: "Posts com templates da marca" },
-  { label: "Video Studio", path: "video-studio", icon: Clapperboard, section: "Estudio Criativo", description: "Editor de video, geracao IA e motion sections" },
-  { label: "Carousel Builder", path: "carousel-builder", icon: Layers3, section: "Estudio Criativo", description: "Carrosséis com storyboard por IA" },
-  { label: "Slides & Decks", path: "slides", icon: Presentation, section: "Estudio Criativo", description: "Apresentações e pitch decks" },
-  { label: "Image Studio", path: "image-prompts", icon: Sparkles, section: "Estudio Criativo", description: "Geração de imagens com IA" },
-  { label: "Product Shots", path: "product-shots", icon: Aperture, section: "Estudio Criativo", description: "Fotos de produto profissionais" },
-  { label: "Web Cloner", path: "web-cloner", icon: MonitorSmartphone, section: "Estudio Criativo", description: "Clone e recrie páginas de destino" },
-  { label: "VibeCoder", path: "vibe-coder", icon: Bot, section: "Estudio Criativo", description: "Builder de sites multi-arquivo" },
-
-  { label: "Feed Preview", path: "feed-preview", icon: Grid2x2, section: "Gestao", description: "Visualize o grid do feed antes de publicar" },
-  { label: "Biblioteca Geral", path: "library", icon: Images, section: "Gestao", description: "Arquivos, imagens e posts gerados" },
-
-  { label: "Configurações", path: "settings", icon: Settings, section: "Sistema", description: "APIs, chaves e preferências" },
+  {
+    label: 'Painel',
+    path: 'painel',
+    icon: LayoutGrid,
+    section: 'Operação',
+    description: 'Visão operacional do workspace, pendências e próximos passos.',
+    helpTitle: 'Painel operacional',
+    helpBody: 'Acompanhe o estado do workspace, progresso de configuração e acessos rápidos para os módulos críticos.',
+  },
+  {
+    label: 'Hub',
+    path: 'hub',
+    icon: Sparkles,
+    section: 'Operação',
+    description: 'Entrada única dos criadores e fluxos ativos do Simwork.',
+    helpTitle: 'Hub de criadores',
+    helpBody: 'Inicie novos fluxos de Sites, Bio Links, Conteúdo, Vídeo e Agents a partir de um catálogo operacional.',
+  },
+  {
+    label: 'Sites',
+    path: 'sites',
+    icon: Globe,
+    section: 'Criar',
+    description: 'Sites e páginas institucionais com editor visual e publicação real.',
+  },
+  {
+    label: 'Bio Links',
+    path: 'biolinks',
+    icon: Link2,
+    section: 'Criar',
+    description: 'Links de bio, blocos rastreáveis e operação mobile-first.',
+  },
+  {
+    label: 'Blog',
+    path: 'blog',
+    icon: FileText,
+    section: 'Criar',
+    description: 'Conteúdo editorial, SEO e derivação de pautas do workspace.',
+  },
+  {
+    label: 'Notícias',
+    path: 'noticias',
+    icon: Newspaper,
+    section: 'Criar',
+    description: 'Curadoria RSS, fila editorial e derivação para outros módulos.',
+  },
+  {
+    label: 'Posts',
+    path: 'posts',
+    icon: Sparkles,
+    section: 'Criar',
+    description: 'Posts, carrosséis e agenda social da marca.',
+  },
+  {
+    label: 'Vídeo',
+    path: 'video',
+    icon: Video,
+    section: 'Criar',
+    description: 'Projetos de vídeo, timeline, motion e renderização.',
+  },
+  {
+    label: 'Agents',
+    path: 'agents',
+    icon: Bot,
+    section: 'Criar',
+    description: 'Agents operacionais, personas e validação SimLab.',
+  },
+  {
+    label: 'CRM',
+    path: 'crm',
+    icon: BriefcaseBusiness,
+    section: 'Operação',
+    description: 'Leads, pipeline comercial e formulários de captação.',
+  },
+  {
+    label: 'Analytics',
+    path: 'analytics',
+    icon: BarChart3,
+    section: 'Operação',
+    description: 'Eventos, métricas por módulo e exportação.',
+  },
+  {
+    label: 'Brand Kit',
+    path: 'brand-kit',
+    icon: Palette,
+    section: 'Workspace',
+    description: 'Identidade visual e ativos centrais da marca.',
+  },
+  {
+    label: 'Briefing',
+    path: 'briefing',
+    icon: FileText,
+    section: 'Workspace',
+    description: 'Contexto da marca, público, oferta e direcionamento.',
+  },
+  {
+    label: 'Assets',
+    path: 'assets',
+    icon: FolderKanban,
+    section: 'Workspace',
+    description: 'Biblioteca central de arquivos do workspace.',
+  },
+  {
+    label: 'Cobrança',
+    path: 'cobranca',
+    icon: Wallet,
+    section: 'Workspace',
+    description: 'Plano, consumo, créditos e histórico financeiro.',
+  },
+  {
+    label: 'Configurações',
+    path: 'config',
+    icon: Settings,
+    section: 'Workspace',
+    description: 'Provedores, feeds, preferências e integrações.',
+  },
+  {
+    label: 'Ajuda',
+    path: 'ajuda',
+    icon: HelpCircle,
+    section: 'Suporte',
+    description: 'Central de ajuda, onboarding e documentação operacional.',
+  },
+  {
+    label: 'Suporte',
+    path: 'suporte',
+    icon: LifeBuoy,
+    section: 'Suporte',
+    description: 'Tickets, status do atendimento e histórico de suporte.',
+  },
+  {
+    label: 'Admin',
+    path: '/admin',
+    icon: Building2,
+    section: 'Suporte',
+    description: 'Operação administrativa global do Simwork.',
+    adminOnly: true,
+  },
 ];
 
 export const WORKSPACE_NAV_GROUPS = [
-  { label: "Início", items: WORKSPACE_NAV_ITEMS.filter((item) => item.section === "Painel") },
-  { label: "Publicações & Portais", items: WORKSPACE_NAV_ITEMS.filter((item) => item.section === "Publicacoes") },
-  { label: "Identidade da Marca", items: WORKSPACE_NAV_ITEMS.filter((item) => item.section === "Estrategia") },
-  { label: "Inteligência & IA", items: WORKSPACE_NAV_ITEMS.filter((item) => item.section === "Inteligencia") },
-  { label: "Estúdio Criativo", items: WORKSPACE_NAV_ITEMS.filter((item) => item.section === "Estudio Criativo") },
-  { label: "Biblioteca", items: WORKSPACE_NAV_ITEMS.filter((item) => item.section === "Gestao") },
+  { label: 'Operação', items: WORKSPACE_NAV_ITEMS.filter((item) => item.section === 'Operação') },
+  { label: 'Criar', items: WORKSPACE_NAV_ITEMS.filter((item) => item.section === 'Criar') },
+  { label: 'Workspace', items: WORKSPACE_NAV_ITEMS.filter((item) => item.section === 'Workspace') },
+  { label: 'Suporte', items: WORKSPACE_NAV_ITEMS.filter((item) => item.section === 'Suporte') },
 ] as const;
 
 export const getWorkspaceRouteMeta = (pathname: string) => {
   const match = pathname.match(/\/workspace\/[^/]+\/([^/?#]+)/);
-  const path = match?.[1] || "dashboard";
+  const path = match?.[1] || 'painel';
   return WORKSPACE_NAV_ITEMS.find((item) => item.path === path) || WORKSPACE_NAV_ITEMS[0];
 };

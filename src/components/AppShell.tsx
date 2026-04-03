@@ -1,73 +1,52 @@
-import type { CSSProperties } from 'react';
-import { Outlet } from 'react-router-dom';
-import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
+import { Outlet, useLocation } from 'react-router-dom';
+import { SidebarProvider } from '@/components/ui/sidebar';
 import WorkspaceSidebar from '@/components/shared/WorkspaceSidebar';
-import WorkspaceTopbar from '@/components/shared/WorkspaceTopbar';
+import SwHelpSheet from '@/components/shared/SwHelpSheet';
+import SwTopbar from '@/components/shared/SwTopbar';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
+import { getWorkspaceRouteMeta } from '@/lib/workspaceNavigation';
+import { useMemo, useState } from 'react';
 
-const hexToRgba = (hex: string, alpha: number) => {
-  const normalized = hex.replace('#', '');
-  const full = normalized.length === 3
-    ? normalized.split('').map((char) => char + char).join('')
-    : normalized;
+const defaultBullets = [
+  'Confira se o Brand Kit e o Briefing já foram migrados para o schema Simwork.',
+  'Valide o estado do módulo antes de publicar ou sincronizar qualquer saída.',
+  'Use a ajuda contextual como checklist de implementação e operação do módulo atual.',
+];
 
-  const value = Number.parseInt(full, 16);
-  const r = (value >> 16) & 255;
-  const g = (value >> 8) & 255;
-  const b = value & 255;
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-};
+export default function AppShell() {
+  const location = useLocation();
+  const { workspace } = useWorkspace();
+  const [helpOpen, setHelpOpen] = useState(false);
 
-const AppShell = () => {
-  const { isLoading, workspace, brandKit } = useWorkspace();
-
-  const primaryColor = brandKit?.color_primary || '#18181B';
-  const shellStyle = {
-    '--workspace-brand': primaryColor,
-    '--workspace-brand-soft': hexToRgba(primaryColor, 0.12),
-    '--workspace-brand-border': hexToRgba(primaryColor, 0.22),
-  } as CSSProperties;
-
-  if (isLoading) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-[var(--surface-1)] text-[var(--text-primary)]">
-        <div className="flex flex-col items-center gap-6">
-          <div
-            className="flex h-14 w-14 items-center justify-center rounded-2xl text-white shadow-[var(--shadow-card)]"
-            style={{ background: primaryColor }}
-          >
-            <span className="text-2xl font-semibold tracking-[-0.04em]">P</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            {[0, 1, 2].map(i => (
-              <div
-                key={i}
-                className="h-1.5 w-1.5 rounded-full animate-bounce"
-                style={{ background: primaryColor, animationDelay: `${i * 0.15}s` }}
-              />
-            ))}
-          </div>
-          <p className="text-xs uppercase tracking-[0.2em] text-[var(--text-muted)]">
-            Carregando workspace...
-          </p>
-        </div>
-      </div>
-    );
-  }
+  const routeMeta = useMemo(() => getWorkspaceRouteMeta(location.pathname), [location.pathname]);
 
   return (
     <SidebarProvider defaultOpen>
-      <div className="flex h-screen overflow-hidden bg-[var(--surface-1)] text-[var(--text-primary)]" style={shellStyle}>
-        <WorkspaceSidebar />
-        <SidebarInset className="min-w-0 overflow-hidden bg-[var(--surface-1)]">
-          <WorkspaceTopbar />
-          <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            <Outlet />
-          </main>
-        </SidebarInset>
+      <div className="min-h-screen w-full bg-[var(--surface-app)] text-[var(--text-primary)]">
+        <div className="flex min-h-screen w-full">
+          <WorkspaceSidebar />
+          <div className="flex min-h-screen min-w-0 flex-1 flex-col">
+            <SwTopbar
+              title={routeMeta.label}
+              description={routeMeta.description}
+              status={routeMeta.section}
+              workspaceName={workspace?.name ?? null}
+              onOpenHelp={() => setHelpOpen(true)}
+            />
+            <main className="min-h-0 flex-1 overflow-y-auto bg-[var(--surface-canvas)]">
+              <Outlet />
+            </main>
+          </div>
+        </div>
       </div>
+
+      <SwHelpSheet
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        title={routeMeta.helpTitle || routeMeta.label}
+        body={routeMeta.helpBody || routeMeta.description}
+        bullets={defaultBullets}
+      />
     </SidebarProvider>
   );
-};
-
-export default AppShell;
+}
