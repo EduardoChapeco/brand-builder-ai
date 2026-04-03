@@ -27,128 +27,37 @@ import {
   Smartphone,
   Tablet,
   Trash2,
+  Layout,
+  Settings2,
+  ChevronLeft,
+  ChevronRight,
+  Globe,
+  UploadCloud
 } from 'lucide-react';
 import { toast } from 'sonner';
-import AppSectionLabel from '@/components/shared/AppSectionLabel';
-import EmptyState from '@/components/shared/EmptyState';
-import PageHeader from '@/components/shared/PageHeader';
-import SectionCard from '@/components/shared/SectionCard';
-import SubtleBadge from '@/components/shared/SubtleBadge';
 import WebsiteSectionInspector from '@/components/website/WebsiteSectionInspector';
 import WebsiteSectionRenderer from '@/components/website/WebsiteSectionRenderer';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { useWebsiteBuilder } from '@/hooks/useWebsiteBuilder';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { WEBSITE_SECTION_LIBRARY } from '@/lib/websites/defaults';
-import type {
-  WebsitePageRecord,
-  WebsiteSectionRecord,
-  WebsiteSectionType,
-  WebsiteStatus,
-} from '@/lib/websites/types';
-import { cn } from '@/lib/utils';
+import type { WebsitePageRecord, WebsiteSectionRecord, WebsiteSectionType, WebsiteStatus } from '@/lib/websites/types';
 
 type PreviewMode = 'desktop' | 'tablet' | 'mobile';
-
-const SECTION_LABELS: Record<WebsiteSectionType, string> = {
-  hero: 'Hero',
-  features: 'Features',
-  benefits: 'Benefits',
-  pricing: 'Pricing',
-  faq: 'FAQ',
-  testimonials: 'Testimonials',
-  cta: 'CTA',
-  contact_form: 'Contact Form',
-  gallery: 'Gallery',
-  video_embed: 'Video Embed',
-  stats: 'Stats',
-  team: 'Team',
-  blog_feed: 'Blog Feed',
-  newsletter: 'Newsletter',
-  social_proof: 'Social Proof',
-  comparison_table: 'Comparison Table',
-  timeline: 'Timeline',
-  custom_html: 'Custom HTML',
-  legacy_block: 'Legacy Block',
-};
-
 const SECTION_GROUP_ORDER = ['Topo', 'Conteudo', 'Conversao', 'Custom'] as const;
 
-const toPathSlug = (value: string) => {
-  const normalized = value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-');
-
-  if (!normalized || normalized === 'home') {
-    return '/';
-  }
-
-  return `/${normalized.replace(/^\/+/, '')}`;
-};
-
-function SortableSectionRow({
-  section,
-  selected,
-  onSelect,
-  onRemove,
-}: {
-  section: WebsiteSectionRecord;
-  selected: boolean;
-  onSelect: () => void;
-  onRemove: () => void;
-}) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: section.id });
-
+function SortableSectionRow({ section, selected, onSelect, onRemove }: any) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: section.id });
   return (
-    <div
-      ref={setNodeRef}
-      style={{
-        transform: CSS.Transform.toString(transform),
-        transition,
-      }}
-      className={cn(
-        'rounded-2xl border p-3',
-        selected
-          ? 'border-[var(--workspace-brand-border)] bg-[var(--workspace-brand-soft)]'
-          : 'border-[var(--border)] bg-[var(--surface-2)]',
-        isDragging && 'opacity-80',
-      )}
-    >
-      <div className="flex items-start gap-3">
-        <button
-          type="button"
-          className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface-card)] text-[var(--text-muted)]"
-          {...attributes}
-          {...listeners}
-        >
-          <GripVertical size={16} />
-        </button>
-
-        <button type="button" onClick={onSelect} className="flex-1 text-left">
-          <p className="text-sm font-semibold text-[var(--text-primary)]">
-            {SECTION_LABELS[section.section_type]}
-          </p>
-          <p className="mt-1 text-xs text-[var(--text-secondary)]">
-            Ordem {section.sort_order + 1}
-          </p>
-        </button>
-
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="h-9 w-9 rounded-xl shadow-none hover:bg-[var(--surface-card)]"
-          onClick={onRemove}
-        >
-          <Trash2 size={16} />
-        </Button>
-      </div>
+    <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={`group relative overflow-hidden rounded-[20px] p-4 flex items-center gap-4 transition-all ${selected ? 'bg-[#3b82f6]/10 border border-[#3b82f6]' : 'bg-[#111] border border-[#222] hover:bg-[#1a1a1a]'} ${isDragging ? 'opacity-80 scale-[1.02] shadow-2xl z-50' : ''}`}>
+      <button {...attributes} {...listeners} className="text-stone-600 hover:text-white transition-colors cursor-grab active:cursor-grabbing"><GripVertical size={20}/></button>
+      <button onClick={onSelect} className="flex-1 text-left">
+        <p className={`text-sm font-bold ${selected ? 'text-[#3b82f6]' : 'text-stone-300'}`}>{section.section_type.replace('_', ' ').toUpperCase()}</p>
+        <p className="text-xs text-stone-500 font-medium">Elemento {section.sort_order + 1}</p>
+      </button>
+      <button onClick={onRemove} className="opacity-0 group-hover:opacity-100 p-2 text-stone-500 hover:text-red-500 transition-all rounded-full hover:bg-red-500/10">
+        <Trash2 size={16}/>
+      </button>
     </div>
   );
 }
@@ -158,401 +67,225 @@ export default function SiteEditorPage() {
   const { siteId } = useParams<{ siteId: string }>();
   const { workspace, canEdit } = useWorkspace();
   const {
-    website,
-    pages,
-    activePage,
-    activePageId,
-    activeSections,
-    selectedSection,
-    selectedSectionId,
-    loading,
-    saving,
-    isDirty,
-    sourceMode,
-    setActivePageId,
-    setSelectedSectionId,
-    updateWebsite,
-    updatePage,
-    addPage,
-    addSection,
-    updateSection,
-    updateSectionContent,
-    removeSection,
-    reorderSections,
-    save,
+    website, pages, activePage, activePageId, activeSections, selectedSection, selectedSectionId,
+    loading, saving, isDirty, setActivePageId, setSelectedSectionId, updateWebsite,
+    updatePage, addPage, addSection, updateSection, updateSectionContent, removeSection, reorderSections, save
   } = useWebsiteBuilder(workspace?.id, siteId);
+  
   const [previewMode, setPreviewMode] = useState<PreviewMode>('desktop');
   const [newPageTitle, setNewPageTitle] = useState('');
-  const [newPageSlug, setNewPageSlug] = useState('');
+  const [leftPaneOpen, setLeftPaneOpen] = useState(true);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: { distance: 8 },
-    }),
-  );
-
-  const libraryByGroup = useMemo(
-    () =>
-      SECTION_GROUP_ORDER.map((group) => ({
-        group,
-        items: WEBSITE_SECTION_LIBRARY.filter((item) => item.group === group),
-      })),
-    [],
-  );
-
-  const previewWidthClass =
-    previewMode === 'desktop'
-      ? 'max-w-[1180px]'
-      : previewMode === 'tablet'
-        ? 'max-w-[820px]'
-        : 'max-w-[430px] rounded-[32px]';
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+  const libraryByGroup = useMemo(() => SECTION_GROUP_ORDER.map(g => ({ group: g, items: WEBSITE_SECTION_LIBRARY.filter(i => i.group === g) })), []);
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-
-    const oldIndex = activeSections.findIndex((section) => section.id === active.id);
-    const newIndex = activeSections.findIndex((section) => section.id === over.id);
+    const oldIndex = activeSections.findIndex(s => s.id === active.id);
+    const newIndex = activeSections.findIndex(s => s.id === over.id);
     if (oldIndex < 0 || newIndex < 0) return;
-
-    const nextOrderedSections = arrayMove(activeSections, oldIndex, newIndex);
-    reorderSections(nextOrderedSections.map((section) => section.id));
+    reorderSections(arrayMove(activeSections, oldIndex, newIndex).map(s => s.id));
   };
 
   const handleSave = async () => {
     const persistedId = await save();
     if (persistedId && siteId === 'new' && workspace?.id) {
-      navigate(`/workspace/${workspace.id}/site-builder/${persistedId}`, { replace: true });
+      navigate(\`/workspace/\${workspace.id}/site-builder/\${persistedId}\`, { replace: true });
     }
   };
 
-  const handleAddPage = async () => {
-    const title = newPageTitle.trim();
-    if (!title) {
-      toast.error('Informe o titulo da nova pagina.');
-      return;
-    }
-
-    await addPage(title, newPageSlug.trim() || toPathSlug(title));
-    setNewPageTitle('');
-    setNewPageSlug('');
-  };
-
-  const handleSelectPage = (page: WebsitePageRecord) => {
-    setActivePageId(page.id);
-    setSelectedSectionId(null);
-  };
-
-  if (loading) {
-    return (
-      <div className="page-layout">
-        <div className="page-content">
-          <div className="page-inner flex min-h-[70vh] items-center justify-center py-6">
-            <Loader2 className="animate-spin text-[var(--text-muted)]" size={32} />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!website) {
-    return (
-      <div className="page-layout">
-        <div className="page-content">
-          <div className="page-inner flex flex-col gap-6 py-6">
-            <PageHeader
-              eyebrow="Website Builder"
-              title="Site nao encontrado"
-              description="Nao foi possivel resolver o website solicitado dentro do workspace atual."
-              className="shadow-none"
-            />
-            <EmptyState
-              title="Nenhum site carregado"
-              description="Volte para a biblioteca e escolha um site valido para continuar a edicao."
-              icon={Layers}
-              action={
-                <Button
-                  variant="outline"
-                  className="rounded-xl shadow-none"
-                  onClick={() => navigate('../site-builder')}
-                >
-                  Voltar para a biblioteca
-                </Button>
-              }
-            />
-          </div>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <div className="min-h-screen bg-[#050505] flex items-center justify-center text-stone-500"><Loader2 className="animate-spin" size={32} /></div>;
+  if (!website) return <div className="min-h-screen bg-[#050505] flex items-center justify-center text-white"><p>Website não encontrado.</p></div>;
 
   return (
-    <div className="page-layout">
-      <div className="page-content">
-        <div className="page-inner flex max-w-none flex-col gap-6 py-6">
-          <PageHeader
-            eyebrow="Website Builder"
-            title={website.name}
-            description="Editor visual canonico em paginas e secoes, com reordenacao drag-and-drop, preview inline e persistencia compativel com o legado."
-            className="shadow-none"
-            action={
-              <div className="flex flex-wrap items-center gap-2">
-                <SubtleBadge variant={sourceMode === 'sections' ? 'brand' : 'outline'}>
-                  {sourceMode === 'sections' ? 'schema canonico' : 'modo legado'}
-                </SubtleBadge>
-                {isDirty ? <SubtleBadge variant="outline">draft sujo</SubtleBadge> : null}
-                {!canEdit ? <SubtleBadge variant="outline">somente leitura</SubtleBadge> : null}
-                <Button
-                  variant="outline"
-                  className="rounded-xl shadow-none"
-                  onClick={() => navigate('../site-builder')}
-                >
-                  Voltar
-                </Button>
-                <Button
-                  variant="outline"
-                  className="rounded-xl shadow-none"
-                  onClick={() =>
-                    navigate('../vibe-coder', {
-                      state: { websiteId: website.id, websiteName: website.name },
-                    })
-                  }
-                >
-                  <Bot size={14} />
-                  Abrir no chat
-                </Button>
-                <Button
-                  className="rounded-xl shadow-none"
-                  onClick={handleSave}
-                  disabled={saving || !canEdit}
-                >
-                  <Save size={14} />
-                  {saving ? 'Salvando...' : 'Salvar'}
-                </Button>
+    <div className="flex h-screen bg-[#050505] text-white font-sans overflow-hidden">
+      
+      {/* 
+        ======== LEFT PANE: Structure & Modules ======== 
+      */}
+      <div className={`flex flex-col border-r border-[#1f1f1f] transition-all duration-300 ease-in-out relative ${leftPaneOpen ? 'w-[360px]' : 'w-0 overflow-hidden opacity-0'}`}>
+        
+        {/* Pages Header */}
+        <div className="p-6 border-b border-[#1f1f1f] bg-black/50 backdrop-blur">
+          <button onClick={() => navigate('../site-builder')} className="text-stone-500 hover:text-white text-xs font-bold uppercase tracking-widest flex items-center gap-2 mb-4 transition-colors">
+            <ChevronLeft size={14}/> Voltar aos Projetos
+          </button>
+          <h2 className="text-xl font-bold bg-gradient-to-r from-white to-stone-500 bg-clip-text text-transparent">Site Structure</h2>
+        </div>
+
+        <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-8">
+          
+          {/* Pages Manager */}
+          <div className="space-y-4">
+             <div className="flex justify-between items-center">
+                <h3 className="text-[10px] font-bold text-stone-500 uppercase tracking-widest flex items-center gap-2"><Globe size={14}/> Rotas & Páginas</h3>
+             </div>
+             
+             <div className="space-y-2">
+               {pages.map((p) => (
+                 <button key={p.id} onClick={() => setActivePageId(p.id)} className={`w-full text-left p-4 rounded-[16px] border transition-all flex items-center justify-between ${activePageId === p.id ? 'bg-[#3b82f6]/10 border-[#3b82f6] text-white' : 'bg-[#111] border-[#222] text-stone-400 hover:bg-[#1a1a1a]'}`}>
+                   <div className="flex flex-col">
+                     <span className="text-sm font-bold">{p.title}</span>
+                     <span className="text-[10px] font-mono opacity-60 mt-1">{p.slug || '/'}</span>
+                   </div>
+                   {p.is_home && <div className="px-2 py-1 bg-white/10 rounded-full text-[9px] font-bold uppercase tracking-wider">Home</div>}
+                 </button>
+               ))}
+               
+               <div className="flex gap-2 mt-4">
+                 <input value={newPageTitle} onChange={e => setNewPageTitle(e.target.value)} placeholder="Nova Página" className="flex-1 bg-transparent border-b border-[#333] text-sm px-2 focus:border-[#3b82f6] outline-none transition-colors" />
+                 <button onClick={() => { if(newPageTitle) addPage(newPageTitle, ''); setNewPageTitle('');}} className="p-2 bg-[#111] hover:bg-[#222] border border-[#222] rounded-xl"><Plus size={16}/></button>
+               </div>
+             </div>
+          </div>
+
+          <div className="w-full h-[1px] bg-gradient-to-r from-transparent via-[#222] to-transparent" />
+
+          {/* Section Composer */}
+          <div className="space-y-4">
+            <h3 className="text-[10px] font-bold text-stone-500 uppercase tracking-widest flex items-center gap-2"><Layers size={14}/> Tree View (DOM)</h3>
+            {activeSections.length === 0 ? (
+              <div className="bg-[#111] rounded-[20px] p-6 text-center border border-dashed border-[#333]">
+                <p className="text-xs text-stone-500">Arraste os nós virtuais do <br/><span className="text-[#3b82f6]">Module Library</span> <span className="text-stone-300">➜</span></p>
               </div>
-            }
-          />
-
-          <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)_340px]">
-            <SectionCard className="shadow-none">
-              <ScrollArea className="h-[calc(100vh-260px)] pr-3">
-                <div className="grid gap-6">
-                  <div className="grid gap-3">
-                    <AppSectionLabel>Paginas</AppSectionLabel>
-                    <div className="grid gap-2">
-                      {pages.map((page) => (
-                        <button
-                          key={page.id}
-                          type="button"
-                          onClick={() => handleSelectPage(page)}
-                          className={cn(
-                            'rounded-2xl border px-4 py-3 text-left transition-colors',
-                            activePageId === page.id
-                              ? 'border-[var(--workspace-brand-border)] bg-[var(--workspace-brand-soft)]'
-                              : 'border-[var(--border)] bg-[var(--surface-2)]',
-                          )}
-                        >
-                          <div className="flex items-center justify-between gap-3">
-                            <div>
-                              <p className="text-sm font-semibold text-[var(--text-primary)]">{page.title}</p>
-                              <p className="mt-1 text-xs text-[var(--text-secondary)]">{page.slug}</p>
-                            </div>
-                            {page.is_home ? <SubtleBadge variant="brand">home</SubtleBadge> : null}
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                    <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4">
-                      <div className="grid gap-3">
-                        <label className="grid gap-2">
-                          <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
-                            Nova pagina
-                          </span>
-                          <Input
-                            value={newPageTitle}
-                            onChange={(event) => setNewPageTitle(event.target.value)}
-                            placeholder="Ex: Sobre"
-                            className="shadow-none"
-                            disabled={!canEdit}
-                          />
-                        </label>
-                        <label className="grid gap-2">
-                          <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
-                            Slug
-                          </span>
-                          <Input
-                            value={newPageSlug}
-                            onChange={(event) => setNewPageSlug(event.target.value)}
-                            placeholder="/sobre"
-                            className="shadow-none"
-                            disabled={!canEdit}
-                          />
-                        </label>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="rounded-xl shadow-none"
-                          onClick={handleAddPage}
-                          disabled={!canEdit}
-                        >
-                          <Plus size={14} />
-                          Adicionar pagina
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid gap-3">
-                    <AppSectionLabel>Adicionar secao</AppSectionLabel>
-                    {libraryByGroup.map(({ group, items }) => (
-                      <div key={group} className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
-                          {group}
-                        </p>
-                        <div className="mt-3 grid gap-2">
-                          {items.map((item) => (
-                            <button
-                              key={item.type}
-                              type="button"
-                              onClick={() => addSection(item.type)}
-                              disabled={!canEdit || !activePageId}
-                              className="rounded-2xl border border-[var(--border)] bg-[var(--surface-card)] px-4 py-3 text-left transition-colors hover:bg-[var(--surface-1)] disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                              <p className="text-sm font-semibold text-[var(--text-primary)]">{item.label}</p>
-                              <p className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">{item.description}</p>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
+            ) : (
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <SortableContext items={activeSections.map(s => s.id)} strategy={verticalListSortingStrategy}>
+                  <div className="space-y-2">
+                    {activeSections.map((s) => (
+                      <SortableSectionRow key={s.id} section={s} selected={selectedSectionId === s.id} onSelect={() => setSelectedSectionId(s.id)} onRemove={() => removeSection(s.id)} />
                     ))}
                   </div>
+                </SortableContext>
+              </DndContext>
+            )}
+          </div>
 
-                  <div className="grid gap-3">
-                    <AppSectionLabel>Estrutura da pagina</AppSectionLabel>
-                    {activeSections.length === 0 ? (
-                      <EmptyState
-                        title="Nenhuma secao"
-                        description="Adicione uma secao para iniciar a composicao desta pagina."
-                        icon={Layers}
-                      />
-                    ) : (
-                      <DndContext
-                        sensors={sensors}
-                        collisionDetection={closestCenter}
-                        onDragEnd={handleDragEnd}
-                      >
-                        <SortableContext
-                          items={activeSections.map((section) => section.id)}
-                          strategy={verticalListSortingStrategy}
-                        >
-                          <div className="grid gap-2">
-                            {activeSections.map((section) => (
-                              <SortableSectionRow
-                                key={section.id}
-                                section={section}
-                                selected={selectedSectionId === section.id}
-                                onSelect={() => setSelectedSectionId(section.id)}
-                                onRemove={() => removeSection(section.id)}
-                              />
-                            ))}
-                          </div>
-                        </SortableContext>
-                      </DndContext>
-                    )}
-                  </div>
+        </div>
+      </div>
+
+      {/* Expand/Collapse Left Pane Button */}
+      <button onClick={() => setLeftPaneOpen(!leftPaneOpen)} className="absolute left-[360px] top-1/2 -translate-y-1/2 -translate-x-1/2 bg-[#111] border border-[#222] w-6 h-12 flex items-center justify-center rounded-full hover:bg-[#222] hover:text-white transition-all z-50 text-stone-500 shadow-xl" style={{ left: leftPaneOpen ? '360px' : '0px', transform: `translate(${leftPaneOpen ? '-50%' : '50%'}, -50%)` }}>
+        {leftPaneOpen ? <ChevronLeft size={14}/> : <ChevronRight size={14}/>}
+      </button>
+
+      {/* 
+        ======== CENTER PANE: Visual Preview / Stage ======== 
+      */}
+      <div className="flex-1 flex flex-col bg-[#050505] relative z-0">
+        
+        {/* Top Navbar */}
+        <div className="h-[72px] border-b border-[#1f1f1f] bg-black/60 backdrop-blur-2xl flex items-center justify-between px-6">
+           <div className="flex items-center gap-4">
+             <div className="px-3 py-1 bg-[#111] border border-[#222] rounded-full text-xs font-mono text-stone-400 flex items-center gap-2">
+               <span className="w-2 h-2 rounded-full bg-[#10b981] animate-pulse"/>
+               {website.name} · {activePage?.title || 'Home'}
+             </div>
+             {isDirty && <span className="text-[10px] text-stone-500 uppercase tracking-widest font-bold">Unsaved changes</span>}
+           </div>
+
+           <div className="flex items-center gap-6">
+             <div className="flex bg-[#111] border border-[#222] rounded-full p-1">
+                {(['desktop', 'tablet', 'mobile'] as PreviewMode[]).map(mode => (
+                  <button key={mode} onClick={() => setPreviewMode(mode)} className={`p-2 rounded-full transition-colors ${previewMode === mode ? 'bg-[#3b82f6] text-white shadow-lg' : 'text-stone-500 hover:text-white'}`}>
+                    {mode === 'desktop' ? <Monitor size={14}/> : mode === 'tablet' ? <Tablet size={14}/> : <Smartphone size={14}/>}
+                  </button>
+                ))}
+             </div>
+
+             <button onClick={handleSave} disabled={saving || !canEdit} className="bg-white hover:bg-stone-200 text-black font-bold text-sm px-6 py-2.5 rounded-full flex items-center gap-2 transition-transform hover:scale-105 shadow-[0_0_20px_rgba(255,255,255,0.1)] active:scale-95">
+                {saving ? <Loader2 size={16} className="animate-spin"/> : <UploadCloud size={16}/>}
+                Push to Production
+             </button>
+           </div>
+        </div>
+
+        {/* Live Canvas Stage */}
+        <div className="flex-1 flex flex-col overflow-hidden p-8 background-pattern relative">
+          {/* Subtle Grid behind canvas */}
+          <div className="absolute inset-0 bg-[url('https://ui.aceternity.com/_next/image?url=%2Fgrid.svg&w=384&q=75')] opacity-20 pointer-events-none mix-blend-screen" />
+          
+          <div className="flex-1 flex justify-center w-full min-h-full overflow-y-auto no-scrollbar relative z-10">
+             {activeSections.length === 0 ? (
+                <div className="w-full max-w-2xl mt-32 h-[400px] border border-dashed border-[#333] rounded-[40px] bg-black/40 backdrop-blur flex flex-col items-center justify-center">
+                  <Layout size={48} className="text-stone-700 mb-6"/>
+                  <h2 className="text-2xl font-bold bg-gradient-to-r from-stone-300 to-stone-600 bg-clip-text text-transparent">Canvas Vazio</h2>
+                  <p className="text-sm text-stone-500 mt-2 text-center max-w-sm">Use o inspetor lateral para adicionar blocos canônicos compatíveis com a IA.</p>
                 </div>
-              </ScrollArea>
-            </SectionCard>
-
-            <SectionCard className="shadow-none">
-              <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] pb-4">
-                <div>
-                  <AppSectionLabel>Preview</AppSectionLabel>
-                  <h2 className="mt-2 text-xl font-semibold tracking-[-0.04em] text-[var(--text-primary)]">
-                    {activePage?.title || 'Pagina'}
-                  </h2>
-                  <p className="mt-2 text-sm text-[var(--text-secondary)]">
-                    Clique no conteudo para selecionar a secao e editar inline no preview.
-                  </p>
+             ) : (
+                <div className={`bg-white w-full rounded-[40px] overflow-hidden shadow-2xl transition-all duration-500 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${previewMode === 'desktop' ? 'max-w-[1440px]' : previewMode === 'tablet' ? 'max-w-[768px]' : 'max-w-[430px]'}`}>
+                  {activeSections.map(s => (
+                    <WebsiteSectionRenderer key={s.id} section={s} previewMode={previewMode} selected={selectedSectionId === s.id} onSelect={() => setSelectedSectionId(s.id)} onUpdateContent={content => updateSectionContent(s.id, content)} />
+                  ))}
                 </div>
-                <div className="flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface-2)] p-1">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className={cn('rounded-full px-3 shadow-none', previewMode === 'desktop' && 'bg-[var(--surface-card)]')}
-                    onClick={() => setPreviewMode('desktop')}
-                  >
-                    <Monitor size={14} />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className={cn('rounded-full px-3 shadow-none', previewMode === 'tablet' && 'bg-[var(--surface-card)]')}
-                    onClick={() => setPreviewMode('tablet')}
-                  >
-                    <Tablet size={14} />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className={cn('rounded-full px-3 shadow-none', previewMode === 'mobile' && 'bg-[var(--surface-card)]')}
-                    onClick={() => setPreviewMode('mobile')}
-                  >
-                    <Smartphone size={14} />
-                  </Button>
-                </div>
-              </div>
-
-              {!canEdit ? (
-                <div className="mt-4 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-3 text-sm text-[var(--text-secondary)]">
-                  Este workspace esta em modo de leitura para o seu perfil. O preview continua acessivel, mas as alteracoes ficam bloqueadas.
-                </div>
-              ) : null}
-
-              <ScrollArea className="mt-6 h-[calc(100vh-360px)]">
-                {activeSections.length === 0 ? (
-                  <EmptyState
-                    title="Sem secoes nesta pagina"
-                    description="Use a biblioteca lateral para inserir a primeira secao e comecar a compor a pagina."
-                    icon={Eye}
-                  />
-                ) : (
-                  <div className="rounded-[28px] border border-[var(--border)] bg-[var(--surface-2)] p-4">
-                    <div className={cn('mx-auto overflow-hidden border border-[var(--border)] bg-[var(--surface-card)]', previewWidthClass)}>
-                      {activeSections.map((section) => (
-                        <WebsiteSectionRenderer
-                          key={section.id}
-                          section={section}
-                          previewMode={previewMode}
-                          selected={selectedSectionId === section.id}
-                          onSelect={() => setSelectedSectionId(section.id)}
-                          onUpdateContent={canEdit ? (contentPatch) => updateSectionContent(section.id, contentPatch) : undefined}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </ScrollArea>
-            </SectionCard>
-
-            <SectionCard className="shadow-none">
-              <ScrollArea className="h-[calc(100vh-260px)] pr-3">
-                <WebsiteSectionInspector
-                  website={website}
-                  activePage={activePage}
-                  selectedSection={selectedSection}
-                  canEdit={canEdit}
-                  updateWebsite={updateWebsite}
-                  updatePage={updatePage}
-                  updateSection={updateSection}
-                  updateSectionContent={updateSectionContent}
-                  onChangeStatus={(status) => updateWebsite({ status: status as WebsiteStatus })}
-                />
-              </ScrollArea>
-            </SectionCard>
+             )}
           </div>
         </div>
       </div>
+
+      {/* 
+        ======== RIGHT PANE: Component Library & Inspector ======== 
+      */}
+      <div className="w-[380px] bg-[#0a0a0a] border-l border-[#1f1f1f] flex flex-col overflow-hidden shrink-0 z-20">
+         
+         <div className="p-6 border-b border-[#1f1f1f] bg-black">
+           <h2 className="text-sm font-bold flex items-center gap-2"><Settings2 size={16}/> Component Inspector</h2>
+         </div>
+
+         <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-8">
+           
+           {!selectedSectionId ? (
+             <div className="space-y-6">
+                <div className="p-4 rounded-[20px] bg-[#111] border border-[#222]">
+                  <h3 className="text-xs font-bold text-stone-400 mb-2">Module Library</h3>
+                  <p className="text-[11px] text-stone-600">Clique para injetar no DOM da página atual.</p>
+                </div>
+
+                <div className="space-y-6">
+                  {libraryByGroup.map(grp => (
+                    <div key={grp.group} className="space-y-3">
+                      <h4 className="text-[10px] font-bold text-stone-500 uppercase tracking-widest">{grp.group}</h4>
+                      <div className="grid grid-cols-2 gap-2">
+                        {grp.items.map(item => (
+                          <button key={item.type} onClick={() => addSection(item.type)} disabled={!activePageId} className="p-3 text-left bg-[#111] border border-[#222] hover:border-[#3b82f6] hover:bg-[#3b82f6]/5 rounded-2xl transition-all disabled:opacity-30 disabled:hover:border-[#222]">
+                            <p className="text-[11px] font-bold text-white mb-1">{item.label}</p>
+                            <p className="text-[9px] text-stone-500 leading-tight block truncate md:whitespace-normal">{item.description}</p>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+             </div>
+           ) : (
+             <div className="animate-in fade-in slide-in-from-right-4">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-sm font-bold text-[#3b82f6]">Configurações do Nó</h3>
+                  <button onClick={() => setSelectedSectionId(null)} className="text-[10px] uppercase font-bold text-stone-500 hover:text-white px-3 py-1 border border-[#333] rounded-full hover:bg-[#222]">Voltar à Biblioteca</button>
+                </div>
+                
+                {/* O WebsiteSectionInspector original lida com configs avançadas de cada Type, então mantemos a ref dele */}
+                <div className="bg-[#111] rounded-[24px] border border-[#222] p-1">
+                  <WebsiteSectionInspector
+                    website={website}
+                    activePage={activePage}
+                    selectedSection={selectedSection}
+                    canEdit={canEdit}
+                    updateWebsite={updateWebsite}
+                    updatePage={updatePage}
+                    updateSection={updateSection}
+                    updateSectionContent={updateSectionContent}
+                    onChangeStatus={s => updateWebsite({ status: s as WebsiteStatus })}
+                  />
+                </div>
+             </div>
+           )}
+
+         </div>
+
+      </div>
+
     </div>
   );
 }

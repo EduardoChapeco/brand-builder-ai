@@ -1,29 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Palette, Plus, Save, Trash2 } from 'lucide-react';
+import { Palette, Plus, Save, Trash2, Wand2, History, CheckCircle2, LayoutTemplate } from 'lucide-react';
 import { toast } from 'sonner';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { supabase } from '@/integrations/supabase/client';
 import type { Json } from '@/integrations/supabase/types';
-import { DEFAULT_BRAND_KIT } from '@/lib/canvasEngine';
-import { minimalDark } from '@/lib/templates/minimalDark';
 
-type ColorFieldName =
-  | 'color_primary'
-  | 'color_secondary'
-  | 'color_accent'
-  | 'color_bg_dark'
-  | 'color_bg_light'
-  | 'color_text_dark'
-  | 'color_text_light';
-
-type FontFieldName = 'font_headline' | 'font_body' | 'font_accent';
-
-interface CustomColor {
-  name: string;
-  hex: string;
-}
+// ===================================
+// TIPAGENS
+// ===================================
+interface CustomColor { name: string; hex: string; }
 
 interface BrandKitForm {
+  // Cores Base
   color_primary: string;
   color_secondary: string;
   color_accent: string;
@@ -31,23 +19,30 @@ interface BrandKitForm {
   color_bg_light: string;
   color_text_dark: string;
   color_text_light: string;
-  font_headline: string;
+  color_success: string;
+  color_warning: string;
+  color_danger: string;
+
+  // Tipografia
+  font_heading: string;
   font_body: string;
-  font_accent: string;
+  font_mono: string;
+  font_display: string;
+
+  // Logomarcas
   logo_url: string;
-  logo_dark_url: string;
-  watermark_text: string;
+  logo_light_url: string;
+  logo_icon_url: string;
+  logo_horizontal_url: string;
+
+  // Estética
+  border_radius_scale: 'none' | 'small' | 'medium' | 'large' | 'pill';
+  shadow_style: 'none' | 'subtle' | 'medium' | 'strong';
+  animation_style: 'none' | 'minimal' | 'smooth' | 'bouncy';
+  icon_set: 'lucide' | 'phosphor' | 'heroicons';
+
   custom_colors: CustomColor[];
 }
-
-const FONTS = [
-  { name: 'Bebas Neue', label: 'Impacto', css: "'Bebas Neue', sans-serif" },
-  { name: 'DM Sans', label: 'Moderno', css: "'DM Sans', sans-serif" },
-  { name: 'Playfair Display', label: 'Elegante', css: "'Playfair Display', serif" },
-  { name: 'Syne', label: 'Futurista', css: "'Syne', sans-serif" },
-  { name: 'Oswald', label: 'Bold', css: "'Oswald', sans-serif" },
-  { name: 'Montserrat', label: 'Versatil', css: "'Montserrat', sans-serif" },
-];
 
 const EMPTY_FORM: BrandKitForm = {
   color_primary: '#7C3AED',
@@ -57,52 +52,49 @@ const EMPTY_FORM: BrandKitForm = {
   color_bg_light: '#FFFFFF',
   color_text_dark: '#111111',
   color_text_light: '#F8FAFC',
-  font_headline: 'Bebas Neue',
-  font_body: 'DM Sans',
-  font_accent: 'Playfair Display',
+  color_success: '#10B981',
+  color_warning: '#F59E0B',
+  color_danger: '#EF4444',
+  font_heading: 'Inter',
+  font_body: 'Inter',
+  font_mono: 'JetBrains Mono',
+  font_display: 'Playfair Display',
   logo_url: '',
-  logo_dark_url: '',
-  watermark_text: '',
+  logo_light_url: '',
+  logo_icon_url: '',
+  logo_horizontal_url: '',
+  border_radius_scale: 'medium',
+  shadow_style: 'subtle',
+  animation_style: 'smooth',
+  icon_set: 'lucide',
   custom_colors: [],
 };
 
-const BrandKitPage = () => {
+const FONTS_SANS = ['Inter', 'Roboto', 'Outfit', 'DM Sans', 'Montserrat', 'Poppins'];
+const FONTS_SERIF = ['Playfair Display', 'Merriweather', 'Lora', 'PT Serif'];
+const FONTS_MONO = ['JetBrains Mono', 'Fira Code', 'Roboto Mono', 'Space Mono'];
+const FONTS_DISPLAY = ['Bebas Neue', 'Oswald', 'Syne', 'Clash Display'];
+
+// ===================================
+// COMPONENTE PRINCIPAL
+// ===================================
+export default function BrandKitPage() {
   const { workspace, brandKit: wsBrandKit, refreshBrandKit } = useWorkspace();
   const [form, setForm] = useState<BrandKitForm>(EMPTY_FORM);
   const [isSaving, setIsSaving] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
     if (!wsBrandKit) { setForm(EMPTY_FORM); return; }
+    
+    // Fallback safe property maping
     setForm({
-      color_primary:   wsBrandKit.color_primary,
-      color_secondary: wsBrandKit.color_secondary,
-      color_accent:    wsBrandKit.color_accent,
-      color_bg_dark:   wsBrandKit.color_bg_dark,
-      color_bg_light:  wsBrandKit.color_bg_light,
-      color_text_dark: wsBrandKit.color_text_dark,
-      color_text_light:wsBrandKit.color_text_light,
-      font_headline:   wsBrandKit.font_headline,
-      font_body:       wsBrandKit.font_body,
-      font_accent:     wsBrandKit.font_accent,
-      logo_url:        wsBrandKit.logo_url || '',
-      logo_dark_url:   wsBrandKit.logo_dark_url || '',
-      watermark_text:  wsBrandKit.watermark_text || '',
-      custom_colors:   Array.isArray(wsBrandKit.custom_colors) ? wsBrandKit.custom_colors as CustomColor[] : [],
+      ...EMPTY_FORM,
+      ...wsBrandKit,
+      font_heading: (wsBrandKit as any).font_headline || (wsBrandKit as any).font_heading || EMPTY_FORM.font_heading,
+      custom_colors: Array.isArray(wsBrandKit.custom_colors) ? wsBrandKit.custom_colors as CustomColor[] : [],
     });
   }, [wsBrandKit]);
-
-  const previewHtml = useMemo(() => {
-    const brand = { ...DEFAULT_BRAND_KIT, ...form, logo_url: form.logo_url || null, watermark_text: form.watermark_text || null };
-    return minimalDark({ headline: 'Sua marca em destaque', body: 'Preview em tempo real com cores, fontes e watermark.' }, brand);
-  }, [form]);
-
-  const setColor = (field: ColorFieldName, value: string) => setForm(c => ({ ...c, [field]: value }));
-  const setFont = (field: FontFieldName, value: string) => setForm(c => ({ ...c, [field]: value }));
-
-  const addCustomColor = () => setForm(c => ({ ...c, custom_colors: [...c.custom_colors, { name: '', hex: '#FFFFFF' }] }));
-  const removeCustomColor = (index: number) => setForm(c => ({ ...c, custom_colors: c.custom_colors.filter((_, i) => i !== index) }));
-  const updateCustomColor = (index: number, patch: Partial<CustomColor>) =>
-    setForm(c => ({ ...c, custom_colors: c.custom_colors.map((col, i) => i === index ? { ...col, ...patch } : col) }));
 
   const handleSave = async () => {
     if (!workspace?.id) return;
@@ -111,232 +103,294 @@ const BrandKitPage = () => {
       const payload = {
         ...form,
         custom_colors: form.custom_colors as unknown as Json,
-        logo_url: form.logo_url || null,
-        logo_dark_url: form.logo_dark_url || null,
-        watermark_text: form.watermark_text || null,
         updated_at: new Date().toISOString(),
       };
+      
       if (wsBrandKit) {
         await supabase.from('brand_kits').update(payload).eq('workspace_id', workspace.id);
       } else {
         await supabase.from('brand_kits').insert({ ...payload, workspace_id: workspace.id, custom_colors: payload.custom_colors as Json });
       }
+      
       await refreshBrandKit();
-      toast.success('Brand Kit salvo com sucesso!');
+      toast.success('DNA visual consolidado com sucesso!');
     } catch (error) {
       console.error(error);
-      toast.error('Erro ao salvar Brand Kit');
+      toast.error('Kits de Marca falhou na atualização.');
     } finally {
       setIsSaving(false);
     }
   };
 
-  const inputStyle = { background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-1)' } as const;
-  const fieldClass = 'w-full px-3 py-2.5 rounded-xl text-sm outline-none transition-colors';
+  const handleAIMagic = async () => {
+    toast.info('Construindo modelo por IA...', { description: 'Isso pode levar alguns segundos.'});
+    setIsGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('extract-brand-identity', {
+        body: { workspace_id: workspace?.id }
+      });
+      if (error) throw error;
+      await refreshBrandKit();
+      toast.success('Design System gerado pela IA!');
+    } catch (e) {
+      console.error(e);
+      toast.error('Erro na geração IA. Verifique as configurações.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
-  const ColorField = ({ label, field }: { label: string; field: ColorFieldName }) => (
-    <div>
-      <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>{label}</label>
-      <div className="flex items-center gap-2 px-3 py-2 rounded-xl" style={inputStyle}>
-        <input type="color" value={form[field]} onChange={e => setColor(field, e.target.value)}
-          className="w-7 h-7 rounded-lg border-0 bg-transparent cursor-pointer" />
-        <input value={form[field]} onChange={e => setColor(field, e.target.value)}
-          className="flex-1 text-xs font-mono bg-transparent outline-none" style={{ color: 'var(--text-2)' }} />
-      </div>
-    </div>
-  );
+  // Preview dinâmico do design system
+  const injectedCSS = useMemo(() => `
+    .pvw-heading { font-family: '${form.font_heading}', sans-serif; color: ${form.color_primary}; }
+    .pvw-display { font-family: '${form.font_display}', serif; }
+    .pvw-body { font-family: '${form.font_body}', sans-serif; }
+    .pvw-mono { font-family: '${form.font_mono}', monospace; }
+    .pvw-bg { background-color: ${form.color_bg_dark}; color: ${form.color_text_light}; }
+    .pvw-card { 
+      background-color: ${form.color_bg_dark};
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: ${form.border_radius_scale === 'small' ? '4px' : form.border_radius_scale === 'medium' ? '12px' : form.border_radius_scale === 'large' ? '24px' : form.border_radius_scale === 'pill' ? '999px' : '0' };
+      box-shadow: ${form.shadow_style === 'subtle' ? '0 4px 20px rgba(0,0,0,0.1)' : form.shadow_style === 'medium' ? '0 10px 30px rgba(0,0,0,0.3)' : form.shadow_style === 'strong' ? '0 20px 40px rgba(0,0,0,0.5)' : 'none' };
+    }
+    .pvw-btn {
+      background: ${form.color_accent};
+      color: ${form.color_text_dark};
+      border-radius: ${form.border_radius_scale === 'small' ? '4px' : form.border_radius_scale === 'medium' ? '8px' : form.border_radius_scale === 'large' ? '16px' : form.border_radius_scale === 'pill' ? '999px' : '0' };
+    }
+  `, [form]);
 
-  const FontPicker = ({ label, field }: { label: string; field: FontFieldName }) => (
-    <div>
-      <p className="text-xs font-semibold mb-2 uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>{label}</p>
-      <div className="grid grid-cols-3 gap-2">
-        {FONTS.map(font => (
-          <button key={`${field}-${font.name}`} onClick={() => setFont(field, font.name)}
-            className="p-3 rounded-xl text-left transition-all"
-            style={{
-              background: form[field] === font.name ? 'var(--primary-muted)' : 'var(--bg-elevated)',
-              border: `1px solid ${form[field] === font.name ? 'var(--primary)' : 'var(--border)'}`,
-            }}>
-            <p className="text-base font-bold" style={{ fontFamily: font.css, color: 'var(--text-1)' }}>{font.name}</p>
-            <p className="text-[10px]" style={{ color: 'var(--text-3)' }}>{font.label}</p>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
+  const updateForm = (updates: Partial<BrandKitForm>) => setForm(f => ({ ...f, ...updates }));
 
   return (
-    <div className="flex h-full overflow-hidden" style={{ background: 'var(--bg-app)' }}>
-      {/* Editor column */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Premium hero */}
-        <div className="page-hero">
-          <div className="relative z-10 flex items-center justify-between">
-            <div>
-              <p className="page-hero-eyebrow">Intelligence Suite • Brand Kit</p>
-              <h1 className="page-hero-title" style={{ fontSize: '2rem' }}>Brand Kit</h1>
-              <p className="text-sm mt-2" style={{ color: 'var(--text-3)' }}>
-                Cores, tipografia e identidade visual — propagados para todos os módulos
-              </p>
+    <div className="flex h-full bg-[#0a0a0a] text-white overflow-hidden">
+      {/* 
+        ========================================
+        COLUNA 1: EDITOR (Settings)
+        ========================================
+      */}
+      <div className="flex-1 overflow-y-auto no-scrollbar border-r border-[#1f1f1f]">
+        
+        {/* Header Premium */}
+        <div className="sticky top-0 z-20 backdrop-blur-3xl bg-black/60 border-b border-[#1f1f1f] p-6 lg:p-8 flex justify-between items-center">
+          <div>
+            <div className="flex items-center gap-3 mb-2 opacity-70">
+              <Palette size={16} className="text-[#a855f7]" /> <span className="text-xs font-semibold tracking-widest uppercase">Design System & DNA</span>
             </div>
-            <button
-              onClick={handleSave}
-              disabled={isSaving}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all hover:-translate-y-0.5 disabled:opacity-50"
-              style={{ background: 'var(--primary)', color: '#fff', boxShadow: '0 8px 24px rgba(124,58,237,0.3)' }}
-            >
-              <Save size={15} />
-              {isSaving ? 'Salvando...' : 'Salvar Brand Kit'}
+            <h1 className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-white to-[#a8a8a8] bg-clip-text text-transparent">
+              Brand Kit
+            </h1>
+          </div>
+          <div className="flex gap-4">
+            <button onClick={handleAIMagic} disabled={isGenerating}
+              className="group relative flex items-center gap-2 px-6 py-2.5 rounded-xl font-medium overflow-hidden transition-all bg-[#111111] border border-[#333333] hover:border-[#a855f7]">
+              <div className="absolute inset-0 bg-gradient-to-r from-[#a855f7]/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <Wand2 size={16} className="text-[#a855f7]" />
+              <span className="relative">{isGenerating ? 'Gerando...' : 'Gerar com IA'}</span>
+            </button>
+            <button onClick={handleSave} disabled={isSaving}
+              className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-medium bg-[#a855f7] hover:bg-[#8b3dcf] transition-all shadow-[0_0_30px_rgba(168,85,247,0.3)] disabled:opacity-50">
+              <Save size={16} />
+              {isSaving ? 'Salvando...' : 'Publicar V2'}
             </button>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 no-scrollbar space-y-6">
-          {/* Colors */}
-          <div className="glass-card rounded-3xl p-6">
-            <h3 className="font-display font-bold text-base mb-5" style={{ color: 'var(--text-1)' }}>Paleta de Cores</h3>
-            <div className="grid grid-cols-2 gap-3">
-              <ColorField label="Primária" field="color_primary" />
-              <ColorField label="Secundária" field="color_secondary" />
-              <ColorField label="Accent" field="color_accent" />
-              <ColorField label="Fundo escuro" field="color_bg_dark" />
-              <ColorField label="Fundo claro" field="color_bg_light" />
-              <ColorField label="Texto escuro" field="color_text_dark" />
-              <ColorField label="Texto claro" field="color_text_light" />
+        {/* Formulário - Glass Cards */}
+        <div className="p-6 lg:p-8 space-y-8 max-w-4xl">
+          
+          {/* Seção: Logomarcas */}
+          <Section glass title="Logos e Identidade Gráfica" desc="Sincronize variações da logo para interfaces claras e escuras.">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input label="Logo Original (Fundo Claro)" val={form.logo_url} set={(v) => updateForm({logo_url:v})} />
+              <Input label="Logo Inversa (Fundo Escuro)" val={form.logo_light_url} set={(v) => updateForm({logo_light_url:v})} />
+              <Input label="Ícone / Favicon" val={form.logo_icon_url} set={(v) => updateForm({logo_icon_url:v})} />
+              <Input label="Wordmark (Texto)" val={form.logo_horizontal_url} set={(v) => updateForm({logo_horizontal_url:v})} />
             </div>
-          </div>
+          </Section>
 
-          {/* Custom colors */}
-          <div className="glass-card rounded-3xl p-6">
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="font-display font-bold text-base" style={{ color: 'var(--text-1)' }}>Cores Adicionais</h3>
-              <button onClick={addCustomColor}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold"
-                style={{ background: 'var(--primary-muted)', border: '1px solid var(--primary)', color: 'var(--primary)' }}>
-                <Plus size={12} /> Adicionar
-              </button>
+          {/* Seção: Paleta Dinâmica */}
+          <Section glass title="Cores Tokens Principais" desc="Estas cores controlam toda a geração de posts, biolinks e sites.">
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
+              <ColorPicker label="Primary" val={form.color_primary} set={(v) => updateForm({color_primary:v})} />
+              <ColorPicker label="Secondary" val={form.color_secondary} set={(v) => updateForm({color_secondary:v})} />
+              <ColorPicker label="Accent" val={form.color_accent} set={(v) => updateForm({color_accent:v})} />
+              <ColorPicker label="Bg Dark" val={form.color_bg_dark} set={(v) => updateForm({color_bg_dark:v})} />
+              <ColorPicker label="Text Light" val={form.color_text_light} set={(v) => updateForm({color_text_light:v})} />
             </div>
-            {form.custom_colors.length === 0 ? (
-              <div className="rounded-xl px-4 py-3 text-sm text-center"
-                style={{ background: 'var(--bg-elevated)', border: '1px dashed var(--border)', color: 'var(--text-3)' }}>
-                Nenhuma cor extra cadastrada.
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {form.custom_colors.map((color, index) => (
-                  <div key={`${color.name}-${index}`} className="grid grid-cols-[1fr_140px_48px] gap-2">
-                    <input value={color.name} onChange={e => updateCustomColor(index, { name: e.target.value })}
-                      placeholder="Nome da cor" className={fieldClass} style={inputStyle} />
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-xl" style={inputStyle}>
-                      <input type="color" value={color.hex} onChange={e => updateCustomColor(index, { hex: e.target.value })}
-                        className="w-7 h-7 rounded-lg border-0 bg-transparent cursor-pointer" />
-                      <input value={color.hex} onChange={e => updateCustomColor(index, { hex: e.target.value })}
-                        className="flex-1 text-xs font-mono bg-transparent outline-none" style={{ color: 'var(--text-2)' }} />
-                    </div>
-                    <button onClick={() => removeCustomColor(index)}
-                      className="rounded-xl flex items-center justify-center"
-                      style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: '#EF4444' }}>
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Fonts */}
-          <div className="glass-card rounded-3xl p-6 space-y-6">
-            <h3 className="font-display font-bold text-base" style={{ color: 'var(--text-1)' }}>Tipografia</h3>
-            <FontPicker label="Fonte de Títulos" field="font_headline" />
-            <FontPicker label="Fonte de Corpo" field="font_body" />
-            <FontPicker label="Fonte de Destaque" field="font_accent" />
-          </div>
-
-          {/* Logo & identity */}
-          <div className="glass-card rounded-3xl p-6 space-y-4">
-            <h3 className="font-display font-bold text-base" style={{ color: 'var(--text-1)' }}>Logo & Marca d'Água</h3>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>
-                  URL do Logo (fundo claro)
-                </label>
-                <input value={form.logo_url}
-                  onChange={e => setForm(c => ({ ...c, logo_url: e.target.value }))}
-                  placeholder="https://..." className={fieldClass} style={inputStyle} />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>
-                  URL do Logo (fundo escuro)
-                </label>
-                <input value={form.logo_dark_url}
-                  onChange={e => setForm(c => ({ ...c, logo_dark_url: e.target.value }))}
-                  placeholder="https://..." className={fieldClass} style={inputStyle} />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>
-                  Texto Marca d'Água
-                </label>
-                <input value={form.watermark_text}
-                  onChange={e => setForm(c => ({ ...c, watermark_text: e.target.value }))}
-                  placeholder="@suamarca" className={fieldClass} style={inputStyle} />
-              </div>
+            
+            <div className="mt-6 border-t border-[#333] pt-6 grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 opacity-80">
+              <ColorPicker label="Success" val={form.color_success} set={(v) => updateForm({color_success:v})} />
+              <ColorPicker label="Warning" val={form.color_warning} set={(v) => updateForm({color_warning:v})} />
+              <ColorPicker label="Danger" val={form.color_danger} set={(v) => updateForm({color_danger:v})} />
             </div>
-          </div>
+          </Section>
 
-          {/* Mobile save */}
-          <button onClick={handleSave} disabled={isSaving}
-            className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-bold transition-all disabled:opacity-60 xl:hidden"
-            style={{ background: 'var(--primary)', color: 'white', boxShadow: '0 8px 24px rgba(124,58,237,0.25)' }}>
-            <Save size={15} />
-            {isSaving ? 'Salvando...' : 'Salvar Brand Kit'}
-          </button>
+          {/* Seção: Tipografia */}
+          <Section glass title="Pilha Tipográfica" desc="Importado automaticamente do Google Fonts ao gerar.">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <FontSelect label="Font Heading" val={form.font_heading} options={FONTS_SANS} set={(v) => updateForm({font_heading:v})} />
+              <FontSelect label="Font Body" val={form.font_body} options={FONTS_SANS} set={(v) => updateForm({font_body:v})} />
+              <FontSelect label="Font Display" val={form.font_display} options={FONTS_DISPLAY} set={(v) => updateForm({font_display:v})} />
+              <FontSelect label="Font Mono" val={form.font_mono} options={FONTS_MONO} set={(v) => updateForm({font_mono:v})} />
+            </div>
+          </Section>
+
+          {/* Seção: Estética & Borda */}
+          <Section glass title="Estética & Feel" desc="Define o comportamento global de UI do sistema.">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+              <SelectVal label="Arredondamento" val={form.border_radius_scale} options={['none','small','medium','large','pill']} set={(v:any) => updateForm({border_radius_scale:v})} />
+              <SelectVal label="Sombras" val={form.shadow_style} options={['none','subtle','medium','strong']} set={(v:any) => updateForm({shadow_style:v})} />
+              <SelectVal label="Motion" val={form.animation_style} options={['none','minimal','smooth','bouncy']} set={(v:any) => updateForm({animation_style:v})} />
+              <SelectVal label="Icon Set" val={form.icon_set} options={['lucide','phosphor','heroicons']} set={(v:any) => updateForm({icon_set:v})} />
+            </div>
+          </Section>
+
         </div>
       </div>
 
-      {/* Right: live preview */}
-      <div className="hidden xl:flex w-80 shrink-0 flex-col" style={{ borderLeft: '1px solid var(--border)', background: 'var(--bg-surface)' }}>
-        <div className="px-5 py-5 shrink-0 border-b" style={{ borderColor: 'var(--border)' }}>
-          <p className="text-sm font-bold" style={{ color: 'var(--text-1)' }}>Preview ao vivo</p>
-          <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>Atualiza em tempo real com suas cores e fontes</p>
+      {/* 
+        ========================================
+        COLUNA 2: PREVIEW LIVE
+        ========================================
+      */}
+      <div className="w-[380px] shrink-0 border-r border-[#1f1f1f] bg-[#050505] hidden xl:flex flex-col relative overflow-hidden">
+        <style>{injectedCSS}</style>
+        
+        {/* Fundo do preview com degradê das cores do kit */}
+        <div className="absolute inset-0 opacity-10 pointer-events-none" style={{
+          background: `radial-gradient(circle at 50% 0%, ${form.color_primary} 0%, transparent 70%), radial-gradient(circle at 100% 100%, ${form.color_secondary} 0%, transparent 70%)`
+        }} />
+
+        <div className="p-6 border-b border-[#1f1f1f] z-10 bg-black/50 backdrop-blur-md">
+          <h2 className="text-sm font-bold flex gap-2 items-center text-white"><LayoutTemplate size={16} /> Live Preview</h2>
+          <p className="text-xs text-stone-400 mt-1">Sua interface será gerada com estes tokens exatos.</p>
         </div>
-        <div className="flex-1 flex flex-col items-center justify-start gap-6 p-6 overflow-y-auto no-scrollbar">
-          {/* Template preview */}
-          <div>
-            <p className="text-xs font-semibold mb-3 text-center uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>Template Preview</p>
-            <div style={{ width: 240, height: 240, borderRadius: 12, overflow: 'hidden', boxShadow: '0 12px 40px rgba(0,0,0,0.4)' }}>
-              <iframe srcDoc={previewHtml} title="brand-kit-preview" sandbox="allow-same-origin" scrolling="no"
-                style={{ width: 540, height: 540, border: 'none', transform: 'scale(0.444)', transformOrigin: 'top left', display: 'block' }} />
+
+        <div className="flex-1 p-6 overflow-y-auto no-scrollbar z-10 flex flex-col gap-6">
+          
+          {/* Mock Component 1: Login / Card */}
+          <div className="pvw-card p-6 pvw-bg transition-all duration-300">
+            {form.logo_light_url ? (
+              <img src={form.logo_light_url} alt="Logo" className="h-6 mb-6 object-contain" />
+            ) : (
+              <div className="w-10 h-10 mb-6 bg-gradient-to-br rounded-xl" style={{ backgroundImage: `linear-gradient(to bottom right, ${form.color_primary}, ${form.color_secondary})`}} />
+            )}
+            
+            <h3 className="pvw-heading text-2xl font-black tracking-tight mb-2 leading-tight">Welcome into the void.</h3>
+            <p className="pvw-body text-sm opacity-80 mb-6">Experience the magic of true dynamic multi-tenant ecosystems.</p>
+            
+            <div className="space-y-3">
+              <div className="w-full h-10 border border-[#333] rounded flex items-center px-4 pvw-body text-xs opacity-50" style={{ borderRadius: form.border_radius_scale === 'none' ? 0 : form.border_radius_scale === 'small' ? '4px' : '8px'}}>name@acme.com</div>
+              <button className="w-full pvw-btn py-3 px-4 pvw-heading text-sm uppercase tracking-wider font-bold transition-transform hover:scale-[1.02]">
+                Join platform
+              </button>
             </div>
           </div>
-          {/* Color swatch */}
-          <div className="w-full">
-            <p className="text-xs font-semibold mb-3 uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>Paleta atual</p>
-            <div className="flex gap-2 flex-wrap">
-              {[form.color_primary, form.color_secondary, form.color_accent, form.color_bg_dark, form.color_accent].map((color, i) => (
-                <div key={i} className="w-10 h-10 rounded-xl border" style={{ background: color, borderColor: 'rgba(255,255,255,0.1)' }}
-                  title={color} />
-              ))}
+
+          {/* Mock Component 2: Dashboard stats */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="pvw-card p-5">
+              <p className="pvw-mono text-[10px] uppercase opacity-60 font-semibold tracking-wider">Conversion</p>
+              <p className="pvw-display text-4xl mt-1 tracking-tighter" style={{ color: form.color_accent}}>14%</p>
+            </div>
+            <div className="pvw-card p-5">
+              <p className="pvw-mono text-[10px] uppercase opacity-60 font-semibold tracking-wider">Revenue</p>
+              <p className="pvw-display text-4xl mt-1 tracking-tighter text-white">$12k</p>
             </div>
           </div>
-          {/* Font preview */}
-          <div className="w-full space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>Tipografia</p>
-            <div className="glass-card rounded-2xl p-4 space-y-2">
-              <p className="font-bold text-2xl" style={{ fontFamily: `'${form.font_headline}', sans-serif`, color: 'var(--text-1)' }}>
-                Headline
-              </p>
-              <p className="text-sm" style={{ fontFamily: `'${form.font_body}', sans-serif`, color: 'var(--text-2)' }}>
-                Corpo do texto com legibilidade
-              </p>
-              <p className="text-xs italic" style={{ fontFamily: `'${form.font_accent}', serif`, color: 'var(--text-3)' }}>
-                Destaque editorial
-              </p>
+        </div>
+      </div>
+
+      {/* 
+        ========================================
+        COLUNA 3: HISTÓRICO & STATUS
+        ========================================
+      */}
+      <div className="w-[300px] shrink-0 bg-[#0a0a0a] hidden 2xl:flex flex-col">
+        <div className="p-6 border-b border-[#1f1f1f]">
+          <h2 className="text-sm font-bold flex gap-2 items-center text-white"><History size={16} /> Versões & Auditoria</h2>
+        </div>
+        <div className="p-6 space-y-6">
+          <div className="flex flex-col gap-4 relative pl-4 border-l border-[#333]">
+            <div className="relative">
+              <div className="absolute -left-[20.5px] top-1 rounded-full bg-[#10b981] w-[8px] h-[8px] shadow-[0_0_10px_#10b981]" />
+              <p className="text-[10px] font-mono text-stone-500 mb-0.5">ESTADO ATUAL (V2)</p>
+              <p className="text-sm text-stone-100 font-medium">Sincronizado</p>
             </div>
+            <div className="relative opacity-40">
+              <div className="absolute -left-[20.5px] top-1 rounded-full bg-[#555] w-[8px] h-[8px]" />
+              <p className="text-[10px] font-mono mb-0.5">HÁ 2 DIAS (V1)</p>
+              <p className="text-sm font-medium">Extração via IA falhou</p>
+            </div>
+          </div>
+
+          <div className="bg-[#111] p-4 rounded-xl border border-[#222]">
+            <p className="text-xs font-bold mb-3 flex items-center gap-1.5"><CheckCircle2 className="text-[#a855f7]" size={14} /> Checklist do Motor</p>
+            <ul className="text-xs space-y-2 text-stone-400">
+              <li>• Paleta Canônica (OK)</li>
+              <li>• Fontes H/B/D importadas</li>
+              <li>• Logo carregadas no bucket</li>
+            </ul>
           </div>
         </div>
       </div>
     </div>
   );
-};
+}
 
-export default BrandKitPage;
+// ===================================
+// UTILS & COMPONENTS
+// ===================================
+
+const Section = ({ title, desc, children, glass }: any) => (
+  <div className={`p-6 md:p-8 rounded-[24px] ${glass ? 'bg-[#121212]/80 backdrop-blur-xl border border-[#2A2A2A]' : 'bg-[#151515] border border-[#2A2A2A]'}`}>
+    <h3 className="text-lg font-bold font-display tracking-wide mb-1 text-white">{title}</h3>
+    <p className="text-sm text-stone-400 mb-6 font-medium">{desc}</p>
+    {children}
+  </div>
+);
+
+const ColorPicker = ({ label, val, set }: any) => (
+  <div>
+    <label className="block text-[10px] font-bold mb-2 uppercase tracking-widest text-[#777] font-mono">{label}</label>
+    <div className="flex bg-[#1a1a1a] border border-[#333] rounded-xl overflow-hidden focus-within:border-[#a855f7] transition-colors p-1.5 pr-3 items-center gap-2">
+      <input type="color" value={val} onChange={e => set(e.target.value)} className="w-8 h-8 rounded shrink-0 border-0 bg-transparent cursor-pointer" />
+      <input type="text" value={val} onChange={e => set(e.target.value)} className="w-full bg-transparent text-xs text-white outline-none font-mono tracking-wider font-semibold" />
+    </div>
+  </div>
+);
+
+const Input = ({ label, val, set }: any) => (
+  <div>
+    <label className="block text-[10px] font-bold mb-2 uppercase tracking-widest text-[#777] font-mono">{label}</label>
+    <div className="flex bg-[#1a1a1a] border border-[#333] rounded-xl overflow-hidden focus-within:border-[#a855f7] transition-colors">
+      <input type="text" value={val} onChange={e => set(e.target.value)} placeholder="https://..." className="w-full bg-transparent px-4 py-3 text-sm text-white outline-none placeholder-[#444]" />
+    </div>
+  </div>
+);
+
+const SelectVal = ({ label, val, options, set }: any) => (
+  <div>
+    <label className="block text-[10px] font-bold mb-2 uppercase tracking-widest text-[#777] font-mono">{label}</label>
+    <div className="flex bg-[#1a1a1a] border border-[#333] rounded-xl overflow-hidden focus-within:border-[#a855f7] transition-colors">
+      <select value={val} onChange={e => set(e.target.value)} className="w-full bg-transparent px-4 py-3 text-sm text-white outline-none appearance-none cursor-pointer">
+        {options.map((o: string) => <option key={o} value={o} className="bg-[#111]">{o}</option>)}
+      </select>
+    </div>
+  </div>
+);
+
+const FontSelect = ({ label, val, options, set }: any) => (
+  <div>
+    <label className="block text-[10px] font-bold mb-2 uppercase tracking-widest text-[#777] font-mono">{label}</label>
+    <div className="grid grid-cols-2 gap-2">
+      {options.map((opt: string) => (
+        <button key={opt} onClick={() => set(opt)}
+          className={\`py-3 px-3 rounded-xl border text-sm transition-all focus:outline-none \${val === opt ? 'bg-[#a855f7]/10 border-[#a855f7] text-white shadow-[0_0_15px_rgba(168,85,247,0.15)] font-bold' : 'bg-[#1a1a1a] border-[#333] text-stone-400 hover:border-[#555]'}\`}>
+          <span style={{ fontFamily: \`'\${opt}', sans-serif\` }}>{opt}</span>
+        </button>
+      ))}
+    </div>
+  </div>
+);

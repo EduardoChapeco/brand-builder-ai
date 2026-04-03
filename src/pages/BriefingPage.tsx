@@ -1,572 +1,323 @@
-import { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { FileText, Plus, Save, Search, Sparkles } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Target, Wand2, Save, FileText, LayoutDashboard, BrainCircuit, Mic2, Users, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { supabase } from '@/integrations/supabase/client';
 import type { Json } from '@/integrations/supabase/types';
 
+// ===================================
+// TIPAGENS
+// ===================================
 interface BriefingForm {
   company_name: string;
+  tagline: string;
   segment: string;
   target_audience: string;
-  main_differentials: string;
+  audience_age_range: string;
+  brand_personality: string;
   tone_of_voice: string;
-  pain_points: string;
-  market_position: string;
+  main_differentials: string;
+  value_proposition: string;
   avoid_topics: string;
-  instagram_handle: string;
-  linkedin_handle: string;
-  keywords: string;
-}
-
-interface CompetitorItem {
-  name: string;
-  url: string;
-  notes: string;
-}
-
-interface CompetitorAnalysis {
-  id: string;
-  url: string;
-  name: string | null;
-  dna_text: string | null;
-  raw_markdown: string | null;
-  analyzed_at: string | null;
+  content_pillars: string[];
+  keywords: string[];
+  brand_dna: string;
+  completeness_score: number;
 }
 
 const EMPTY_FORM: BriefingForm = {
   company_name: '',
+  tagline: '',
   segment: '',
   target_audience: '',
-  main_differentials: '',
+  audience_age_range: '',
+  brand_personality: '',
   tone_of_voice: '',
-  pain_points: '',
-  market_position: '',
+  main_differentials: '',
+  value_proposition: '',
   avoid_topics: '',
-  instagram_handle: '',
-  linkedin_handle: '',
-  keywords: '',
+  content_pillars: [],
+  keywords: [],
+  brand_dna: '',
+  completeness_score: 0,
 };
 
-const EMPTY_COMPETITOR: CompetitorItem = {
-  name: '',
-  url: '',
-  notes: '',
-};
-
-const textareaStyle = {
-  background: 'var(--bg-elevated)',
-  border: '1px solid var(--border)',
-  color: 'var(--text-1)',
-};
-const inputStyle = {
-  background: 'var(--bg-elevated)',
-  border: '1px solid var(--border)',
-  color: 'var(--text-1)',
-};
-const labelStyle = { color: 'var(--text-2)' };
-const fieldClass = 'w-full px-3 py-2.5 rounded-xl text-sm outline-none transition-colors';
-
-const Field = ({
-  label,
-  value,
-  onChange,
-  rows,
-  placeholder,
-}: {
-  label: string;
-  value: string;
-  onChange: (val: string) => void;
-  rows?: number;
-  placeholder?: string;
-}) => (
-  <div>
-    <label className="block text-xs font-medium mb-1.5" style={labelStyle}>
-      {label}
-    </label>
-    {rows ? (
-      <textarea
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        rows={rows}
-        placeholder={placeholder}
-        className={`${fieldClass} resize-none`}
-        style={textareaStyle}
-      />
-    ) : (
-      <input
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        placeholder={placeholder}
-        className={fieldClass}
-        style={inputStyle}
-      />
-    )}
-  </div>
-);
-
-const BriefingPage = () => {
-  const navigate = useNavigate();
+export default function BriefingPage() {
   const { workspace, briefing: wsBriefing, refreshBriefing } = useWorkspace();
-
   const [form, setForm] = useState<BriefingForm>(EMPTY_FORM);
-  const [competitors, setCompetitors] = useState<CompetitorItem[]>([]);
-  const [draftCompetitor, setDraftCompetitor] = useState<CompetitorItem>(EMPTY_COMPETITOR);
-  const [analyses, setAnalyses] = useState<CompetitorAnalysis[]>([]);
   const [isSaving, setIsSaving] = useState(false);
-  const [analyzingUrl, setAnalyzingUrl] = useState<string | null>(null);
-  const [isExtractingDna, setIsExtractingDna] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
-    if (!wsBriefing) {
-      setForm(EMPTY_FORM);
-      setCompetitors([]);
-      return;
-    }
-
+    if (!wsBriefing) { setForm(EMPTY_FORM); return; }
+    
     setForm({
-      company_name: wsBriefing.company_name || '',
-      segment: wsBriefing.segment || '',
-      target_audience: wsBriefing.target_audience || '',
-      main_differentials: wsBriefing.main_differentials || '',
-      tone_of_voice: wsBriefing.tone_of_voice || '',
-      pain_points: wsBriefing.pain_points || '',
-      market_position: wsBriefing.market_position || '',
-      avoid_topics: wsBriefing.avoid_topics || '',
-      instagram_handle: wsBriefing.instagram_handle || '',
-      linkedin_handle: wsBriefing.linkedin_handle || '',
-      keywords: Array.isArray(wsBriefing.keywords) ? wsBriefing.keywords.join(', ') : '',
+      ...EMPTY_FORM,
+      ...wsBriefing,
+      content_pillars: Array.isArray(wsBriefing.content_pillars) ? (wsBriefing.content_pillars as unknown as string[]) : [],
+      keywords: Array.isArray(wsBriefing.keywords) ? (wsBriefing.keywords as unknown as string[]) : [],
     });
-
-    setCompetitors(Array.isArray(wsBriefing.main_competitors) ? wsBriefing.main_competitors : []);
   }, [wsBriefing]);
 
-  const fetchAnalyses = useCallback(async () => {
-    if (!workspace?.id) return;
-
-    const { data, error } = await supabase
-      .from('competitor_analyses_v2')
-      .select('*')
-      .eq('workspace_id', workspace.id)
-      .order('analyzed_at', { ascending: false });
-
-    if (error) {
-      toast.error('Erro ao carregar analises de concorrentes');
-      return;
-    }
-
-    setAnalyses((data || []) as CompetitorAnalysis[]);
-  }, [workspace?.id]);
-
-  useEffect(() => {
-    fetchAnalyses();
-  }, [fetchAnalyses]);
-
-  const setField = <K extends keyof BriefingForm>(field: K, value: BriefingForm[K]) => {
-    setForm(current => ({ ...current, [field]: value }));
+  const calculateCompleteness = (f: BriefingForm): number => {
+    let score = 0;
+    if (f.company_name?.trim()) score += 10;
+    if (f.segment?.trim()) score += 10;
+    if (f.target_audience?.trim()) score += 15;
+    if (f.brand_personality?.trim()) score += 10;
+    if (f.main_differentials?.trim()) score += 10;
+    if (f.value_proposition?.trim()) score += 15;
+    if (f.content_pillars?.length >= 3) score += 15;
+    if (f.keywords?.length >= 5) score += 15;
+    return score > 100 ? 100 : score;
   };
 
-  const handleSave = async () => {
+  const handleSave = async (f = form) => {
     if (!workspace?.id) return;
-
     setIsSaving(true);
     try {
+      const score = calculateCompleteness(f);
       const payload = {
-        workspace_id: workspace.id,
-        company_name: form.company_name,
-        segment: form.segment,
-        target_audience: form.target_audience,
-        main_differentials: form.main_differentials,
-        tone_of_voice: form.tone_of_voice,
-        pain_points: form.pain_points,
-        market_position: form.market_position,
-        avoid_topics: form.avoid_topics,
-        instagram_handle: form.instagram_handle,
-        linkedin_handle: form.linkedin_handle,
-        keywords: form.keywords
-          ? form.keywords.split(',').map(keyword => keyword.trim()).filter(Boolean)
-          : [],
-        main_competitors: competitors as unknown as Json,
+        ...f,
+        content_pillars: f.content_pillars as unknown as Json,
+        keywords: f.keywords as unknown as Json,
+        completeness_score: score,
         updated_at: new Date().toISOString(),
       };
-
+      
       if (wsBriefing) {
         await supabase.from('briefings').update(payload).eq('workspace_id', workspace.id);
       } else {
-        await supabase.from('briefings').insert(payload);
+        await supabase.from('briefings').insert({ ...payload, workspace_id: workspace.id, content_pillars: payload.content_pillars as Json });
       }
-
+      
+      setForm(prev => ({ ...prev, completeness_score: score }));
       await refreshBriefing();
-      toast.success('Briefing salvo');
+      toast.success('DNA Estratégico salvo com sucesso!');
     } catch (error) {
       console.error(error);
-      toast.error('Erro ao salvar briefing');
+      toast.error('Briefing falhou na atualização.');
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleExtractDeepDNA = async () => {
-    if (!workspace?.id) return;
-    if (!form.company_name || !form.segment || !form.target_audience) {
-      toast.warning('Preencha ao menos Nome, Segmento e Publico Alvo para a IA entender a base.');
-      return;
-    }
-    
-    setIsExtractingDna(true);
-    toast.message('Consultor IA analisando seu briefing básico...', {
-       description: 'Isso pode levar alguns segundos.'
-    });
+  const updateForm = (updates: Partial<BriefingForm>) => {
+    const next = { ...form, ...updates };
+    next.completeness_score = calculateCompleteness(next);
+    setForm(next);
+  };
 
+  const handleAIMagic = async () => {
+    toast.info('IA Estrategista em ação...', { description: 'Reescrevendo e expandindo seu briefing.'});
+    setIsGenerating(true);
     try {
       const { data, error } = await supabase.functions.invoke('extract-brand-identity', {
-        body: {
-          workspaceId: workspace.id,
-          rawForm: {
-            name: form.company_name,
-            segment: form.segment,
-            targetAudience: form.target_audience,
-            tone: form.tone_of_voice,
-            differentials: form.main_differentials
-          }
-        }
+        body: { rawForm: form }
       });
-
-      if (error || data?.error) {
-         const errMsg = error ? error.message : data.error;
-         const isMissingKeys = errMsg.toLowerCase().includes('chave') || errMsg.toLowerCase().includes('key') || errMsg.toLowerCase().includes('llm');
-         toast.error(isMissingKeys ? 'Erro: Configure suas APIs (Groq/OpenRouter) em Settings.' : 'Erro ao Extrair DNA Mestre.');
-         return;
-      }
-
-      if (data?.deep_dna) {
-         const dna = data.deep_dna;
-         // Merge deep DNA with existing form (Appended to Tone of voice and Differentials)
-         const appendedTone = `${form.tone_of_voice}\n\n[IA DEEP DNA - TONE EXTENSION]\n${dna.tone_of_voice_expanded}\nEmoji Style: ${dna.emoji_usage}`;
-         const appendedDiff = `${form.main_differentials}\n\n[IA DEEP DNA - STRATEGY]\nArquétipo: ${dna.archetype}\nPilares: ${(dna.content_pillars || []).join(', ')}\nHooks: ${(dna.hook_patterns || []).join(', ')}`;
-
-         setForm(prev => ({
-            ...prev,
-            tone_of_voice: appendedTone,
-            main_differentials: appendedDiff
-         }));
-         
-         toast.success('DNA Profundo Extraído! Salve para registrar no Workspace.', { duration: 5000 });
-      }
-
-    } catch (err: unknown) {
-      toast.error('Ocorreu uma falha na Orquestração do Consultor IA.');
-      console.error(err);
-    } finally {
-      setIsExtractingDna(false);
-    }
-  };
-
-  const handleAddCompetitor = () => {
-    if (!draftCompetitor.url.trim()) {
-      toast.error('Informe a URL do concorrente');
-      return;
-    }
-
-    setCompetitors(current => [
-      ...current,
-      {
-        name: draftCompetitor.name.trim(),
-        url: draftCompetitor.url.trim(),
-        notes: draftCompetitor.notes.trim(),
-      },
-    ]);
-    setDraftCompetitor(EMPTY_COMPETITOR);
-  };
-
-  const handleRemoveCompetitor = (url: string) => {
-    setCompetitors(current => current.filter(item => item.url !== url));
-  };
-
-  const handleAnalyzeCompetitor = async (competitor: CompetitorItem) => {
-    if (!workspace?.id) return;
-
-    setAnalyzingUrl(competitor.url);
-    try {
-      const { data, error } = await supabase.functions.invoke('analyze-url', {
-        body: {
-          workspace_id: workspace.id,
-          url: competitor.url,
-          name: competitor.name || null,
-          notes: competitor.notes || null,
-        },
-      });
-
       if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-
-      await Promise.all([fetchAnalyses(), refreshBriefing()]);
-      toast.success('Concorrente analisado');
-    } catch (err: unknown) {
-      const errMessage = err instanceof Error ? err.message : String(err);
-      const isMissingKeys = errMessage.toLowerCase().includes('chave') || errMessage.toLowerCase().includes('key');
-      toast.error(isMissingKeys ? 'Erro: Configure suas APIs (Firecrawl / LLM) em Settings.' : 'Erro ao analisar concorrente.');
+      
+      const newDna = data?.deep_dna;
+      if (newDna) {
+        updateForm({
+          brand_dna: `${newDna.archetype || ''} - ${newDna.tone_of_voice_expanded || ''}`,
+          content_pillars: newDna.content_pillars || form.content_pillars
+        });
+        await handleSave({
+          ...form,
+          brand_dna: `${newDna.archetype || ''} - ${newDna.tone_of_voice_expanded || ''}`,
+          content_pillars: newDna.content_pillars || form.content_pillars
+        });
+      }
+      
+      toast.success('Briefing expandido com IA!');
+    } catch (e) {
+      console.error(e);
+      toast.error('Erro na IA Estrategista.');
     } finally {
-      setAnalyzingUrl(null);
+      setIsGenerating(false);
     }
   };
 
-  const getAnalysisByUrl = (url: string) => analyses.find(item => item.url === url);
+  const handlePillarChange = (index: number, val: string) => {
+    const next = [...form.content_pillars];
+    next[index] = val;
+    updateForm({ content_pillars: next });
+  };
+  
+  const addPillar = () => updateForm({ content_pillars: [...form.content_pillars, ''] });
+  const remPillar = (i: number) => updateForm({ content_pillars: form.content_pillars.filter((_, idx) => idx !== i) });
 
   return (
-    <div className="page-layout">
-      <div className="page-hero">
-        <div className="relative z-10 flex items-start justify-between gap-4">
+    <div className="flex h-full bg-[#0a0a0a] text-white overflow-hidden">
+      {/* 
+        ========================================
+        COLUNA 1: EDITOR (Estratégia)
+        ========================================
+      */}
+      <div className="flex-1 overflow-y-auto no-scrollbar border-r border-[#1f1f1f]">
+        
+        {/* Header Premium */}
+        <div className="sticky top-0 z-20 backdrop-blur-3xl bg-black/60 border-b border-[#1f1f1f] p-6 lg:p-8 flex justify-between items-center">
           <div>
-            <p className="page-hero-eyebrow">Intelligence Suite • Briefing</p>
-            <h1 className="page-hero-title" style={{ fontSize: '2rem' }}>Briefing</h1>
-            <p className="text-sm mt-2" style={{ color: 'var(--text-3)' }}>
-              Base de conhecimento da IA — preenchida uma vez, usada em todos os posts
-            </p>
+            <div className="flex items-center gap-3 mb-2 opacity-70">
+              <BrainCircuit size={16} className="text-[#a855f7]" /> <span className="text-xs font-semibold tracking-widest uppercase">Estratégia Engine</span>
+            </div>
+            <h1 className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-white to-[#a8a8a8] bg-clip-text text-transparent">
+              Brand Briefing
+            </h1>
           </div>
-          <span className="shrink-0 text-xs px-2.5 py-1 rounded-full font-semibold"
-            style={{ background: 'var(--primary-muted)', color: 'var(--primary)', border: '1px solid var(--primary)' }}>
-            Base da IA
-          </span>
+          <div className="flex gap-4">
+            <button onClick={handleAIMagic} disabled={isGenerating}
+              className="group relative flex items-center gap-2 px-6 py-2.5 rounded-xl font-medium overflow-hidden transition-all bg-[#111111] border border-[#333333] hover:border-[#10b981]">
+              <div className="absolute inset-0 bg-gradient-to-r from-[#10b981]/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <Wand2 size={16} className="text-[#10b981]" />
+              <span className="relative">{isGenerating ? 'Processando...' : 'IA Auto-Completar'}</span>
+            </button>
+            <button onClick={() => handleSave()} disabled={isSaving}
+              className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-medium bg-[#10b981] hover:bg-[#059669] text-black transition-all shadow-[0_0_30px_rgba(16,185,129,0.2)] disabled:opacity-50">
+              <Save size={16} />
+              {isSaving ? 'Salvando...' : 'Publicar V2'}
+            </button>
+          </div>
+        </div>
+
+        {/* Formulário - Glass Cards */}
+        <div className="p-6 lg:p-8 space-y-8 max-w-4xl">
+          
+          <Section icon={<Target />} title="Posicionamento Core" desc="O núcleo de quem você é e do que você faz.">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input label="Nome da Marca" val={form.company_name} set={(v:any) => updateForm({company_name:v})} />
+              <Input label="Segmento (Ex: SaúdeTech)" val={form.segment} set={(v:any) => updateForm({segment:v})} />
+              <Input label="Tagline/Slogan" val={form.tagline} set={(v:any) => updateForm({tagline:v})} colspan />
+              <TextArea label="Unique Value Proposition (UVP)" val={form.value_proposition} set={(v:any) => updateForm({value_proposition:v})} colspan />
+              <TextArea label="Diferenciais Competitivos" val={form.main_differentials} set={(v:any) => updateForm({main_differentials:v})} colspan rows={3} />
+            </div>
+          </Section>
+
+          <Section icon={<Users />} title="Público & Personas" desc="Para quem estamos construindo isso.">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <TextArea label="Descrição do Público (Dores/Desejos)" val={form.target_audience} set={(v:any) => updateForm({target_audience:v})} rows={3} />
+              <div className="space-y-4">
+                <Input label="Faixa Etária Principal" val={form.audience_age_range} placeholder="Ex: 25-45 anos" set={(v:any) => updateForm({audience_age_range:v})} />
+                <Input label="Tópicos a Evitar (Antipadrões)" val={form.avoid_topics} placeholder="Ex: Religião, promessas irrealistas" set={(v:any) => updateForm({avoid_topics:v})} />
+              </div>
+            </div>
+          </Section>
+
+          <Section icon={<Mic2 />} title="Voz e Personalidade" desc="Como a IA incorporará sua marca ao escrever.">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input label="Personalidade (3-5 adjetivos)" placeholder="Ex: Ousada, visionária, direta" val={form.brand_personality} set={(v:any) => updateForm({brand_personality:v})} />
+              <Input label="Tom de Voz" placeholder="Ex: Acolhedor sem jargões" val={form.tone_of_voice} set={(v:any) => updateForm({tone_of_voice:v})} />
+            </div>
+          </Section>
+
+          <Section icon={<LayoutDashboard />} title="Arquitetura de Conteúdo" desc="Pilares para a geração automática de posts e vídeos.">
+            <div className="space-y-4">
+              <div className="space-y-3 bg-[#131313] p-5 border border-[#222] rounded-2xl">
+                <div className="flex justify-between items-center mb-4">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-[#777] font-mono">Pilares Editoriais ({form.content_pillars.length})</label>
+                  <button onClick={addPillar} className="text-xs bg-[#222] font-semibold hover:bg-[#333] px-3 py-1 rounded transition-colors">+ Adicionar</button>
+                </div>
+                {form.content_pillars.length === 0 && <p className="text-sm text-[#555] italic">Nenhum pilar adicionado. A IA não saberá sobre o que gerar.</p>}
+                {form.content_pillars.map((pillar, idx) => (
+                  <div key={idx} className="flex gap-2">
+                    <input type="text" value={pillar} onChange={e => handlePillarChange(idx, e.target.value)}
+                      placeholder="Ex: Educação em Investimentos" className="w-full bg-[#1a1a1a] border border-[#333] px-4 py-3 rounded-xl text-sm focus:border-[#10b981] outline-none" />
+                    <button onClick={() => remPillar(idx)} className="px-4 bg-[#1a1a1a] border border-[#333] hover:border-red-500 hover:text-red-500 rounded-xl transition-all">
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <TextArea label="Keywords / SEO (separadas por vírgula)" val={(form.keywords || []).join(', ')} set={(v:any) => updateForm({keywords: v.split(',').map((s:string)=>s.trim())})} rows={2} />
+            </div>
+          </Section>
+
         </div>
       </div>
 
-      <div className="page-content no-scrollbar">
-        <div className="max-w-3xl mx-auto p-6">
-          <Accordion type="multiple" defaultValue={['empresa', 'publico', 'concorrentes']} className="space-y-3">
-            <AccordionItem value="empresa" className="rounded-2xl overflow-hidden" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-              <AccordionTrigger className="px-5 py-4 font-semibold font-display hover:no-underline" style={{ color: 'var(--text-1)' }}>
-                Empresa
-              </AccordionTrigger>
-              <AccordionContent className="px-5 pb-5 space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <Field label="Nome da empresa" value={form.company_name} onChange={v => setField('company_name', v)} placeholder="Studio Criativo" />
-                  <Field label="Segmento / nicho" value={form.segment} onChange={v => setField('segment', v)} placeholder="Marketing Digital" />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <Field label="Instagram" value={form.instagram_handle} onChange={v => setField('instagram_handle', v)} placeholder="@suaempresa" />
-                  <Field label="LinkedIn" value={form.linkedin_handle} onChange={v => setField('linkedin_handle', v)} placeholder="sua-empresa" />
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem value="publico" className="rounded-2xl overflow-hidden" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-              <AccordionTrigger className="px-5 py-4 font-semibold font-display hover:no-underline" style={{ color: 'var(--text-1)' }}>
-                Publico-alvo
-              </AccordionTrigger>
-              <AccordionContent className="px-5 pb-5 space-y-4">
-                <Field label="Quem e seu publico?" value={form.target_audience} onChange={v => setField('target_audience', v)} rows={3} placeholder="Ex: empreendedores, donos de pequenas empresas..." />
-                <Field label="Principais dores" value={form.pain_points} onChange={v => setField('pain_points', v)} rows={3} placeholder="O que trava a decisao de compra?" />
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem value="posicionamento" className="rounded-2xl overflow-hidden" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-              <AccordionTrigger className="px-5 py-4 font-semibold font-display hover:no-underline" style={{ color: 'var(--text-1)' }}>
-                Posicionamento
-              </AccordionTrigger>
-              <AccordionContent className="px-5 pb-5 space-y-4">
-                <Field label="Principais diferenciais" value={form.main_differentials} onChange={v => setField('main_differentials', v)} rows={3} placeholder="O que te diferencia da concorrencia?" />
-                <Field label="Posicao no mercado" value={form.market_position} onChange={v => setField('market_position', v)} placeholder="Lider em X, desafiante em Y..." />
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem value="tom" className="rounded-2xl overflow-hidden" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-              <AccordionTrigger className="px-5 py-4 font-semibold font-display hover:no-underline" style={{ color: 'var(--text-1)' }}>
-                Tom e voz
-              </AccordionTrigger>
-              <AccordionContent className="px-5 pb-5 space-y-4">
-                <Field label="Tom de voz" value={form.tone_of_voice} onChange={v => setField('tone_of_voice', v)} rows={2} placeholder="Direto, didatico, sem jargoes..." />
-                <Field label="Temas para evitar" value={form.avoid_topics} onChange={v => setField('avoid_topics', v)} rows={2} placeholder="Nao mencionar X, evitar Y..." />
-                <Field label="Palavras-chave" value={form.keywords} onChange={v => setField('keywords', v)} placeholder="produtividade, IA, automacao..." />
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem value="concorrentes" className="rounded-2xl overflow-hidden" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-              <AccordionTrigger className="px-5 py-4 font-semibold font-display hover:no-underline" style={{ color: 'var(--text-1)' }}>
-                Concorrentes e inspiracoes
-              </AccordionTrigger>
-              <AccordionContent className="px-5 pb-5 space-y-4">
-                <div className="grid grid-cols-3 gap-2">
-                  <input
-                    value={draftCompetitor.name}
-                    onChange={event => setDraftCompetitor(current => ({ ...current, name: event.target.value }))}
-                    placeholder="Nome"
-                    className={fieldClass}
-                    style={inputStyle}
-                  />
-                  <input
-                    value={draftCompetitor.url}
-                    onChange={event => setDraftCompetitor(current => ({ ...current, url: event.target.value }))}
-                    placeholder="https://site.com"
-                    className={fieldClass}
-                    style={inputStyle}
-                  />
-                  <div className="flex gap-2">
-                    <input
-                      value={draftCompetitor.notes}
-                      onChange={event => setDraftCompetitor(current => ({ ...current, notes: event.target.value }))}
-                      placeholder="Notas"
-                      className={`${fieldClass} flex-1`}
-                      style={inputStyle}
-                    />
-                    <button
-                      onClick={handleAddCompetitor}
-                      className="px-3 rounded-xl text-sm font-medium"
-                      style={{ background: 'var(--primary)', color: 'white' }}
-                    >
-                      <Plus size={14} />
-                    </button>
-                  </div>
-                </div>
-
-                {competitors.length === 0 ? (
-                  <div
-                    className="rounded-xl px-4 py-3 text-sm"
-                    style={{ background: 'var(--bg-elevated)', border: '1px dashed var(--border)', color: 'var(--text-3)' }}
-                  >
-                    Adicione concorrentes para gerar DNA de comunicacao e referencias.
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {competitors.map(competitor => {
-                      const analysis = getAnalysisByUrl(competitor.url);
-                      const isAnalyzing = analyzingUrl === competitor.url;
-
-                      return (
-                        <div
-                          key={competitor.url}
-                          className="rounded-xl p-4 space-y-3"
-                          style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-1)' }}>
-                                {competitor.name || competitor.url}
-                              </p>
-                              <p className="text-xs truncate" style={{ color: 'var(--text-3)' }}>
-                                {competitor.url}
-                              </p>
-                              {competitor.notes && (
-                                <p className="text-xs mt-1" style={{ color: 'var(--text-2)' }}>
-                                  {competitor.notes}
-                                </p>
-                              )}
-                            </div>
-
-                            <div className="flex items-center gap-2 shrink-0">
-                              <span
-                                className="text-[10px] px-2 py-0.5 rounded-full"
-                                style={{
-                                  background: analysis ? '#10B98120' : '#47556920',
-                                  color: analysis ? '#10B981' : '#94A3B8',
-                                }}
-                              >
-                                {analysis ? 'Analisado' : 'Pendente'}
-                              </span>
-                              <button
-                                onClick={() => handleAnalyzeCompetitor(competitor)}
-                                disabled={isAnalyzing}
-                                className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-medium disabled:opacity-60"
-                                style={{ background: 'var(--primary-muted)', border: '1px solid var(--primary)', color: 'var(--primary)' }}
-                              >
-                                {isAnalyzing ? <Sparkles size={12} className="animate-spin" /> : <Search size={12} />}
-                                {isAnalyzing ? 'Analisando...' : 'Analisar'}
-                              </button>
-                              <button
-                                onClick={() => handleRemoveCompetitor(competitor.url)}
-                                className="px-3 py-2 rounded-xl text-xs font-medium"
-                                style={{ background: 'var(--bg-app)', border: '1px solid var(--border)', color: 'var(--text-2)' }}
-                              >
-                                Remover
-                              </button>
-                            </div>
-                          </div>
-
-                          {analysis?.dna_text && (
-                            <div
-                              className="rounded-xl p-3 text-xs whitespace-pre-wrap"
-                              style={{ background: 'var(--bg-app)', border: '1px solid var(--border)', color: 'var(--text-2)' }}
-                            >
-                              {analysis.dna_text}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem value="dna" className="rounded-2xl overflow-hidden" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-              <AccordionTrigger className="px-5 py-4 font-semibold font-display hover:no-underline" style={{ color: 'var(--text-1)' }}>
-                DNA da marca
-              </AccordionTrigger>
-              <AccordionContent className="px-5 pb-5 space-y-4">
-                <div
-                  className="rounded-xl p-4 text-sm whitespace-pre-wrap"
-                  style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-2)', minHeight: 180 }}
-                >
-                  {wsBriefing?.brand_dna || 'Analise concorrentes para gerar um DNA consolidado da marca.'}
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem value="rss" className="rounded-2xl overflow-hidden" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-              <AccordionTrigger className="px-5 py-4 font-semibold font-display hover:no-underline" style={{ color: 'var(--text-1)' }}>
-                Feeds RSS
-              </AccordionTrigger>
-              <AccordionContent className="px-5 pb-5">
-                <div
-                  className="rounded-xl p-4 flex items-center justify-between gap-4"
-                  style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}
-                >
-                  <div>
-                    <p className="text-sm font-medium" style={{ color: 'var(--text-1)' }}>
-                      Gerencie seus feeds na pagina de configuracoes.
-                    </p>
-                    <p className="text-xs mt-1" style={{ color: 'var(--text-3)' }}>
-                      O gerador usa esses feeds para sugerir topicos recentes sem custo de IA.
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => navigate('../settings')}
-                    className="px-3 py-2 rounded-xl text-xs font-medium"
-                    style={{ background: 'var(--primary)', color: 'white' }}
-                  >
-                    Ir para Settings
-                  </button>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-
-          <div className="mt-6 flex flex-col md:flex-row gap-3">
-            <button
-              onClick={handleExtractDeepDNA}
-              disabled={isExtractingDna || isSaving}
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all disabled:opacity-60"
-              style={{ background: 'var(--bg-card)', color: 'var(--text-1)', border: '1px solid var(--border)' }}
-            >
-              {isExtractingDna ? <Sparkles size={15} className="animate-spin" /> : <Sparkles size={15} style={{ color: 'var(--primary)' }} />}
-              {isExtractingDna ? 'Engenharia de DNA em andamento...' : 'Consultor de Marca IA (Deep DNA)'}
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={isSaving || isExtractingDna}
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all disabled:opacity-60"
-              style={{ background: 'var(--primary)', color: 'white', boxShadow: '0 8px 24px rgba(124,58,237,0.25)' }}
-            >
-              <Save size={15} />
-              {isSaving ? 'Salvando...' : 'Salvar briefing'}
-            </button>
+      {/* 
+        ========================================
+        COLUNA 2: COMPLETENESS SCORE & DNA
+        ========================================
+      */}
+      <div className="w-[340px] shrink-0 bg-[#050505] hidden xl:flex flex-col relative overflow-hidden border-r border-[#1f1f1f]">
+        
+        {/* Dashboard de Completude */}
+        <div className="p-6 border-b border-[#1f1f1f] bg-black">
+          <p className="text-[10px] font-bold tracking-widest text-stone-500 mb-2 font-mono">READINESS SCORE</p>
+          <div className="flex items-end gap-2 mb-4">
+            <h2 className="text-6xl font-black tracking-tighter" style={{ color: form.completeness_score >= 80 ? '#10b981' : form.completeness_score >= 50 ? '#f59e0b' : '#ef4444' }}>
+              {form.completeness_score}<span className="text-2xl text-stone-600">%</span>
+            </h2>
           </div>
+          
+          <div className="w-full h-1.5 bg-[#1a1a1a] rounded overflow-hidden">
+            <div className="h-full transition-all duration-1000 ease-out" style={{ 
+              width: `${form.completeness_score}%`,
+              backgroundColor: form.completeness_score >= 80 ? '#10b981' : form.completeness_score >= 50 ? '#f59e0b' : '#ef4444'
+            }} />
+          </div>
+
+          <p className="text-xs text-stone-400 font-medium mt-4">
+            {form.completeness_score >= 80 ? 'Excelente! A IA tem contexto profundo para gerar assets de alta conversão.' :
+             form.completeness_score >= 50 ? 'Bom. Mas fornecer detalhes como Diferenciais melhoraria as copys.' :
+             'Incompleto. Seus templates e agentes podem gerar conteúdo genérico.'}
+          </p>
+        </div>
+
+        {/* Brand DNA Box */}
+        <div className="flex-1 p-6 overflow-y-auto no-scrollbar font-sans space-y-5">
+           <div>
+             <div className="flex items-center gap-2 mb-3 text-stone-400">
+               <FileText size={16} /> <span className="text-sm font-bold tracking-wide">Brand DNA (IA)</span>
+             </div>
+             {form.brand_dna ? (
+               <div className="text-sm leading-relaxed text-stone-300 italic opacity-80" style={{ whiteSpace: 'pre-line' }}>
+                 "{form.brand_dna}"
+               </div>
+             ) : (
+               <div className="bg-[#111] p-4 rounded-xl border border-[#222] border-dashed text-xs text-stone-500 text-center">
+                 Execute o botão "IA Auto-Completar" para condensar suas regras num DNA canônico.
+               </div>
+             )}
+           </div>
         </div>
       </div>
     </div>
   );
-};
+}
 
-export default BriefingPage;
+// ===================================
+// COMPONENTS
+// ===================================
+
+const Section = ({ icon, title, desc, children }: any) => (
+  <div className="p-6 md:p-8 rounded-[24px] bg-[#121212]/80 backdrop-blur-xl border border-[#2A2A2A]">
+    <div className="flex items-center gap-3 mb-2">
+      <div className="p-2 rounded-lg bg-[#222] text-white/70">{icon}</div>
+      <h3 className="text-lg font-bold font-display tracking-wide text-white">{title}</h3>
+    </div>
+    <p className="text-sm text-stone-400 mb-6 font-medium border-b border-[#2A2A2A] pb-6">{desc}</p>
+    {children}
+  </div>
+);
+
+const Input = ({ label, val, set, placeholder, colspan }: any) => (
+  <div className={colspan ? "md:col-span-2" : ""}>
+    <label className="block text-[10px] font-bold mb-2 uppercase tracking-widest text-[#777] font-mono">{label}</label>
+    <div className="flex bg-[#1a1a1a] border border-[#333] rounded-xl overflow-hidden focus-within:border-[#10b981] transition-colors">
+      <input type="text" value={val} onChange={e => set(e.target.value)} placeholder={placeholder} className="w-full bg-transparent px-4 py-3 text-sm text-white outline-none placeholder-[#444]" />
+    </div>
+  </div>
+);
+
+const TextArea = ({ label, val, set, placeholder, rows = 4, colspan }: any) => (
+  <div className={colspan ? "md:col-span-2" : ""}>
+    <label className="block text-[10px] font-bold mb-2 uppercase tracking-widest text-[#777] font-mono">{label}</label>
+    <div className="flex bg-[#1a1a1a] border border-[#333] rounded-xl overflow-hidden focus-within:border-[#10b981] transition-colors">
+      <textarea value={val} onChange={e => set(e.target.value)} placeholder={placeholder} rows={rows} className="w-full bg-transparent px-4 py-3 text-sm text-white outline-none placeholder-[#444] resize-none" />
+    </div>
+  </div>
+);
