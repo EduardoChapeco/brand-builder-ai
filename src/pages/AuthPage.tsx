@@ -53,8 +53,9 @@ export default function AuthPage() {
         });
         if (error) throw error;
       }
-    } catch (error: any) {
-      toast.error(error.message || "Erro de autenticação");
+    } catch (error) {
+      const err = error as Error;
+      toast.error(err.message || "Erro de autenticação");
     } finally {
       setLoading(false);
     }
