@@ -22,6 +22,7 @@ import { useEffect, useState } from 'react';
 import { WorkspaceService, type WorkspaceStats } from '@/services/WorkspaceService';
 import { SwHelpSheet } from '@/components/shared/SwHelpSheet';
 import { LoggerService } from '@/services/LoggerService';
+import { isWorkspaceModuleEnabled } from '@/lib/workspaceNavigation';
 
 export default function HubPage() {
   const navigate = useNavigate();
@@ -109,7 +110,7 @@ export default function HubPage() {
       tag: 'Agents: 0',
       path: 'agents'
     }
-  ];
+  ].filter((mod) => isWorkspaceModuleEnabled(mod.path));
 
   return (
     <div className="p-8 space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -218,9 +219,11 @@ export default function HubPage() {
            <div className="flex items-center gap-2 text-stone-500 text-xs hover:text-white transition-colors cursor-pointer" onClick={() => navigate(`/workspace/${workspaceId}/ajuda`)}>
               <FileText size={14} /> Knowledge Base
            </div>
-           <div className="flex items-center gap-2 text-stone-500 text-xs hover:text-white transition-colors cursor-pointer" onClick={() => navigate(`/workspace/${workspaceId}/noticias`)}>
-              <Newspaper size={14} /> Feed de Atualizações
-           </div>
+           {isWorkspaceModuleEnabled('noticias') ? (
+             <div className="flex items-center gap-2 text-stone-500 text-xs hover:text-white transition-colors cursor-pointer" onClick={() => navigate(`/workspace/${workspaceId}/noticias`)}>
+                <Newspaper size={14} /> Feed de Atualizações
+             </div>
+           ) : null}
         </div>
         <p className="text-[10px] font-mono text-stone-600 uppercase tracking-widest">
            Simwork Engine v1.0 · Workspace: {workspace?.name || 'Local'}

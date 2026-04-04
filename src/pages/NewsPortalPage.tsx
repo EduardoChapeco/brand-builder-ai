@@ -22,14 +22,12 @@ import { Button } from '@/components/ui/button';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { supabase } from '@/integrations/supabase/client'
 import { fromTable } from '@/integrations/supabase/db-custom';
-import type { Tables } from '@/integrations/supabase/types';
-
-type NewsItem = any;
+import type { RssItem } from '@/types/app.types';
 
 const NewsPortalPage = () => {
   const navigate = useNavigate();
   const { workspace, briefing } = useWorkspace();
-  const [items, setItems] = useState<NewsItem[]>([]);
+  const [items, setItems] = useState<RssItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -38,7 +36,8 @@ const NewsPortalPage = () => {
     if (!workspace?.id) return;
 
     setLoading(true);
-    const { data, error } = await fromTable('news_items')
+    const { data, error } = await supabase
+      .from('rss_items')
       .select('*')
       .eq('workspace_id', workspace.id)
       .order('relevance_score', { ascending: false })
@@ -53,12 +52,12 @@ const NewsPortalPage = () => {
         toast.error('Não foi possível carregar o News Portal');
       }
     } else {
-      const rows = (data || []) as NewsItem[];
+      const rows = (data || []) as RssItem[];
       setItems(rows);
 
       if (syncRuns) {
         const pendingRuns = rows
-          .filter((item) => item.latest_simlab_run_id && (item.simlab_status === 'queued' || item.simlab_status === 'running'))
+          .filter((item) => item.latest_simlab_run_id && (item.status === 'queued' || item.status === 'running'))
           .slice(0, 6);
 
         if (pendingRuns.length > 0) {
@@ -100,13 +99,13 @@ const NewsPortalPage = () => {
     }
   };
 
-  const extractContent = async (item: NewsItem) => {
+  const extractContent = async (item: RssItem) => {
     if (!workspace?.id) return;
 
     setBusyId(item.id);
     try {
       const { error } = await supabase.functions.invoke('news-extract-content', {
-        body: { workspace_id: workspace.id, news_item_id: item.id },
+        body: { workspace_id: workspace.id, rss_item_id: item.id },
       });
       if (error) throw error;
       toast.success('Conteudo extraido');
@@ -119,13 +118,13 @@ const NewsPortalPage = () => {
     }
   };
 
-  const generateBlog = async (item: NewsItem) => {
+  const generateBlog = async (item: RssItem) => {
     if (!workspace?.id) return;
 
     setBusyId(item.id);
     try {
       const { data, error } = await supabase.functions.invoke('blog-generate', {
-        body: { workspace_id: workspace.id, news_item_id: item.id },
+        body: { workspace_id: workspace.id, rss_item_id: item.id },
       });
       if (error) throw error;
       toast.success('Rascunho criado no Blog Manager');
@@ -155,7 +154,7 @@ const NewsPortalPage = () => {
             eyebrow="News Portal"
             title="Cockpit editorial do workspace"
             description={
-              `Monitore noticias relevantes para ${briefing?.company_name || workspace?.name || 'o workspace'}, extraia contexto e abra blog, post ou carrossel sem mudar de modulo.`
+              `Monitore noticias relevantes para ${briefing?.company?.name || workspace?.name || 'o workspace'}, extraia contexto e abra blog, post ou carrossel sem mudar de modulo.`
             }
             action={
               <Button onClick={refreshNews} disabled={syncing} className="h-11 rounded-xl px-5">
@@ -179,7 +178,7 @@ const NewsPortalPage = () => {
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <SubtleBadge>Briefing: {briefing?.segment || 'Nao definido'}</SubtleBadge>
+              <SubtleBadge>Briefing: {briefing?.company?.segment || 'Nao definido'}</SubtleBadge>
               <SubtleBadge variant="outline">1 clique para blog/post/carrossel</SubtleBadge>
             </div>
           </ActionBar>
@@ -194,11 +193,11 @@ const NewsPortalPage = () => {
                 title="Nenhuma noticia no workspace"
                 description="Rode a sincronizacao inicial para popular o portal com oportunidades de conteudo."
                 icon={Newspaper}
-                action={
-                  <Button onClick={refreshNews} disabled={syncing} className="rounded-xl">
-                    Atualizar feed
-                  </Button>
-                }
+                action={{
+                  label: "Atualizar feed",
+                  onClick: refreshNews,
+                  icon: RefreshCcw
+                }}
               />
             ) : (
               items.map((item) => {
@@ -211,7 +210,7 @@ const NewsPortalPage = () => {
                     <div className="flex flex-wrap items-center gap-2">
                       <SubtleBadge variant="brand">Score {item.relevance_score || 0}</SubtleBadge>
                       {item.status ? <SubtleBadge>{item.status}</SubtleBadge> : null}
-                      {item.simlab_status ? <SubtleBadge variant="outline">SimLab {item.simlab_status}</SubtleBadge> : null}
+                      {item.latest_simlab_run_id ? <SubtleBadge variant="outline">SimLab {item.status}</SubtleBadge> : null}
                       {item.categories?.slice(0, 2).map((category) => (
                         <SubtleBadge key={`${item.id}-${category}`} variant="outline">
                           {category}
@@ -242,7 +241,7 @@ const NewsPortalPage = () => {
                             state: {
                               topic: item.title,
                               recommendedTemplate: 'editorial-magazine',
-                              sourceUrl: item.source_url,
+                              sourceUrl: item.item_url,
                             },
                           })
                         }
@@ -270,7 +269,7 @@ const NewsPortalPage = () => {
                         <Sparkles size={14} />
                         Extrair conteudo
                       </Button>
-                      <Button variant="ghost" className="rounded-xl" onClick={() => window.open(item.source_url, '_blank')}>
+                      <Button variant="ghost" className="rounded-xl" onClick={() => window.open(item.item_url, '_blank')}>
                         <ExternalLink size={14} />
                         Fonte
                       </Button>

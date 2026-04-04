@@ -223,6 +223,11 @@ export interface RssItem {
   author: string | null;
   published_at: string | null;
   relevance_score: number;
+  relevance_reason: string | null;
+  categories: string[];
+  status: string;
+  content_extracted: boolean;
+  latest_simlab_run_id: string | null;
   derivations: Record<string, unknown>;
   fetched_at: string;
 }

@@ -48,9 +48,9 @@ serve(async (req: Request) => {
     const snap = await getCCPSnapshot(supabase, workspace_id);
 
     const [{ data: systemFeeds }, { data: workspaceFeeds }, { data: existingRows }] = await Promise.all([
-      supabase.from("rss_sources").select("*").eq("is_active", true).order("name"),
+      supabase.from("rss_sources").select("*").eq("status", "active").order("name"),
       supabase.from("rss_feeds").select("*").eq("workspace_id", workspace_id).eq("is_active", true).order("created_at"),
-      supabase.from("news_items").select("source_url").eq("workspace_id", workspace_id),
+      supabase.from("rss_items").select("item_url").eq("workspace_id", workspace_id),
     ]);
 
     const feeds: FeedRow[] = [
@@ -58,7 +58,7 @@ serve(async (req: Request) => {
       ...((workspaceFeeds || []) as FeedRow[]),
     ];
 
-    const existingUrls = new Set((existingRows as Array<{ source_url: string }> || []).map((item) => item.source_url));
+    const existingUrls = new Set((existingRows as Array<{ item_url: string }> || []).map((item) => item.item_url));
     const collected: Array<NewsCandidate & { rss_source_id: string | null }> = [];
     const skipped = [];
 
@@ -96,30 +96,22 @@ serve(async (req: Request) => {
 
       return {
         workspace_id,
-        rss_source_id: item.rss_source_id,
+        source_id: item.rss_source_id,
         title: item.title,
         description: item.description,
-        source_name: item.source_name,
-        source_url: item.source_url,
+        item_url: item.source_url,
         published_at: item.published_at,
         categories: item.categories,
         relevance_score: relevance.score,
         relevance_reason: relevance.reason,
         status: relevance.score >= 60 ? "priority" : "new",
-        ccp_context: buildNewsItemCCPContext({
-          workspaceId: workspace_id,
-          snap,
-          relevanceScore: relevance.score,
-          relevanceReason: relevance.reason,
-          categories: item.categories,
-        }),
       };
     });
 
     let inserted: NewsItemRow[] = [];
     if (deduped.length > 0) {
       const { data, error } = await supabase
-        .from("news_items")
+        .from("rss_items")
         .insert(deduped)
         .select("*");
 
@@ -162,7 +154,7 @@ serve(async (req: Request) => {
         validationType: "trend",
         moduleType: "trend_signal",
         stimulusType: "news_signal",
-        targetTable: "news_items",
+        targetTable: "rss_items",
         targetId: item.id,
         objective: item.title,
         audienceHint: snap.audience || null,
@@ -172,7 +164,7 @@ serve(async (req: Request) => {
           artifact: {
             title: item.title,
             description: item.description,
-            source_url: item.source_url,
+            item_url: item.item_url,
             relevance_score: item.relevance_score,
             relevance_reason: item.relevance_reason,
             categories: item.categories,

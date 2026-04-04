@@ -15,6 +15,7 @@ import { ErrorBadge } from '@/components/shared/ErrorBadge';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { useAgents } from '@/hooks/useAgents';
 import type { Agent, AgentType } from '@/types/app.types';
+import AgentConfigForm from '@/components/agents/AgentConfigForm';
 
 const AGENT_TYPE_LABELS: Record<AgentType, string> = {
   persona: 'Persona SimLab',
@@ -362,47 +363,24 @@ export default function AgentsPage() {
 
       {editingAgent && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <SwCard glass className="w-full max-w-lg p-8 space-y-6 animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold text-white">Editar Agente</h2>
-              <SwButton variant="ghost" onClick={() => setEditingAgent(null)}>✕</SwButton>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2">Nome</label>
-                <SwInput
-                  id="edit-agent-name"
-                  value={editingAgent.name}
-                  onChange={(e) => setEditingAgent({ ...editingAgent, name: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2">URL do Avatar</label>
-                <SwInput
-                  id="edit-agent-avatar"
-                  placeholder="https://..."
-                  value={editingAgent.avatar_url ?? ''}
-                  onChange={(e) => setEditingAgent({ ...editingAgent, avatar_url: e.target.value })}
-                />
-              </div>
-            </div>
-            <div className="flex gap-3 justify-end">
-              <SwButton variant="ghost" onClick={() => setEditingAgent(null)}>Cancelar</SwButton>
-              <SwButton
-                variant="primary"
-                className="bg-[#a855f7] hover:bg-[#9333ea] text-white"
-                onClick={async () => {
-                  const ok = await update(editingAgent.id, {
-                    name: editingAgent.name,
-                    avatar_url: editingAgent.avatar_url ?? undefined,
-                  });
-                  if (ok) { toast.success('Agente atualizado.'); setEditingAgent(null); }
-                  else toast.error('Falha ao atualizar agente.');
-                }}
-              >
-                <UserCircle2 size={16} /> Salvar
-              </SwButton>
-            </div>
+          <SwCard glass className="w-full max-w-2xl p-8 space-y-6 animate-in fade-in zoom-in-95 max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <AgentConfigForm 
+              agent={editingAgent}
+              onCancel={() => setEditingAgent(null)}
+              onSave={async (newConfig) => {
+                const ok = await update(editingAgent.id, {
+                  name: editingAgent.name,
+                  avatar_url: editingAgent.avatar_url ?? undefined,
+                  config: newConfig
+                });
+                if (ok) {
+                  toast.success('DNA do Agente atualizado com sucesso.');
+                  setEditingAgent(null);
+                } else {
+                  toast.error('Falha ao atualizar DNA do agente.');
+                }
+              }}
+            />
           </SwCard>
         </div>
       )}

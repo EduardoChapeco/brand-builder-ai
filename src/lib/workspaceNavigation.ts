@@ -28,6 +28,7 @@ export type WorkspaceNavItem = {
   section: 'Operação' | 'Criar' | 'Workspace' | 'Suporte';
   description: string;
   adminOnly?: boolean;
+  disabled?: boolean;
   helpTitle?: string;
   helpBody?: string;
 };
@@ -184,11 +185,14 @@ export const WORKSPACE_NAV_ITEMS: WorkspaceNavItem[] = [
 ];
 
 export const WORKSPACE_NAV_GROUPS = [
-  { label: 'Operação', items: WORKSPACE_NAV_ITEMS.filter((item) => item.section === 'Operação') },
-  { label: 'Criar', items: WORKSPACE_NAV_ITEMS.filter((item) => item.section === 'Criar') },
-  { label: 'Workspace', items: WORKSPACE_NAV_ITEMS.filter((item) => item.section === 'Workspace') },
-  { label: 'Suporte', items: WORKSPACE_NAV_ITEMS.filter((item) => item.section === 'Suporte') },
+  { label: 'Operação', items: WORKSPACE_NAV_ITEMS.filter((item) => item.section === 'Operação' && !item.disabled) },
+  { label: 'Criar', items: WORKSPACE_NAV_ITEMS.filter((item) => item.section === 'Criar' && !item.disabled) },
+  { label: 'Workspace', items: WORKSPACE_NAV_ITEMS.filter((item) => item.section === 'Workspace' && !item.disabled) },
+  { label: 'Suporte', items: WORKSPACE_NAV_ITEMS.filter((item) => item.section === 'Suporte' && !item.disabled) },
 ] as const;
+
+export const isWorkspaceModuleEnabled = (path: string) =>
+  !WORKSPACE_NAV_ITEMS.find((item) => item.path === path)?.disabled;
 
 export const getWorkspaceRouteMeta = (pathname: string) => {
   const match = pathname.match(/\/workspace\/[^/]+\/([^/?#]+)/);

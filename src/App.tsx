@@ -30,23 +30,23 @@ import GeneratorPage from '@/pages/GeneratorPage';
 import HelpPage from '@/pages/HelpPage';
 import HubPage from '@/pages/HubPage';
 import LibraryPage from '@/pages/LibraryPage';
-import NewsPortalPage from '@/pages/NewsPortalPage';
+import ModuleUnavailablePage from '@/pages/ModuleUnavailablePage';
 import NotFound from '@/pages/NotFound';
 import OnboardingPage from '@/pages/OnboardingPage';
-import PublicBioLink from '@/pages/PublicBioLink';
 import SettingsPage from '@/pages/SettingsPage';
 import SiteBuilderPage from '@/pages/SiteBuilderPage';
 import SiteEditorPage from '@/pages/SiteEditorPage';
 import SupportPage from '@/pages/SupportPage';
-import VideoStudioEditorPage from '@/pages/VideoStudioEditorPage';
-import VideoStudioGeneratePage from '@/pages/VideoStudioGeneratePage';
-import VideoStudioMotionPage from '@/pages/VideoStudioMotionPage';
-import VideoStudioPage from '@/pages/VideoStudioPage';
 import WorkspacesPage from '@/pages/WorkspacesPage';
 import AdminGuard from '@/components/shared/AdminGuard';
 import BioLinkModuleLayout from '@/components/biolink/BioLinkModuleLayout';
 import AgentsPage from '@/pages/AgentsPage';
 import SimLabPage from '@/pages/SimLabPage';
+import NewsPortalPage from '@/pages/NewsPortalPage';
+import VideoStudioPage from '@/pages/VideoStudioPage';
+import VideoStudioEditorPage from '@/pages/VideoStudioEditorPage';
+import VideoStudioGeneratePage from '@/pages/VideoStudioGeneratePage';
+import VideoStudioMotionPage from '@/pages/VideoStudioMotionPage';
 
 
 const queryClient = new QueryClient({
@@ -70,8 +70,8 @@ const App = () => (
           <Route path="/auth/login" element={<AuthPage />} />
           <Route path="/workspaces" element={<WorkspacesPage />} />
           <Route path="/onboarding" element={<OnboardingPage />} />
-          <Route path="/b/:slug" element={<PublicBioLink />} />
-           <Route path="/l/:slug" element={<PublicBioLink />} />
+          <Route path="/b/:slug" element={<BioLinkPublicPage />} />
+          <Route path="/l/:slug" element={<BioLinkPublicPage />} />
  
            {/* === ADMIN AREA === */}
            <Route
@@ -204,9 +204,6 @@ const App = () => (
             {/* Fallback interno */}
             <Route path="biolink-analytics" element={<BioLinkAnalyticsPage />} />
           </Route>
-
-          {/* Rota Pública do BioLink (Fora do AppShell) */}
-          <Route path="/b/:slug" element={<BioLinkPublicPage />} />
 
           {/* 404 global */}
           <Route path="*" element={<NotFound />} />
