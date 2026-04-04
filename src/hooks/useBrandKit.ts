@@ -1,120 +1,89 @@
-/**
- * SW-060: useBrandKit — Hook canônico para Brand Kit
- * Lê de sw_brand_kits, com autosave debounced
- */
+// src/hooks/useBrandKit.ts
+// SDD-1.0 — Hook canônico para Brand Kit com auto-save (debounce 1.5s)
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { supabase } from '@/lib/supabase';
-import { logError } from '@/lib/errorLogger';
-import type { SwBrandKit } from '@/types/database';
+import { useState, useCallback, useRef, useEffect } from "react";
+import { supabase } from "../lib/supabase";
+import { logError } from "../lib/error-logger";
+import type { BrandKit } from "../types/app.types";
 
-interface UseBrandKitReturn {
-  brandKit: SwBrandKit | null;
-  isSaving: boolean;
-  isLoading: boolean;
-  error: string | null;
-  errorCode: string | null;
-  save: (updates: Partial<SwBrandKit>) => void;
-  reload: () => void;
-}
-
-export function useBrandKit(workspaceId: string | null): UseBrandKitReturn {
-  const [brandKit, setBrandKit] = useState<SwBrandKit | null>(null);
+export function useBrandKit(workspaceId: string) {
+  const [brandKit, setBrandKit] = useState<BrandKit | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [errorCode, setErrorCode] = useState<string | null>(null);
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveTimeout = useRef<ReturnType<typeof setTimeout>>();
 
-  const fetchBrandKit = useCallback(async () => {
+  const fetch = useCallback(async () => {
     if (!workspaceId) return;
-
     setIsLoading(true);
     setError(null);
     setErrorCode(null);
 
     try {
-      const { data, error: dbErr } = await supabase
-        .from('sw_brand_kits')
-        .select('*')
-        .eq('workspace_id', workspaceId)
+      const { data, error: err } = await supabase
+        .from("brand_kits")
+        .select("id, workspace_id, colors, fonts, logos, voice, updated_at")
+        .eq("workspace_id", workspaceId)
         .maybeSingle();
 
-      if (dbErr) throw dbErr;
-      setBrandKit(data as SwBrandKit ?? null);
-    } catch (err) {
-      const code = 'ERR_BRANDKIT_LOAD_001';
-      const message = err instanceof Error ? err.message : String(err);
-      setError('Não foi possível carregar o Brand Kit');
-      setErrorCode(code);
-      await logError({
-        code,
-        module: 'marca',
-        message: 'Falha ao carregar brand kit',
-        detail: { error: message, workspaceId },
-        workspaceId,
-      });
+      if (err) {
+        setErrorCode("ERR_BRANDKIT_LOAD_001");
+        setError(err.message);
+        await logError({
+          code: "ERR_BRANDKIT_LOAD_001",
+          module: "brand_kit",
+          message: "Não foi possível carregar o Brand Kit",
+          detail: { error: err.message, workspaceId },
+          workspaceId,
+        });
+        return;
+      }
+
+      setBrandKit(data as BrandKit | null);
     } finally {
       setIsLoading(false);
     }
   }, [workspaceId]);
 
-  useEffect(() => {
-    fetchBrandKit();
-  }, [fetchBrandKit]);
-
-  // Autosave debounced (1.5s)
-  const save = useCallback((updates: Partial<SwBrandKit>) => {
-    if (!workspaceId) return;
-
-    // Atualiza otimisticamente
-    setBrandKit(prev => prev ? { ...prev, ...updates } : null);
-
-    // Debounce
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-
-    saveTimerRef.current = setTimeout(async () => {
+  const save = useCallback(async (updates: Partial<BrandKit>) => {
+    clearTimeout(saveTimeout.current);
+    saveTimeout.current = setTimeout(async () => {
       setIsSaving(true);
       try {
-        const { error: dbErr } = await supabase
-          .from('sw_brand_kits')
+        const { data, error: err } = await supabase
+          .from("brand_kits")
           .upsert(
-            { workspace_id: workspaceId, ...updates, updated_at: new Date().toISOString() },
-            { onConflict: 'workspace_id' }
-          );
+            {
+              workspace_id: workspaceId,
+              ...updates,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "workspace_id" },
+          )
+          .select("id, workspace_id, colors, fonts, logos, voice, updated_at")
+          .single();
 
-        if (dbErr) throw dbErr;
+        if (err) throw err;
+        setBrandKit(data as BrandKit);
       } catch (err) {
-        const code = 'ERR_BRANDKIT_SAVE_001';
         await logError({
-          code,
-          module: 'marca',
-          message: 'Não foi possível salvar o Brand Kit',
-          detail: { error: String(err) },
+          code: "ERR_BRANDKIT_SAVE_001",
+          module: "brand_kit",
+          message: "Não foi possível salvar o Brand Kit",
+          detail: { error: (err as Error).message, workspaceId },
           workspaceId,
         });
-        // Reload para reverter otimismo
-        await fetchBrandKit();
       } finally {
         setIsSaving(false);
       }
     }, 1500);
-  }, [workspaceId, fetchBrandKit]);
+  }, [workspaceId]);
 
-  // Cleanup do timer
+  // Cleanup: cancelar debounce ao desmontar
   useEffect(() => {
-    return () => {
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    };
+    return () => clearTimeout(saveTimeout.current);
   }, []);
 
-  return {
-    brandKit,
-    isSaving,
-    isLoading,
-    error,
-    errorCode,
-    save,
-    reload: fetchBrandKit,
-  };
+  return { brandKit, isLoading, isSaving, error, errorCode, fetch, save };
 }

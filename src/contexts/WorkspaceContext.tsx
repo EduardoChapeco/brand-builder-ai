@@ -1,119 +1,92 @@
-/**
- * SW-013: WorkspaceContext — Contexto global de workspace
- * Fonte única de verdade para workspace_id em toda a aplicação
- */
+// src/contexts/WorkspaceContext.tsx
+// SDD-1.0 — ÚNICO provider de workspace no app
+// Todo componente que precisa do workspace usa useWorkspace()
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
-import { logError } from '@/lib/errorLogger';
-import type { SwWorkspace } from '@/types/database';
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { supabase } from "../lib/supabase";
+import { logError } from "../lib/error-logger";
+import type { Workspace, MemberRole } from "../types/app.types";
 
 interface WorkspaceContextValue {
-  workspace: SwWorkspace | null;
-  workspaceId: string | null;
+  workspace: Workspace | null;
+  role: MemberRole | null;
   isLoading: boolean;
   error: string | null;
-  reload: () => void;
+  errorCode: string | null;
+  refetch: () => Promise<void>;
 }
 
-const WorkspaceContext = createContext<WorkspaceContextValue>({
-  workspace: null,
-  workspaceId: null,
-  isLoading: true,
-  error: null,
-  reload: () => {},
-});
+const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
 
-export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
-  const [workspace, setWorkspace] = useState<SwWorkspace | null>(null);
+export function WorkspaceProvider({
+  children,
+  workspaceId,
+}: {
+  children: React.ReactNode;
+  workspaceId: string;
+}) {
+  const [workspace, setWorkspace] = useState<Workspace | null>(null);
+  const [role, setRole] = useState<MemberRole | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<string | null>(null);
 
-  const loadWorkspace = useCallback(async () => {
+  const fetchWorkspace = async () => {
     setIsLoading(true);
     setError(null);
+    setErrorCode(null);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setWorkspace(null);
-        return;
-      }
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuário não autenticado");
 
-      // Tenta buscar workspace como owner primeiro
-      const { data: owned, error: ownErr } = await supabase
-        .from('sw_workspaces')
-        .select('id, owner_id, name, slug, plan_id, avatar_url, sector, website, settings, created_at, updated_at')
-        .eq('owner_id', user.id)
-        .limit(1)
-        .maybeSingle();
+      const { data, error: wsError } = await supabase
+        .from("workspaces")
+        .select(
+          `id, name, slug, logo_url, plan, status,
+          trial_ends_at, settings, created_at, updated_at,
+          workspace_members!inner(role)`,
+        )
+        .eq("id", workspaceId)
+        .eq("workspace_members.user_id", user.id)
+        .single();
 
-      if (ownErr) throw ownErr;
+      if (wsError) throw wsError;
+      if (!data) throw new Error("Workspace não encontrado ou acesso negado");
 
-      if (owned) {
-        sessionStorage.setItem('sw_workspace_id', owned.id);
-        setWorkspace(owned as SwWorkspace);
-        return;
-      }
-
-      // Fallback: como membro
-      const { data: memberRow, error: memErr } = await supabase
-        .from('sw_workspace_members')
-        .select('workspace_id')
-        .eq('user_id', user.id)
-        .limit(1)
-        .maybeSingle();
-
-      if (memErr) throw memErr;
-
-      if (memberRow) {
-        const { data: ws, error: wsErr } = await supabase
-          .from('sw_workspaces')
-          .select('id, owner_id, name, slug, plan_id, avatar_url, sector, website, settings, created_at, updated_at')
-          .eq('id', memberRow.workspace_id)
-          .single();
-
-        if (wsErr) throw wsErr;
-        if (ws) {
-          sessionStorage.setItem('sw_workspace_id', ws.id);
-          setWorkspace(ws as SwWorkspace);
-        }
-      }
+      setWorkspace(data as unknown as Workspace);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      setRole((data as any).workspace_members?.[0]?.role ?? null);
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
+      const message =
+        err instanceof Error ? err.message : "Erro desconhecido";
+      const code = "ERR_WORKSPACE_LOAD_001";
+
       setError(message);
+      setErrorCode(code);
+
       await logError({
-        code: 'ERR_WORKSPACE_LOAD_001',
-        module: 'workspace',
-        message: 'Falha ao carregar workspace do usuário',
-        detail: { error: message },
+        code,
+        module: "workspace",
+        message: `Não foi possível carregar o workspace ${workspaceId}`,
+        detail: { error: message, workspaceId },
+        workspaceId,
       });
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  };
 
   useEffect(() => {
-    loadWorkspace();
-
-    // Recarregar quando autenticação mudar
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      sessionStorage.removeItem('sw_workspace_id');
-      loadWorkspace();
-    });
-
-    return () => subscription.unsubscribe();
-  }, [loadWorkspace]);
+    if (workspaceId) fetchWorkspace();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workspaceId]);
 
   return (
     <WorkspaceContext.Provider
-      value={{
-        workspace,
-        workspaceId: workspace?.id ?? null,
-        isLoading,
-        error,
-        reload: loadWorkspace,
-      }}
+      value={{ workspace, role, isLoading, error, errorCode, refetch: fetchWorkspace }}
     >
       {children}
     </WorkspaceContext.Provider>
@@ -121,5 +94,9 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 }
 
 export function useWorkspace() {
-  return useContext(WorkspaceContext);
+  const ctx = useContext(WorkspaceContext);
+  if (!ctx) {
+    throw new Error("useWorkspace() deve ser usado dentro de WorkspaceProvider");
+  }
+  return ctx;
 }

@@ -1,126 +1,139 @@
-/**
- * SW-040: useAgents — Hook canônico para Agentes
- */
+// src/hooks/useAgents.ts
+// SDD-1.0 — Hook canônico para Agentes (personas, influencers, mascotes, squads)
 
-import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
-import { logError } from '@/lib/errorLogger';
-import type { SwAgent } from '@/types/database';
+import { useState, useCallback } from "react";
+import { supabase } from "../lib/supabase";
+import { logError } from "../lib/error-logger";
+import type { Agent, AgentType } from "../types/app.types";
 
-interface UseAgentsReturn {
-  agents: SwAgent[];
-  isLoading: boolean;
-  error: string | null;
-  errorCode: string | null;
-  reload: () => void;
-  createAgent: (data: Partial<SwAgent>) => Promise<SwAgent | null>;
-  updateAgent: (id: string, data: Partial<SwAgent>) => Promise<boolean>;
-}
-
-export function useAgents(workspaceId: string | null): UseAgentsReturn {
-  const [agents, setAgents] = useState<SwAgent[]>([]);
+export function useAgents(workspaceId: string, agentType?: AgentType) {
+  const [agents, setAgents] = useState<Agent[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [errorCode, setErrorCode] = useState<string | null>(null);
 
-  const fetchAgents = useCallback(async () => {
+  const fetch = useCallback(async () => {
     if (!workspaceId) return;
-
     setIsLoading(true);
     setError(null);
     setErrorCode(null);
 
     try {
-      const { data, error: dbErr } = await supabase
-        .from('sw_agents')
-        .select('id, workspace_id, name, type, status, avatar_url, identity, voice, memory, behavior, tools, integrations, created_by, created_at, updated_at')
-        .eq('workspace_id', workspaceId)
-        .order('created_at', { ascending: false });
+      let query = supabase
+        .from("agents")
+        .select("id, agent_type, name, avatar_url, config, calibration_score, is_active, created_at, updated_at")
+        .eq("workspace_id", workspaceId)
+        .order("created_at", { ascending: false });
 
-      if (dbErr) throw dbErr;
-      setAgents(data as SwAgent[] ?? []);
-    } catch (err) {
-      const code = 'ERR_AGENT_LOAD_001';
-      const message = err instanceof Error ? err.message : String(err);
-      setError('Não foi possível carregar os agentes');
-      setErrorCode(code);
-      await logError({
-        code,
-        module: 'agentes',
-        message: 'Falha ao carregar agentes',
-        detail: { error: message, workspaceId },
-        workspaceId,
-      });
+      if (agentType) query = query.eq("agent_type", agentType);
+
+      const { data, error: err } = await query;
+
+      if (err) {
+        const code = "ERR_AGENT_LOAD_001";
+        setErrorCode(code);
+        setError(err.message);
+        await logError({
+          code,
+          module: "agents",
+          message: "Não foi possível carregar os agentes",
+          detail: { error: err.message, workspaceId, agentType },
+          workspaceId,
+        });
+        return;
+      }
+
+      setAgents(data as Agent[]);
     } finally {
       setIsLoading(false);
     }
-  }, [workspaceId]);
+  }, [workspaceId, agentType]);
 
-  useEffect(() => {
-    fetchAgents();
-  }, [fetchAgents]);
-
-  const createAgent = useCallback(async (agentData: Partial<SwAgent>): Promise<SwAgent | null> => {
-    if (!workspaceId) return null;
-
+  const create = useCallback(async (
+    name: string,
+    type: AgentType,
+    config: Record<string, unknown> = {},
+    avatarUrl?: string,
+  ): Promise<Agent | null> => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-
-      const { data, error: dbErr } = await supabase
-        .from('sw_agents')
+      const { data, error: err } = await supabase
+        .from("agents")
         .insert({
           workspace_id: workspaceId,
-          name: agentData.name ?? 'Novo Agente',
-          type: agentData.type ?? 'brand',
-          status: 'draft',
-          identity: agentData.identity ?? {},
-          voice: agentData.voice ?? {},
-          memory: agentData.memory ?? {},
-          behavior: agentData.behavior ?? {},
-          tools: agentData.tools ?? [],
-          integrations: agentData.integrations ?? [],
-          created_by: user?.id ?? null,
+          agent_type: type,
+          name,
+          avatar_url: avatarUrl ?? null,
+          config,
+          is_active: true,
         })
-        .select()
+        .select("id, agent_type, name, avatar_url, config, calibration_score, is_active, created_at, updated_at")
         .single();
 
-      if (dbErr) throw dbErr;
-      await fetchAgents();
-      return data as SwAgent;
+      if (err) throw err;
+      setAgents((prev) => [data as Agent, ...prev]);
+      return data as Agent;
     } catch (err) {
       await logError({
-        code: 'ERR_AGENT_CREATE_001',
-        module: 'agentes',
-        message: 'Falha ao criar agente',
-        detail: { error: String(err) },
+        code: "ERR_AGENT_SAVE_001",
+        module: "agents",
+        message: "Não foi possível criar agente",
+        detail: { error: (err as Error).message, name, type, workspaceId },
         workspaceId,
       });
       return null;
     }
-  }, [workspaceId, fetchAgents]);
+  }, [workspaceId]);
 
-  const updateAgent = useCallback(async (id: string, agentData: Partial<SwAgent>): Promise<boolean> => {
+  const update = useCallback(async (
+    agentId: string,
+    updates: Partial<Pick<Agent, "name" | "config" | "avatar_url" | "is_active">>,
+  ): Promise<boolean> => {
     try {
-      const { error: dbErr } = await supabase
-        .from('sw_agents')
-        .update({ ...agentData, updated_at: new Date().toISOString() })
-        .eq('id', id)
-        .eq('workspace_id', workspaceId ?? '');
+      const { error: err } = await supabase
+        .from("agents")
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq("id", agentId)
+        .eq("workspace_id", workspaceId);
 
-      if (dbErr) throw dbErr;
-      await fetchAgents();
+      if (err) throw err;
+      setAgents((prev) =>
+        prev.map((a) => (a.id === agentId ? { ...a, ...updates } : a)),
+      );
       return true;
     } catch (err) {
       await logError({
-        code: 'ERR_AGENT_UPDATE_001',
-        module: 'agentes',
-        message: 'Falha ao atualizar agente',
-        detail: { error: String(err), id },
-        workspaceId: workspaceId ?? undefined,
+        code: "ERR_AGENT_SAVE_001",
+        module: "agents",
+        message: "Não foi possível atualizar agente",
+        detail: { error: (err as Error).message, agentId, workspaceId },
+        workspaceId,
       });
       return false;
     }
-  }, [workspaceId, fetchAgents]);
+  }, [workspaceId]);
 
-  return { agents, isLoading, error, errorCode, reload: fetchAgents, createAgent, updateAgent };
+  const remove = useCallback(async (agentId: string): Promise<boolean> => {
+    try {
+      const { error: err } = await supabase
+        .from("agents")
+        .delete()
+        .eq("id", agentId)
+        .eq("workspace_id", workspaceId);
+
+      if (err) throw err;
+      setAgents((prev) => prev.filter((a) => a.id !== agentId));
+      return true;
+    } catch (err) {
+      await logError({
+        code: "ERR_AGENT_SAVE_001",
+        module: "agents",
+        message: "Não foi possível remover agente",
+        detail: { error: (err as Error).message, agentId, workspaceId },
+        workspaceId,
+      });
+      return false;
+    }
+  }, [workspaceId]);
+
+  return { agents, isLoading, error, errorCode, fetch, create, update, remove };
 }
