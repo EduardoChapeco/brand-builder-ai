@@ -35,23 +35,36 @@ export async function logError(params: LogErrorParams): Promise<void> {
   } = params;
 
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    // Invocação da Edge Function canônica sw-log (Service Role bypass RLS)
+    await supabase.functions.invoke("sw-log", {
+      body: {
+        level,
+        code,
+        module,
+        message,
+        detail,
+        workspace_id: workspaceId || null,
+      },
+    });
 
-    await supabase.from("system_logs").insert({
-      workspace_id: workspaceId,
-      user_id: user?.id ?? null,
-      level,
-      code,
-      module,
-      message,
-      detail,
-    });
+    // Se falhar o invoke anterior (timeout, rede), tenta fallback direto (RLS Permitindo)
   } catch (loggingError) {
-    // Se falhar ao logar (sem conexão), pelo menos imprime no console
-    console.error("[SIMWORK:error-logger] Falha ao registrar log:", {
-      original: params,
-      loggingError,
-    });
+    console.warn("[SIMWORK:error-logger] Edge Function sw-log falhou, tentando insert direto:", loggingError);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      await supabase.from("system_logs").insert({
+        workspace_id: workspaceId,
+        user_id: user?.id ?? null,
+        level,
+        code,
+        module,
+        message,
+        detail,
+      });
+    } catch (insertError) {
+      console.error("[SIMWORK:error-logger] Falha crítica ao registrar log:", { original: params, insertError });
+    }
   }
 }
 

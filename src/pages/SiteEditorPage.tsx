@@ -1,18 +1,38 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Plus, LayoutTemplate, Layers, Settings, Eye, Globe, ChevronLeft, 
   Smartphone, Monitor, Tablet, MousePointer2, Type, Image as ImageIcon, 
-  PlusCircle, Trash2, MoveVertical, HelpCircle
+  PlusCircle, Trash2, MoveVertical, HelpCircle, Save, Zap
 } from 'lucide-react';
-import { SwButton, SwBadge, SwCard, SwInput, SwSpinner } from '@/components/shared/SwComponents';
+import { SwButton, SwBadge, SwInput, SwSpinner } from '@/components/shared/SwComponents';
 import { SwHelpSheet } from '@/components/shared/SwHelpSheet';
+import { useWebsiteBuilder } from '@/hooks/useWebsiteBuilder';
 import { cn } from '@/lib/utils';
 
 export default function SiteEditorPage() {
+  const { workspaceId, siteId } = useParams();
+  const navigate = useNavigate();
   const [device, setDevice] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
   const [activeTab, setActiveTab] = useState<'structure' | 'blocks' | 'settings'>('structure');
-  const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+
+  const {
+    publication,
+    sections,
+    selectedSection,
+    selectedSectionId,
+    loading,
+    saving,
+    isDirty,
+    setSelectedSectionId,
+    addSection,
+    updateSectionContent,
+    removeSection,
+    save,
+    publish,
+  } = useWebsiteBuilder(workspaceId, siteId);
+
 
   const SITE_HELP = [
     { title: 'Editor de 4 Colunas', description: 'Organize suas páginas à esquerda e edite o conteúdo ao centro.', icon: LayoutTemplate },
@@ -20,26 +40,43 @@ export default function SiteEditorPage() {
     { title: 'Injeção de Marca', description: 'As cores do seu Brand Kit são aplicadas automaticamente em cada seção.', icon: Layers }
   ];
 
-  // Exemplo de seções no editor
-  const [sections, setSections] = useState([
-    { id: '1', type: 'hero-dark', title: 'A Revolução Tecnológica', subtitle: 'A Simwork ajuda você a escalar sua marca com IA.', isVisible: true },
-    { id: '2', type: 'features-grid', title: 'Principais Recursos', subtitle: 'Tudo o que você precisa num só lugar.', isVisible: true },
-    { id: '3', type: 'cta-glass', title: 'Pronto para começar?', subtitle: 'Crie sua conta gratuita hoje mesmo.', isVisible: true },
-  ]);
+  if (loading) {
+    return (
+      <div className="fixed inset-0 bg-[#0a0a0f] flex items-center justify-center z-50">
+        <div className="text-center space-y-4">
+          <SwSpinner className="w-12 h-12 border-t-[#a855f7]" />
+          <p className="text-stone-500 font-bold text-xs uppercase tracking-widest animate-pulse">Iniciando Canvas Canonical...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-[#0a0a0f] flex flex-col z-50 overflow-hidden font-sans">
       {/* Topbar do Editor */}
       <header className="h-16 border-b border-white/5 bg-black/40 backdrop-blur-xl flex items-center justify-between px-6 z-20">
          <div className="flex items-center gap-4">
-            <button className="p-2 rounded-xl border border-white/5 bg-white/5 text-stone-500 hover:text-white transition-all">
+            <button 
+              onClick={() => navigate(`/workspace/${workspaceId}/sites`)}
+              className="p-2 rounded-xl border border-white/5 bg-white/5 text-stone-500 hover:text-white transition-all"
+            >
                <ChevronLeft size={18} />
             </button>
             <div>
-               <h1 className="text-sm font-bold text-white tracking-tight">Nome do Site</h1>
-               <span className="text-[9px] text-stone-500 font-bold uppercase tracking-widest">Página: Home</span>
+               <h1 className="text-sm font-bold text-white tracking-tight">{publication?.name || 'Site Sem Nome'}</h1>
+               <span className="text-[9px] text-stone-500 font-bold uppercase tracking-widest">
+                 URL: /{publication?.slug || '...' }
+               </span>
             </div>
-            <SwBadge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20 text-[9px]">Rascunho</SwBadge>
+            <SwBadge 
+              variant="outline" 
+              className={cn(
+                "text-[9px]",
+                publication?.status === 'published' ? "bg-green-500/10 text-green-500 border-green-500/20" : "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
+              )}
+            >
+              {publication?.status === 'published' ? 'Publicado' : 'Rascunho'}
+            </SwBadge>
          </div>
 
          <div className="flex items-center gap-2 bg-white/5 p-1 rounded-2xl border border-white/5">
@@ -50,10 +87,28 @@ export default function SiteEditorPage() {
 
          <div className="flex items-center gap-3">
             <button className="p-2 text-stone-500 hover:text-white transition-all" onClick={() => setIsHelpOpen(true)}><HelpCircle size={20} /></button>
-            <SwButton variant="ghost" className="h-10 text-stone-400 border-white/5"><Eye size={16} /> Ver</SwButton>
-            <SwButton variant="primary" className="h-10 bg-[#a855f7] text-white px-6 rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg shadow-[#a855f7]/20">
+            
+            <SwButton 
+              variant="ghost" 
+              className={cn("h-10 text-stone-400 border-white/5", isDirty && "text-[#a855f7]")}
+              onClick={() => save()}
+              disabled={saving}
+              isLoading={saving}
+            >
+               <Save size={16} /> 
+               {isDirty ? 'Salvar Alterações' : 'Salvo'}
+            </SwButton>
+
+            <SwButton 
+              variant="primary" 
+              className="h-10 bg-[#a855f7] text-white px-6 rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg shadow-[#a855f7]/20 hover:scale-[1.02] active:scale-95 transition-all"
+              onClick={() => publish()}
+              disabled={saving}
+              isLoading={saving}
+            >
                <Globe size={16} /> Publicar Site
             </SwButton>
+
          </div>
       </header>
 
@@ -80,7 +135,7 @@ export default function SiteEditorPage() {
                 <div className="space-y-4">
                    <h3 className="text-[10px] font-bold text-stone-600 uppercase tracking-widest">Camadas da Página</h3>
                    <div className="space-y-2">
-                      {sections.map((section, index) => (
+                      {sections.map((section) => (
                         <div 
                           key={section.id} 
                           onClick={() => setSelectedSectionId(section.id)}
@@ -92,26 +147,34 @@ export default function SiteEditorPage() {
                            <div className="flex items-center gap-3">
                               <MoveVertical size={14} className="text-stone-700" />
                               <div>
-                                 <h4 className="text-xs font-bold text-white capitalize">{section.type.replace('-', ' ')}</h4>
-                                 <span className="text-[9px] text-stone-500 uppercase font-black">ID: {section.id}</span>
+                                 <h4 className="text-xs font-bold text-white capitalize">{section.section_type.replace('-', ' ')}</h4>
+                                 <span className="text-[9px] text-stone-500 uppercase font-black">ID: {section.id.slice(0, 8)}</span>
                               </div>
                            </div>
                            <SwBadge variant="outline" className="text-[8px] opacity-0 group-hover:opacity-100 transition-opacity">Editar</SwBadge>
                         </div>
                       ))}
                    </div>
-                   <SwButton variant="ghost" className="w-full h-10 border-dashed border-white/10 text-stone-500 hover:text-white">
+                   <SwButton 
+                     variant="ghost" 
+                     className="w-full h-10 border-dashed border-white/10 text-stone-500 hover:text-white"
+                     onClick={() => setActiveTab('blocks')}
+                   >
                       <PlusCircle size={16} /> Nova Seção
                    </SwButton>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-3">
-                   {['Hero', 'Features', 'Testimonials', 'Pricing', 'CTA', 'Contact', 'FAQ', 'Footer'].map(block => (
-                     <div key={block} className="p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-[#a855f7] transition-all text-center group cursor-pointer">
+                   {['hero', 'features', 'testimonials', 'pricing', 'cta', 'contact', 'faq', 'footer'].map(type => (
+                     <div 
+                       key={type} 
+                       onClick={() => addSection(type)}
+                       className="p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-[#a855f7] transition-all text-center group cursor-pointer"
+                     >
                         <div className="w-10 h-10 bg-white/5 rounded-xl border border-white/5 mx-auto mb-2 flex items-center justify-center text-stone-500 group-hover:text-[#a855f7] transition-colors">
                            <LayoutTemplate size={20} />
                         </div>
-                        <span className="text-[10px] font-bold text-stone-500 uppercase tracking-widest group-hover:text-white transition-colors">{block}</span>
+                        <span className="text-[10px] font-bold text-stone-500 uppercase tracking-widest group-hover:text-white transition-colors">{type}</span>
                      </div>
                    ))}
                 </div>
@@ -129,28 +192,48 @@ export default function SiteEditorPage() {
            >
               {/* Site Content Simulation */}
               <div className="w-full">
-                 <div className="p-12 text-center space-y-6">
-                    <div className="animate-pulse flex flex-col items-center gap-4">
-                       <div className="w-20 h-1 bg-[#a855f7] rounded-full mx-auto" />
-                       <h2 className="text-4xl lg:text-6xl font-black text-white tracking-tighter">O Site Está Ganhando Vida</h2>
-                       <p className="text-xl text-stone-400 max-w-2xl mx-auto">Edite suas seções à esquerda e veja o resultado aqui em tempo real.</p>
-                       <div className="flex gap-4 pt-4">
-                          <div className="px-8 py-3 bg-[#a855f7] rounded-2xl text-white font-bold">Experimentar Agora</div>
-                          <div className="px-8 py-3 bg-white/5 border border-white/10 rounded-2xl text-white font-bold">Saiba mais</div>
-                       </div>
-                    </div>
-                 </div>
-                 
-                 {/* Exemplo de Seção Extra */}
-                 <div className="p-20 bg-white/5 border-y border-white/5 grid grid-cols-3 gap-8">
-                    {[1,2,3].map(i => (
-                      <div key={i} className="p-8 rounded-3xl bg-white/[0.02] border border-white/5 space-y-4">
-                         <div className="w-12 h-12 bg-[#a855f7]/20 rounded-2xl flex items-center justify-center text-[#a855f7]"><Zap /></div>
-                         <h3 className="text-xl font-bold text-white">Recurso Premium {i}</h3>
-                         <p className="text-sm text-stone-500 leading-relaxed">Descrição detalhada do seu recurso que vai encantar os usuários.</p>
+                 {sections.length === 0 ? (
+                   <div className="p-12 text-center space-y-6">
+                      <div className="animate-pulse flex flex-col items-center gap-4">
+                         <div className="w-20 h-1 bg-[#a855f7] rounded-full mx-auto" />
+                         <h2 className="text-4xl lg:text-6xl font-black text-white tracking-tighter">O Site Está Ganhando Vida</h2>
+                         <p className="text-xl text-stone-400 max-w-2xl mx-auto">Adicione blocos à esquerda para começar a construir seu site canônico.</p>
                       </div>
-                    ))}
-                 </div>
+                   </div>
+                 ) : (
+                   <div className="divide-y divide-white/5">
+                      {sections.map((section) => (
+                        <div 
+                          key={section.id} 
+                          className={cn(
+                            "p-12 transition-all relative group",
+                            selectedSectionId === section.id && "bg-[#a855f7]/5"
+                          )}
+                        >
+                           <div className="space-y-4">
+                              <h2 className="text-3xl font-black text-white">{section.content.headline as string || 'Sem Título'}</h2>
+                              <p className="text-stone-400">{section.content.subheadline as string || 'Sem subtítulo.'}</p>
+                           </div>
+                           
+                           {section.section_type === 'features' && (
+                             <div className="grid grid-cols-3 gap-4 mt-8">
+                                {[1,2,3].map(i => (
+                                  <div key={i} className="p-6 rounded-2xl bg-white/5 border border-white/5">
+                                    <div className="w-10 h-10 bg-[#a855f7]/20 rounded-xl flex items-center justify-center text-[#a855f7] mb-4"><Zap size={18} /></div>
+                                    <h4 className="text-white font-bold text-sm">Feature {i}</h4>
+                                  </div>
+                                ))}
+                             </div>
+                           )}
+                           
+                           {/* Overlay de edição rápida */}
+                           <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
+                              <SwButton variant="ghost" size="sm" onClick={() => setSelectedSectionId(section.id)}>Configurar</SwButton>
+                           </div>
+                        </div>
+                      ))}
+                   </div>
+                 )}
               </div>
            </div>
            
@@ -170,33 +253,56 @@ export default function SiteEditorPage() {
                  <h2 className="text-sm font-bold text-white uppercase tracking-widest">Inspetor</h2>
                  <button onClick={() => setSelectedSectionId(null)} className="text-stone-500 hover:text-white"><Plus size={18} className="rotate-45" /></button>
               </div>
-              <p className="text-[10px] text-stone-500 font-bold uppercase tracking-widest">Editando: Seção {selectedSectionId}</p>
+              <p className="text-[10px] text-stone-500 font-bold uppercase tracking-widest">
+                Editando: {selectedSection?.section_type}
+              </p>
            </div>
 
-           <div className="flex-1 overflow-y-auto p-6 space-y-8 no-scrollbar">
-              <section className="space-y-4">
-                 <label className="text-[10px] font-bold text-stone-500 uppercase tracking-widest">Conteúdo</label>
-                 <div className="space-y-3">
-                    <SwInput label="Título" defaultValue="A Revolução Tecnológica" className="bg-white/5 border-white/10 rounded-xl" />
-                    <SwInput label="Subtítulo" defaultValue="A Simwork ajuda você a escalar sua marca." className="bg-white/5 border-white/10 rounded-xl" />
-                 </div>
-              </section>
+           {selectedSection && (
+             <div className="flex-1 overflow-y-auto p-6 space-y-8 no-scrollbar">
+                <section className="space-y-4">
+                   <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-stone-500 uppercase tracking-widest ml-1">Título</label>
+                      <SwInput 
+                        value={selectedSection.content.headline as string || ''} 
+                        onChange={(e) => updateSectionContent(selectedSection.id, { headline: e.target.value })}
+                        className="bg-white/5 border-white/10 rounded-xl" 
+                      />
+                   </div>
+                   <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-stone-500 uppercase tracking-widest ml-1">Subtítulo</label>
+                      <SwInput 
+                        value={selectedSection.content.subheadline as string || ''} 
+                        onChange={(e) => updateSectionContent(selectedSection.id, { subheadline: e.target.value })}
+                        className="bg-white/5 border-white/10 rounded-xl" 
+                      />
+                   </div>
+                </section>
 
-              <section className="space-y-4">
-                 <label className="text-[10px] font-bold text-stone-500 uppercase tracking-widest">Cores e Estilo</label>
-                 <div className="grid grid-cols-4 gap-2">
-                    {['#a855f7', '#06b6d4', '#ef4444', '#10b981'].map(color => (
-                       <div key={color} className="w-full aspect-square rounded-xl cursor-pointer ring-2 ring-transparent hover:ring-white transition-all" style={{ backgroundColor: color }} />
-                    ))}
-                 </div>
-              </section>
+                <section className="space-y-4">
+                   <label className="text-[10px] font-bold text-stone-500 uppercase tracking-widest">Ações da Seção</label>
+                   <div className="space-y-2">
+                     <SwButton 
+                       variant="ghost" 
+                       className="w-full h-10 border-white/5 text-stone-400"
+                       onClick={() => setSelectedSectionId(null)}
+                     >
+                       Concluir Edição
+                     </SwButton>
+                   </div>
+                </section>
 
-              <section className="pt-8 space-y-4">
-                 <SwButton variant="ghost" className="w-full border-red-500/20 text-red-500 hover:bg-red-500/10">
-                    <Trash2 size={16} /> Excluir Seção
-                 </SwButton>
-              </section>
-           </div>
+                <section className="pt-8 space-y-4">
+                   <SwButton 
+                     variant="ghost" 
+                     className="w-full border-red-500/20 text-red-500 hover:bg-red-500/10"
+                     onClick={() => removeSection(selectedSection.id)}
+                   >
+                      <Trash2 size={16} /> Excluir Seção
+                   </SwButton>
+                </section>
+             </div>
+           )}
         </aside>
       </main>
 
@@ -206,6 +312,15 @@ export default function SiteEditorPage() {
         moduleName="SITE BUILDER CANVAS" 
         sections={SITE_HELP} 
       />
+
+      {/* Overlay de Salvamento */}
+      {saving && (
+        <div className="fixed bottom-6 right-6 bg-[#a855f7] text-white px-4 py-2 rounded-xl text-xs font-bold shadow-2xl flex items-center gap-2 animate-bounce z-50">
+           <SwSpinner className="w-4 h-4 border-t-white" /> Sincronizando com o Banco Canônico...
+        </div>
+      )}
     </div>
   );
 }
+
+

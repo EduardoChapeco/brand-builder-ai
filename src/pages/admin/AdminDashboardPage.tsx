@@ -14,14 +14,17 @@ export default function AdminDashboardPage() {
   const { data: stats, isLoading } = useQuery({
     queryKey: ["admin_dashboard_stats"],
     queryFn: async () => {
-      const [ws, logs, keys] = await Promise.all([
-        supabase.from("workspaces").select("id, status", { count: "exact", head: false }),
-        supabase.from("system_logs").select("id, level", { count: "exact", head: false })
-          .eq("resolved", false).eq("level", "error").limit(5),
-        supabase.from("admin_api_keys").select("id, service, is_active", { count: "exact", head: false }),
+      const [ws, users, pubs, logs, keys] = await Promise.all([
+        supabase.from("workspaces").select("id", { count: "exact", head: true }),
+        supabase.from("profiles").select("id", { count: "exact", head: true }),
+        supabase.from("publications").select("id", { count: "exact", head: true }),
+        supabase.from("system_logs").select("id", { count: "exact", head: true }).eq("resolved", false).eq("level", "error"),
+        supabase.from("admin_api_keys").select("id", { count: "exact", head: true }),
       ]);
       return {
         workspaces: ws.count ?? 0,
+        users: users.count ?? 0,
+        publications: pubs.count ?? 0,
         errors: logs.count ?? 0,
         keys: keys.count ?? 0,
       };
@@ -29,11 +32,12 @@ export default function AdminDashboardPage() {
   });
 
   const cards = [
-    { label: "Workspaces Ativos", value: isLoading ? "..." : stats?.workspaces ?? 0, icon: LayoutDashboard, href: "/admin/workspaces" },
-    { label: "Erros Não Resolvidos", value: isLoading ? "..." : stats?.errors ?? 0, icon: AlertTriangle, color: stats && stats.errors > 0 ? "text-red-400" : "text-emerald-400", href: "/admin/logs" },
-    { label: "Chaves de IA", value: isLoading ? "..." : stats?.keys ?? 0, icon: Key, href: "/admin/chaves-ia" },
-    { label: "Status RLS", value: "Ativo", icon: ShieldCheck, color: "text-emerald-400" },
+    { label: "Workspaces", value: isLoading ? "..." : stats?.workspaces ?? 0, icon: LayoutDashboard, href: "/admin/workspaces" },
+    { label: "Usuários Totais", value: isLoading ? "..." : stats?.users ?? 0, icon: Users, href: "/admin/usuarios" },
+    { label: "Publicações", value: isLoading ? "..." : stats?.publications ?? 0, icon: ShieldCheck, href: "/admin/workspaces" },
+    { label: "Erros Ativos", value: isLoading ? "..." : stats?.errors ?? 0, icon: AlertTriangle, color: stats && stats.errors > 0 ? "text-rose-400" : "text-emerald-400", href: "/admin/logs" },
   ];
+
 
   return (
     <div className="p-8 space-y-8 max-w-6xl mx-auto animate-in fade-in duration-500">

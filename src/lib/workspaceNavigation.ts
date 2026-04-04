@@ -1,8 +1,10 @@
 import type { LucideIcon } from 'lucide-react';
 import {
   BarChart3,
+  Beaker,
   Bot,
   BriefcaseBusiness,
+
   Building2,
   FileText,
   FolderKanban,
@@ -49,6 +51,16 @@ export const WORKSPACE_NAV_ITEMS: WorkspaceNavItem[] = [
     helpTitle: 'Hub de criadores',
     helpBody: 'Inicie novos fluxos de Sites, Bio Links, Conteúdo, Vídeo e Agents a partir de um catálogo operacional.',
   },
+  {
+    label: 'SimLab',
+    path: 'simlab',
+    icon: Beaker,
+    section: 'Operação',
+    description: 'Laboratório de auditoria de IA e histórico de validações por persona.',
+    helpTitle: 'Laboratório de IA',
+    helpBody: 'Acompanhe as decisões tomadas pelos agentes da marca, revise vereditos e analise insights de público gerados automaticamente.',
+  },
+
   {
     label: 'Sites',
     path: 'sites',

@@ -43,8 +43,11 @@ import VideoStudioGeneratePage from '@/pages/VideoStudioGeneratePage';
 import VideoStudioMotionPage from '@/pages/VideoStudioMotionPage';
 import VideoStudioPage from '@/pages/VideoStudioPage';
 import WorkspacesPage from '@/pages/WorkspacesPage';
+import AdminGuard from '@/components/shared/AdminGuard';
 import BioLinkModuleLayout from '@/components/biolink/BioLinkModuleLayout';
 import AgentsPage from '@/pages/AgentsPage';
+import SimLabPage from '@/pages/SimLabPage';
+
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -68,16 +71,67 @@ const App = () => (
           <Route path="/workspaces" element={<WorkspacesPage />} />
           <Route path="/onboarding" element={<OnboardingPage />} />
           <Route path="/b/:slug" element={<PublicBioLink />} />
-          <Route path="/l/:slug" element={<PublicBioLink />} />
-          <Route path="/admin" element={<AdminDashboardPage />} />
-          <Route path="/admin/chaves-ia" element={<AdminChavesIAPage />} />
-          <Route path="/admin/logs" element={<AdminSystemLogsPage />} />
-          <Route path="/admin/usuarios" element={<AdminUsersPage />} />
-          <Route path="/admin/workspaces" element={<AdminWorkspacesPage />} />
-          <Route path="/admin/flags" element={<AdminFlagsPage />} />
-          <Route path="/admin/modulos" element={<AdminModulosPage />} />
-
-          {/* Workspace — shell autenticado */}
+           <Route path="/l/:slug" element={<PublicBioLink />} />
+ 
+           {/* === ADMIN AREA === */}
+           <Route
+             path="/admin"
+             element={(
+               <AdminGuard>
+                 <AdminDashboardPage />
+               </AdminGuard>
+             )}
+           />
+           <Route
+             path="/admin/chaves-ia"
+             element={(
+               <AdminGuard>
+                 <AdminChavesIAPage />
+               </AdminGuard>
+             )}
+           />
+           <Route
+             path="/admin/logs"
+             element={(
+               <AdminGuard>
+                 <AdminSystemLogsPage />
+               </AdminGuard>
+             )}
+           />
+           <Route
+             path="/admin/usuarios"
+             element={(
+               <AdminGuard>
+                 <AdminUsersPage />
+               </AdminGuard>
+             )}
+           />
+           <Route
+             path="/admin/workspaces"
+             element={(
+               <AdminGuard>
+                 <AdminWorkspacesPage />
+               </AdminGuard>
+             )}
+           />
+           <Route
+             path="/admin/flags"
+             element={(
+               <AdminGuard>
+                 <AdminFlagsPage />
+               </AdminGuard>
+             )}
+           />
+           <Route
+             path="/admin/modulos"
+             element={(
+               <AdminGuard>
+                 <AdminModulosPage />
+               </AdminGuard>
+             )}
+           />
+ 
+           {/* Workspace — shell autenticado */}
           <Route
             path="/workspace/:workspaceId/*"
             element={(

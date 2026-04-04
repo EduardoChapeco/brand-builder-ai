@@ -125,13 +125,13 @@ type SimlabDispatchResponse = {
   insight?: unknown;
 };
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
+export const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
 
-const toRecord = (value: unknown): Record<string, unknown> => (isRecord(value) ? value : {});
-const toString = (value: unknown) => (typeof value === "string" && value.trim().length > 0 ? value.trim() : null);
-const toArray = (value: unknown) => (Array.isArray(value) ? value : []);
-const toNumber = (value: unknown) => {
+export const toRecord = (value: unknown): Record<string, unknown> => (isRecord(value) ? value : {});
+export const toString = (value: unknown) => (typeof value === "string" && value.trim().length > 0 ? value.trim() : null);
+export const toArray = (value: unknown) => (Array.isArray(value) ? value : []);
+export const toNumber = (value: unknown) => {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value === "string" && value.trim().length > 0) {
     const parsed = Number(value);
@@ -140,13 +140,13 @@ const toNumber = (value: unknown) => {
   return null;
 };
 
-const toVerdict = (value: unknown): SimlabRunVerdict => {
+export const toVerdict = (value: unknown): SimlabRunVerdict => {
   const verdict = toString(value);
   if (verdict === "approved" || verdict === "revise" || verdict === "blocked") return verdict;
   return null;
 };
 
-const toTargetRef = (value: unknown): SimlabTargetRef => {
+export const toTargetRef = (value: unknown): SimlabTargetRef => {
   const record = toRecord(value);
   if (toString(record.table) && toString(record.id)) {
     return {
@@ -157,7 +157,7 @@ const toTargetRef = (value: unknown): SimlabTargetRef => {
   return null;
 };
 
-const toRun = (value: unknown): SimlabRun => {
+export const toRun = (value: unknown): SimlabRun => {
   const record = toRecord(value);
   return {
     id: toString(record.id) || "",
@@ -182,7 +182,7 @@ const toRun = (value: unknown): SimlabRun => {
   };
 };
 
-const toVariant = (value: unknown): SimlabVariant => {
+export const toVariant = (value: unknown): SimlabVariant => {
   const record = toRecord(value);
   return {
     id: toString(record.id) || crypto.randomUUID(),
@@ -198,7 +198,7 @@ const toVariant = (value: unknown): SimlabVariant => {
   };
 };
 
-const toInsight = (value: unknown): SimlabInsight | null => {
+export const toInsight = (value: unknown): SimlabInsight | null => {
   const record = toRecord(value);
   if (Object.keys(record).length === 0) return null;
   return {
@@ -214,7 +214,7 @@ const toInsight = (value: unknown): SimlabInsight | null => {
   };
 };
 
-const toPersona = (value: unknown): SimlabPersona => {
+export const toPersona = (value: unknown): SimlabPersona => {
   const record = toRecord(value);
   const version = toRecord(record.current_version);
   return {
@@ -245,7 +245,7 @@ const toPersona = (value: unknown): SimlabPersona => {
   };
 };
 
-const toPolicy = (value: unknown): SimlabModulePolicy => {
+export const toPolicy = (value: unknown): SimlabModulePolicy => {
   const record = toRecord(value);
   return {
     id: toString(record.id) || "",
@@ -258,6 +258,7 @@ const toPolicy = (value: unknown): SimlabModulePolicy => {
     updated_at: toString(record.updated_at),
   };
 };
+
 
 export const dispatchSimlabValidation = async (payload: SimlabDispatchInput) => {
   const { data, error } = await supabase.functions.invoke("simlab-dispatch", { body: payload });
