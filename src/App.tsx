@@ -53,6 +53,7 @@ const App = () => (
       <Toaster position="top-right" richColors />
       <BrowserRouter>
         <Routes>
+          {/* Rotas públicas */}
           <Route path="/" element={<Navigate to="/workspaces" replace />} />
           <Route path="/auth/login" element={<AuthPage />} />
           <Route path="/workspaces" element={<WorkspacesPage />} />
@@ -61,6 +62,7 @@ const App = () => (
           <Route path="/l/:slug" element={<PublicBioLink />} />
           <Route path="/admin" element={<AdminPage />} />
 
+          {/* Workspace — shell autenticado */}
           <Route
             path="/workspace/:workspaceId/*"
             element={(
@@ -71,9 +73,11 @@ const App = () => (
           >
             <Route index element={<Navigate to="painel" replace />} />
 
+            {/* === OPERACIONAL === */}
             <Route path="painel" element={<DashboardPage />} />
             <Route path="hub" element={<HubPage />} />
 
+            {/* === CRIADORES === */}
             <Route path="sites" element={<SiteBuilderPage />} />
             <Route path="sites/:siteId" element={<SiteEditorPage />} />
 
@@ -95,11 +99,14 @@ const App = () => (
             <Route path="video/motion" element={<VideoStudioMotionPage />} />
 
             <Route path="agents" element={<AgentsPage />} />
+            {/* simlab absorvido por agents */}
             <Route path="simlab" element={<Navigate to="../agents" replace />} />
 
+            {/* === DADOS === */}
             <Route path="crm" element={<CRMPage />} />
             <Route path="analytics" element={<AnalyticsPage />} />
 
+            {/* === WORKSPACE === */}
             <Route path="brand-kit" element={<BrandKitPage />} />
             <Route path="briefing" element={<BriefingPage />} />
             <Route path="assets" element={<LibraryPage />} />
@@ -108,6 +115,7 @@ const App = () => (
             <Route path="ajuda" element={<HelpPage />} />
             <Route path="suporte" element={<SupportPage />} />
 
+            {/* === REDIRECTS LEGADOS (URLs antigas → PT-BR) === */}
             <Route path="dashboard" element={<Navigate to="../painel" replace />} />
             <Route path="site-builder" element={<Navigate to="../sites" replace />} />
             <Route path="video-studio" element={<Navigate to="../video" replace />} />
@@ -119,9 +127,16 @@ const App = () => (
             <Route path="help" element={<Navigate to="../ajuda" replace />} />
             <Route path="support" element={<Navigate to="../suporte" replace />} />
 
+            {/* === FORA DO ESCOPO SIMWORK → redirect ao painel === */}
+            <Route path="squads" element={<Navigate to="../painel" replace />} />
+            <Route path="web-cloner" element={<Navigate to="../painel" replace />} />
+            <Route path="vibe-coder" element={<Navigate to="../painel" replace />} />
+
+            {/* Fallback interno */}
             <Route path="*" element={<Navigate to="painel" replace />} />
           </Route>
 
+          {/* 404 global */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

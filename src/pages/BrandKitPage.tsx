@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Palette, Plus, Save, Trash2, Wand2, History, CheckCircle2, LayoutTemplate } from 'lucide-react';
+import { Palette, Save, Wand2, History, CheckCircle2, LayoutTemplate } from 'lucide-react';
 import { toast } from 'sonner';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
+import { fromTable } from '@/integrations/supabase/db-custom';
 import { supabase } from '@/integrations/supabase/client';
-import type { Json } from '@/integrations/supabase/types';
 
 // ===================================
 // TIPAGENS
@@ -96,45 +96,102 @@ export default function BrandKitPage() {
     });
   }, [wsBrandKit]);
 
-  const handleSave = async () => {
+  const handleSave = async (f = form) => {
     if (!workspace?.id) return;
     setIsSaving(true);
     try {
-      const payload = {
-        ...form,
-        custom_colors: form.custom_colors as unknown as Json,
+      const swPayload = {
+        workspace_id: workspace.id,
+        brand_name: wsBrandKit?.brand_name ?? workspace.name,
+        tone_of_voice: null,
+        colors: {
+          primary: f.color_primary,
+          secondary: f.color_secondary,
+          accent: f.color_accent,
+          bg_dark: f.color_bg_dark,
+          bg_light: f.color_bg_light,
+          text_dark: f.color_text_dark,
+          text_light: f.color_text_light,
+          custom: f.custom_colors,
+        },
+        fonts: {
+          heading: f.font_heading,
+          body: f.font_body,
+          accent: f.font_display,
+        },
+        logos: {
+          primary: f.logo_url || null,
+          dark: f.logo_light_url || null,
+        },
         updated_at: new Date().toISOString(),
       };
-      
+
       if (wsBrandKit) {
-        await supabase.from('brand_kits').update(payload).eq('workspace_id', workspace.id);
+        const { error } = await fromTable('sw_brand_kits')
+          .update(swPayload)
+          .eq('workspace_id', workspace.id);
+        if (error) throw error;
       } else {
-        await supabase.from('brand_kits').insert({ ...payload, workspace_id: workspace.id, custom_colors: payload.custom_colors as Json });
+        const { error } = await fromTable('sw_brand_kits').insert(swPayload);
+        if (error) throw error;
       }
-      
+
       await refreshBrandKit();
       toast.success('DNA visual consolidado com sucesso!');
     } catch (error) {
       console.error(error);
-      toast.error('Kits de Marca falhou na atualização.');
+      toast.error('Brand Kit falhou na atualização.');
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleAIMagic = async () => {
-    toast.info('Construindo modelo por IA...', { description: 'Isso pode levar alguns segundos.'});
+    if (!workspace?.id) return;
+    toast.info('Diretor de Arte IA operando...', { description: 'Sintetizando cores e tipografia a partir do seu DNA.' });
     setIsGenerating(true);
     try {
-      const { data, error } = await supabase.functions.invoke('extract-brand-identity', {
-        body: { workspace_id: workspace?.id }
+      const { data: briefingData } = await fromTable('sw_briefings')
+        .select('content')
+        .eq('workspace_id', workspace.id)
+        .maybeSingle();
+
+      const { data, error } = await supabase.functions.invoke("sw-brand-generate", {
+        body: {
+          workspace_id: workspace.id,
+          briefing_data: briefingData?.content || {}
+        }
       });
+
       if (error) throw error;
-      await refreshBrandKit();
-      toast.success('Design System gerado pela IA!');
+      
+      const aiResponse = data?.data;
+      if (aiResponse) {
+        toast.info('Aplicando Brand Kit...', { description: 'Injetando tokens no Design System.' });
+        
+        const nextForm = {
+          ...form,
+          color_primary: aiResponse.colors?.primary || form.color_primary,
+          color_secondary: aiResponse.colors?.secondary || form.color_secondary,
+          color_accent: aiResponse.colors?.accent || form.color_accent,
+          color_bg_dark: aiResponse.colors?.bg_dark || form.color_bg_dark,
+          color_bg_light: aiResponse.colors?.bg_light || form.color_bg_light,
+          color_text_dark: aiResponse.colors?.text_dark || form.color_text_dark,
+          color_text_light: aiResponse.colors?.text_light || form.color_text_light,
+          font_heading: aiResponse.fonts?.heading || form.font_heading,
+          font_body: aiResponse.fonts?.body || form.font_body,
+          font_display: aiResponse.fonts?.accent || form.font_display,
+        };
+        
+        updateForm(nextForm);
+        await handleSave(nextForm);
+        toast.success('DNA Visual (Brand Kit) gerado com extremo sucesso!');
+      } else {
+        throw new Error('Retorno vazio da Inteligência Artificial');
+      }
     } catch (e) {
       console.error(e);
-      toast.error('Erro na geração IA. Verifique as configurações.');
+      toast.error('Erro de conexão com o painel de criação digital.');
     } finally {
       setIsGenerating(false);
     }
@@ -188,7 +245,7 @@ export default function BrandKitPage() {
               <Wand2 size={16} className="text-[#a855f7]" />
               <span className="relative">{isGenerating ? 'Gerando...' : 'Gerar com IA'}</span>
             </button>
-            <button onClick={handleSave} disabled={isSaving}
+            <button onClick={() => handleSave()} disabled={isSaving}
               className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-medium bg-[#a855f7] hover:bg-[#8b3dcf] transition-all shadow-[0_0_30px_rgba(168,85,247,0.3)] disabled:opacity-50">
               <Save size={16} />
               {isSaving ? 'Salvando...' : 'Publicar V2'}

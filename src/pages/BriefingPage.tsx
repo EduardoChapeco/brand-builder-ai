@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { Target, Wand2, Save, FileText, LayoutDashboard, BrainCircuit, Mic2, Users, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
+import { fromTable } from '@/integrations/supabase/db-custom';
 import { supabase } from '@/integrations/supabase/client';
-import type { Json } from '@/integrations/supabase/types';
 
 // ===================================
 // TIPAGENS
@@ -77,20 +77,40 @@ export default function BriefingPage() {
     setIsSaving(true);
     try {
       const score = calculateCompleteness(f);
-      const payload = {
-        ...f,
-        content_pillars: f.content_pillars as unknown as Json,
-        keywords: f.keywords as unknown as Json,
-        completeness_score: score,
+      const contentPayload = {
+        company_name: f.company_name,
+        tagline: f.tagline,
+        segment: f.segment,
+        target_audience: f.target_audience,
+        audience_age_range: f.audience_age_range,
+        brand_personality: f.brand_personality,
+        tone_of_voice: f.tone_of_voice,
+        main_differentials: f.main_differentials,
+        value_proposition: f.value_proposition,
+        avoid_topics: f.avoid_topics,
+        content_pillars: f.content_pillars,
+        keywords: f.keywords,
+        brand_dna: f.brand_dna,
+      };
+
+      const swPayload = {
+        workspace_id: workspace.id,
+        title: f.company_name || 'Briefing principal',
+        status: 'draft',
+        content: { ...contentPayload, completeness_score: score },
         updated_at: new Date().toISOString(),
       };
-      
+
       if (wsBriefing) {
-        await supabase.from('briefings').update(payload).eq('workspace_id', workspace.id);
+        const { error } = await fromTable('sw_briefings')
+          .update(swPayload)
+          .eq('workspace_id', workspace.id);
+        if (error) throw error;
       } else {
-        await supabase.from('briefings').insert({ ...payload, workspace_id: workspace.id, content_pillars: payload.content_pillars as Json });
+        const { error } = await fromTable('sw_briefings').insert(swPayload);
+        if (error) throw error;
       }
-      
+
       setForm(prev => ({ ...prev, completeness_score: score }));
       await refreshBriefing();
       toast.success('DNA Estratégico salvo com sucesso!');
@@ -109,31 +129,48 @@ export default function BriefingPage() {
   };
 
   const handleAIMagic = async () => {
-    toast.info('IA Estrategista em ação...', { description: 'Reescrevendo e expandindo seu briefing.'});
+    if (!workspace?.id) return;
+    toast.info('IA Estrategista em ação...', { description: 'A Inteligência Simwork está redigindo seu DNA.' });
     setIsGenerating(true);
+    
     try {
-      const { data, error } = await supabase.functions.invoke('extract-brand-identity', {
-        body: { rawForm: form }
+      const { data, error } = await supabase.functions.invoke("sw-briefing-generate", {
+        body: {
+          workspace_id: workspace.id,
+          form_data: {
+             company_name: form.company_name,
+             segment: form.segment,
+             target_audience: form.target_audience,
+             main_differentials: form.main_differentials
+          }
+        }
       });
+
       if (error) throw error;
       
-      const newDna = data?.deep_dna;
-      if (newDna) {
-        updateForm({
-          brand_dna: `${newDna.archetype || ''} - ${newDna.tone_of_voice_expanded || ''}`,
-          content_pillars: newDna.content_pillars || form.content_pillars
-        });
-        await handleSave({
+      const aiResponse = data?.data;
+      if (aiResponse) {
+        toast.info('Construindo interface...', { description: 'Aplicando novas estratégias na tela.' });
+        
+        const nextForm = {
           ...form,
-          brand_dna: `${newDna.archetype || ''} - ${newDna.tone_of_voice_expanded || ''}`,
-          content_pillars: newDna.content_pillars || form.content_pillars
-        });
+          brand_dna: aiResponse.brand_dna || form.brand_dna,
+          tone_of_voice: aiResponse.tone_of_voice || form.tone_of_voice,
+          main_differentials: aiResponse.main_differentials || form.main_differentials,
+          content_pillars: Array.isArray(aiResponse.content_pillars) 
+            ? aiResponse.content_pillars 
+            : form.content_pillars
+        };
+        
+        updateForm(nextForm);
+        await handleSave(nextForm);
+        toast.success('Briefing Genial gerado com sucesso!');
+      } else {
+        throw new Error('Retorno vazio da Inteligência Artificial');
       }
-      
-      toast.success('Briefing expandido com IA!');
     } catch (e) {
       console.error(e);
-      toast.error('Erro na IA Estrategista.');
+      toast.error('Falha ao conectar com o estúdio de IA.');
     } finally {
       setIsGenerating(false);
     }

@@ -218,7 +218,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchBriefing = useCallback(async (currentWorkspaceId: string) => {
     const response = await fromTable('sw_briefings')
-      .select('id,workspace_id,title,status,content,completeness_score,created_at,updated_at')
+      .select('id,workspace_id,title,status,content,created_at,updated_at')
       .eq('workspace_id', currentWorkspaceId)
       .maybeSingle();
 
@@ -227,7 +227,14 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       throw response.error;
     }
 
-    return (response.data ?? null) as Briefing | null;
+    const data = response.data;
+    if (data) {
+      return {
+        ...data,
+        completeness_score: (data.content as any)?.completeness_score || 0
+      } as Briefing;
+    }
+    return null;
   }, []);
 
   const fetchAll = useCallback(async () => {
@@ -256,7 +263,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       }
 
       const memberResponse = await fromTable('sw_workspace_members')
-        .select('role,status')
+        .select('role')
         .eq('workspace_id', workspaceId)
         .eq('user_id', user.id)
         .maybeSingle();
@@ -274,7 +281,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       }
 
       const member = (memberResponse.data ?? null) as MembershipRow | null;
-      if (!member || member.status !== 'active' || !member.role) {
+      if (!member || !member.role) {
         toast.error('Você não tem acesso a este workspace.');
         navigate('/workspaces', { replace: true });
         return;
@@ -282,7 +289,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
 
       const [workspaceResponse, brandKitData, briefingData] = await Promise.all([
         fromTable('sw_workspaces')
-          .select('id,name,slug,logo_url,timezone,locale,created_at,updated_at')
+          .select('id,name,slug,avatar_url,settings,created_at,updated_at')
           .eq('id', workspaceId)
           .maybeSingle(),
         fetchBrandKit(workspaceId),
@@ -307,7 +314,13 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
-      setWorkspace(workspaceResponse.data as Workspace);
+      const wsData = workspaceResponse.data as any;
+      setWorkspace({
+        ...wsData,
+        timezone: wsData.settings?.timezone || 'America/Sao_Paulo',
+        locale: wsData.settings?.locale || 'pt-BR',
+        logo_url: wsData.avatar_url,
+      } as Workspace);
       setBrandKit(normalizeBrandKit(brandKitData));
       setBriefing(normalizeBriefing(briefingData));
       setRole(member.role);

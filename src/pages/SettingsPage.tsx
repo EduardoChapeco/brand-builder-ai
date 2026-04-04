@@ -225,8 +225,8 @@ const SettingsPage = () => {
     setIsLoading(true);
     try {
       const [{ data: keyRows, error: keyError }, { data: feedRows, error: feedError }] = await Promise.all([
-        fromTable('api_keys').select('id,provider,alias,key_preview,calls_today,daily_limit,is_active').eq('workspace_id', workspace.id).is('deleted_at', null).order('created_at'),
-        supabase.from('rss_feeds').select('id,name,url,category,is_active').eq('workspace_id', workspace.id).order('created_at'),
+        fromTable('sw_provider_keys').select('id,provider,alias,key_preview,calls_today,daily_limit,is_active').eq('workspace_id', workspace.id).is('deleted_at', null).order('created_at'),
+        fromTable('sw_editorial_sources').select('id,name,url,category,is_active').eq('workspace_id', workspace.id).order('created_at'),
       ]);
 
       if (keyError) throw keyError;
@@ -311,9 +311,9 @@ const SettingsPage = () => {
   };
 
   const toggleKey = async (id: string, nextValue: boolean) => {
-    const { error } = await supabase.from('api_keys').update({ is_active: nextValue }).eq('id', id);
+    const { error } = await fromTable('sw_provider_keys').update({ is_active: nextValue }).eq('id', id);
     if (error) {
-      toast.error('Nao foi possivel atualizar a chave');
+      toast.error('Não foi possível atualizar a chave');
       return;
     }
 
@@ -327,8 +327,7 @@ const SettingsPage = () => {
       return;
     }
 
-    const { data, error } = await supabase
-      .from('rss_feeds')
+    const { data, error } = await fromTable('sw_editorial_sources')
       .insert({
         workspace_id: workspace.id,
         name: newFeed.name.trim() || null,
@@ -349,7 +348,7 @@ const SettingsPage = () => {
   };
 
   const deleteFeed = async (id: string) => {
-    const { error } = await supabase.from('rss_feeds').delete().eq('id', id);
+    const { error } = await fromTable('sw_editorial_sources').delete().eq('id', id);
     if (error) {
       toast.error('Erro ao remover o feed');
       return;
@@ -360,9 +359,9 @@ const SettingsPage = () => {
   };
 
   const toggleFeed = async (id: string, nextValue: boolean) => {
-    const { error } = await supabase.from('rss_feeds').update({ is_active: nextValue }).eq('id', id);
+    const { error } = await fromTable('sw_editorial_sources').update({ is_active: nextValue }).eq('id', id);
     if (error) {
-      toast.error('Nao foi possivel atualizar o feed');
+      toast.error('Não foi possível atualizar o feed');
       return;
     }
 
