@@ -1,36 +1,71 @@
-import type { LucideIcon } from "lucide-react";
-import type { ReactNode } from "react";
-import { cn } from "@/lib/utils";
+/**
+ * SW-032: EmptyState — Estado vazio de módulos
+ * NUNCA exibir "erro" para estado vazio. SEMPRE com ação clara.
+ */
 
-export const EmptyState = ({
-  title,
-  description,
-  icon: Icon,
-  action,
-  className,
-}: {
+import React from 'react';
+import { LucideIcon } from 'lucide-react';
+
+export interface EmptyStateProps {
+  icon: LucideIcon;
   title: string;
   description: string;
-  icon?: LucideIcon;
-  action?: ReactNode;
+  action?: {
+    label: string;
+    onClick: () => void;
+    icon?: LucideIcon;
+  };
+  secondaryAction?: {
+    label: string;
+    onClick: () => void;
+  };
   className?: string;
-}) => (
-  <div
-    className={cn(
-      "flex min-h-[220px] flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--border-strong)] bg-[var(--surface-2)] px-6 py-10 text-center",
-      className,
-    )}
-  >
-    {Icon ? (
-      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--surface-card)] text-[var(--text-muted)]">
-        <Icon size={22} />
+}
+
+export function EmptyState({
+  icon: Icon,
+  title,
+  description,
+  action,
+  secondaryAction,
+  className = '',
+}: EmptyStateProps) {
+  return (
+    <div className={`flex flex-col items-center justify-center min-h-[320px] gap-5 p-8 ${className}`}>
+      {/* Ícone com glow */}
+      <div className="relative">
+        <div className="absolute inset-0 bg-violet-500/20 blur-2xl rounded-full scale-150" />
+        <div className="relative flex items-center justify-center w-20 h-20 rounded-2xl bg-zinc-900 border border-zinc-800">
+          <Icon className="w-9 h-9 text-zinc-400" />
+        </div>
       </div>
-    ) : null}
-    <h3 className="text-lg font-semibold tracking-[-0.03em] text-[var(--text-primary)]">{title}</h3>
-    <p className="mt-2 max-w-[560px] text-sm leading-6 text-[var(--text-secondary)]">{description}</p>
-    {action ? <div className="mt-5">{action}</div> : null}
-  </div>
-);
 
-export default EmptyState;
+      {/* Texto */}
+      <div className="text-center max-w-sm">
+        <h3 className="text-white font-semibold text-lg mb-2">{title}</h3>
+        <p className="text-zinc-400 text-sm leading-relaxed">{description}</p>
+      </div>
 
+      {/* Ações */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        {action && (
+          <button
+            onClick={action.onClick}
+            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-sm font-medium transition-all hover:shadow-lg hover:shadow-violet-500/20"
+          >
+            {action.icon && <action.icon className="w-4 h-4" />}
+            {action.label}
+          </button>
+        )}
+        {secondaryAction && (
+          <button
+            onClick={secondaryAction.onClick}
+            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-sm font-medium transition-colors"
+          >
+            {secondaryAction.label}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}

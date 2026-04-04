@@ -1,114 +1,166 @@
 /**
- * cerebro-context — CCP Resource Provider
- *
- * Single endpoint que serve contexto estruturado e canônico para qualquer
- * consumidor interno ou externo (agentes, n8n, Make, etc.).
- *
- * GET /cerebro-context?ws=WORKSPACE_ID&r=brand,signals,personas,policies
- *
- * Resources disponíveis (parâmetro ?r=):
- *   brand     → CCPBrandSnapshot + XML serializado
- *   signals   → top news + viral patterns (comprimidos)
- *   personas  → lista slim de personas ativas
- *   policies  → simlab module policies
- *   all       → todos os recursos em um request
- *
- * Autenticação: JWT obrigatório (verifyJwt: true)
- * Cache: 30s in-memory por workspace
+ * cerebro-context Edge Function — CCP Snapshot para LLMs
+ * SW-013: Retorna o contexto completo da marca para Edge Functions de IA
  */
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import {
-  getCCPPersonasSlim,
-  getCCPSignals,
-  getCCPSnapshot,
-  snapshotToXML,
-} from "../_shared/ccp.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-
-const err = (message: string, status = 400) => json({ error: message }, status);
-
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders });
   }
-
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-  );
 
   try {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: "ERR_CCP_AUTH_001", message: "Authorization header obrigatório" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    );
+
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    // Verificar usuário
+    const { data: { user }, error: authErr } = await supabaseClient.auth.getUser();
+    if (authErr || !user) {
+      return new Response(
+        JSON.stringify({ error: "ERR_CCP_AUTH_002", message: "Usuário não autenticado" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Obter workspace_id do body ou query
     const url = new URL(req.url);
-    const workspaceId = url.searchParams.get("ws")?.trim();
-    const resources = (url.searchParams.get("r") || "brand").split(",").map((r) => r.trim());
+    let workspaceId = url.searchParams.get("workspace_id");
+
+    if (!workspaceId && req.method === "POST") {
+      const body = await req.json().catch(() => ({}));
+      workspaceId = body.workspace_id;
+    }
 
     if (!workspaceId) {
-      return err("Parâmetro 'ws' (workspace_id) é obrigatório.");
+      // Buscar workspace do usuário automaticamente
+      const { data: ws } = await supabaseAdmin
+        .from("sw_workspaces")
+        .select("id")
+        .eq("owner_id", user.id)
+        .limit(1)
+        .maybeSingle();
+
+      workspaceId = ws?.id ?? null;
     }
 
-    const includeAll = resources.includes("all");
-    const result: Record<string, unknown> = { workspace_id: workspaceId };
-
-    // ── brand ──────────────────────────────────────────────
-    if (includeAll || resources.includes("brand")) {
-      const snap = await getCCPSnapshot(supabase, workspaceId);
-      result.brand = {
-        snapshot: snap,
-        xml: snapshotToXML(snap),
-      };
+    if (!workspaceId) {
+      return new Response(
+        JSON.stringify({ error: "ERR_CCP_WORKSPACE_001", message: "Workspace não encontrado" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    // ── signals ────────────────────────────────────────────
-    if (includeAll || resources.includes("signals")) {
-      const signals = await getCCPSignals(supabase, workspaceId);
-      result.signals = signals;
+    // Buscar dados em paralelo
+    const [workspaceResult, briefingResult, brandKitResult, agentsResult, simlabResult] =
+      await Promise.all([
+        supabaseAdmin
+          .from("sw_workspaces")
+          .select("id, owner_id, name, slug, sector, website, settings")
+          .eq("id", workspaceId)
+          .single(),
+        supabaseAdmin
+          .from("sw_briefings")
+          .select("*")
+          .eq("workspace_id", workspaceId)
+          .maybeSingle(),
+        supabaseAdmin
+          .from("sw_brand_kits")
+          .select("*")
+          .eq("workspace_id", workspaceId)
+          .maybeSingle(),
+        supabaseAdmin
+          .from("sw_agents")
+          .select("id, name, type, status, identity, voice, memory, behavior")
+          .eq("workspace_id", workspaceId)
+          .in("type", ["persona", "brand", "creator"])
+          .eq("status", "active"),
+        supabaseAdmin
+          .from("sw_simlab_profiles")
+          .select("id, name, persona, behaviors, insights")
+          .eq("workspace_id", workspaceId),
+      ]);
+
+    if (workspaceResult.error || !workspaceResult.data) {
+      return new Response(
+        JSON.stringify({ error: "ERR_CCP_WORKSPACE_002", message: "Workspace não acessível" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    // ── personas ───────────────────────────────────────────
-    if (includeAll || resources.includes("personas")) {
-      const personas = await getCCPPersonasSlim(supabase, workspaceId);
-      result.personas = personas;
-    }
+    const snapshot = {
+      workspace: workspaceResult.data,
+      briefing: briefingResult.data ?? null,
+      brandKit: brandKitResult.data ?? null,
+      personas: agentsResult.data ?? [],
+      simlabProfiles: simlabResult.data ?? [],
+    };
 
-    // ── policies ───────────────────────────────────────────
-    if (includeAll || resources.includes("policies")) {
-      const { data: policyRows } = await supabase
-        .from("simlab_module_policies")
-        .select("module_type,policy_key,policy_json,is_default")
-        .or(`workspace_id.eq.${workspaceId},workspace_id.is.null`)
-        .eq("is_active", true)
-        .order("module_type");
+    // Gerar XML do CCP
+    const ccpXML = serializeCCP(snapshot);
 
-      result.policies = (policyRows || []).map((row) => {
-        const pj = (row.policy_json as Record<string, unknown>) || {};
-        return {
-          module_type: row.module_type,
-          policy_key: row.policy_key,
-          n_personas_min: pj.persona_sample_size_min ?? 2,
-          n_personas_max: pj.persona_sample_size_max ?? 4,
-          agents_per_persona: pj.agents_per_persona ?? 5,
-          is_default: row.is_default,
-        };
-      });
-    }
-
-    result.fetched_at = new Date().toISOString();
-    return json(result);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error("[cerebro-context]", message);
-    return err(message, 500);
+    return new Response(
+      JSON.stringify({ snapshot, ccpXML, generatedAt: new Date().toISOString() }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (err) {
+    return new Response(
+      JSON.stringify({ error: "ERR_CCP_INTERNAL_001", message: String(err) }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   }
 });
+
+function serializeCCP(snapshot: Record<string, unknown>): string {
+  const ws = snapshot.workspace as Record<string, string>;
+  const brf = snapshot.briefing as Record<string, unknown> | null;
+  const bk = snapshot.brandKit as Record<string, unknown> | null;
+  const personas = snapshot.personas as Array<Record<string, unknown>>;
+
+  return `<CCPSnapshot>
+  <Workspace>
+    <Name>${esc(ws?.name ?? "")}</Name>
+    <Sector>${esc(ws?.sector ?? "")}</Sector>
+  </Workspace>
+  <Briefing>
+    <CompanyName>${esc(String(brf?.company_name ?? ""))}</CompanyName>
+    <ToneOfVoice>${esc(String(brf?.tone_of_voice ?? ""))}</ToneOfVoice>
+    <TargetAudience>${esc(String(brf?.target_audience ?? ""))}</TargetAudience>
+    <ValueProposition>${esc(String(brf?.value_proposition ?? ""))}</ValueProposition>
+    <BrandDNA>${esc(String(brf?.brand_dna ?? ""))}</BrandDNA>
+  </Briefing>
+  <BrandKit>
+    <Archetype>${esc(String(bk?.archetype ?? ""))}</Archetype>
+    <Positioning>${esc(String(bk?.positioning ?? ""))}</Positioning>
+  </BrandKit>
+  <Personas>
+    ${personas.map(p => `<Persona><Name>${esc(String(p.name))}</Name><Type>${esc(String(p.type))}</Type></Persona>`).join("\n    ")}
+  </Personas>
+</CCPSnapshot>`;
+}
+
+function esc(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}

@@ -1,67 +1,70 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { corsHeaders, createServiceClient, safeJsonResponse } from "../_shared/postgen.ts";
-import { assertWorkspaceAccess, sanitizeLogPayload } from "../_shared/simwork-access.ts";
+/**
+ * sw-log Edge Function — Logging centralizado via Edge Function
+ * Já existe e está deployada. Este index.ts confirma o contrato.
+ */
 
-type LogLevel = "debug" | "info" | "warn" | "error" | "fatal";
-type LogKind = "system" | "error";
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-serve(async (req: Request) => {
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    );
+
     const body = await req.json();
-    const workspaceId = typeof body.workspace_id === "string" ? body.workspace_id : null;
-    const level = (typeof body.level === "string" ? body.level : "info") as LogLevel;
-    const moduleName = typeof body.module === "string" ? body.module : "unknown";
-    const message = typeof body.message === "string" ? body.message : "Sem mensagem";
-    const kind = (typeof body.kind === "string" ? body.kind : "system") as LogKind;
+    const {
+      workspace_id,
+      user_id,
+      module = "sistema",
+      error_code,
+      message,
+      payload = {},
+    } = body;
 
-    const supabase = createServiceClient();
-
-    if (workspaceId) {
-      const access = await assertWorkspaceAccess(req, supabase, workspaceId);
-      if (!access) {
-        return safeJsonResponse({ error: "Acesso negado ao workspace." }, 403);
-      }
+    if (!message) {
+      return new Response(
+        JSON.stringify({ error: "Campo 'message' é obrigatório" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    const payload = sanitizeLogPayload(body.payload ?? body.metadata ?? {});
-
-    if (kind === "error") {
-      const { error } = await supabase.from("sw_error_logs").insert({
-        workspace_id: workspaceId,
-        module: moduleName,
-        function_name: typeof body.function_name === "string" ? body.function_name : null,
-        error_code: typeof body.error_code === "string" ? body.error_code : null,
+    const { data, error } = await supabaseAdmin
+      .from("sw_error_logs")
+      .insert({
+        workspace_id: workspace_id ?? null,
+        user_id: user_id ?? null,
+        module,
+        error_code: error_code ?? null,
         message,
         payload,
-        retry_count: typeof body.retry_count === "number" ? body.retry_count : 0,
-      });
+      })
+      .select("id")
+      .single();
 
-      if (error) throw error;
-    } else {
-      const { error } = await supabase.from("sw_system_logs").insert({
-        workspace_id: workspaceId,
-        level,
-        module: moduleName,
-        message,
-        metadata: payload,
-      });
+    if (error) throw error;
 
-      if (error) throw error;
-    }
-
-    return safeJsonResponse({ success: true });
-  } catch (error) {
-    console.error("[sw-log]", error);
-    return safeJsonResponse(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : "Falha ao persistir log.",
-      },
-      500,
+    return new Response(
+      JSON.stringify({ success: true, log_id: data.id }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (err) {
+    return new Response(
+      JSON.stringify({
+        error: "ERR_SWLOG_INTERNAL_001",
+        message: String(err),
+      }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
