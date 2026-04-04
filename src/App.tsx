@@ -6,10 +6,12 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { WorkspaceProvider } from '@/contexts/WorkspaceContext';
 import { ErrorBoundary } from '@/components/shared/ErrorBoundary';
 import AdminDashboardPage from '@/pages/admin/AdminDashboardPage';
+import AdminFlagsPage from '@/pages/admin/AdminFlagsPage';
+import AdminModulosPage from '@/pages/admin/AdminModulosPage';
 import AdminSystemLogsPage from '@/pages/admin/AdminSystemLogsPage';
 import AdminUsersPage from '@/pages/admin/AdminUsersPage';
 import AdminWorkspacesPage from '@/pages/admin/AdminWorkspacesPage';
-import AgentsPage from '@/pages/AgentsPage';
+import AdminChavesIAPage from '@/pages/admin/AdminChavesIAPage';
 import AnalyticsPage from '@/pages/AnalyticsPage';
 import AuthPage from '@/pages/AuthPage';
 import BillingPage from '@/pages/BillingPage';
@@ -42,7 +44,7 @@ import VideoStudioMotionPage from '@/pages/VideoStudioMotionPage';
 import VideoStudioPage from '@/pages/VideoStudioPage';
 import WorkspacesPage from '@/pages/WorkspacesPage';
 import BioLinkModuleLayout from '@/components/biolink/BioLinkModuleLayout';
-import AdminChavesIAPage from '@/pages/admin/AdminChavesIAPage';
+import AgentsPage from '@/pages/AgentsPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -72,6 +74,8 @@ const App = () => (
           <Route path="/admin/logs" element={<AdminSystemLogsPage />} />
           <Route path="/admin/usuarios" element={<AdminUsersPage />} />
           <Route path="/admin/workspaces" element={<AdminWorkspacesPage />} />
+          <Route path="/admin/flags" element={<AdminFlagsPage />} />
+          <Route path="/admin/modulos" element={<AdminModulosPage />} />
 
           {/* Workspace — shell autenticado */}
           <Route
