@@ -12,6 +12,7 @@ import BillingPage from '@/pages/BillingPage';
 import BioLinkAnalyticsPage from '@/pages/BioLinkAnalyticsPage';
 import BioLinkCRMPage from '@/pages/BioLinkCRMPage';
 import BioLinkPage from '@/pages/BioLinkPage';
+import BioLinkPublicPage from '@/pages/BioLinkPublicPage';
 import BioLinkSettingsPage from '@/pages/BioLinkSettingsPage';
 import BioLinkThemesPage from '@/pages/BioLinkThemesPage';
 import BlogManagerPage from '@/pages/BlogManagerPage';
@@ -133,8 +134,11 @@ const App = () => (
             <Route path="vibe-coder" element={<Navigate to="../painel" replace />} />
 
             {/* Fallback interno */}
-            <Route path="*" element={<Navigate to="painel" replace />} />
+            <Route path="biolink-analytics" element={<BioLinkAnalyticsPage />} />
           </Route>
+
+          {/* Rota Pública do BioLink (Fora do AppShell) */}
+          <Route path="/b/:slug" element={<BioLinkPublicPage />} />
 
           {/* 404 global */}
           <Route path="*" element={<NotFound />} />

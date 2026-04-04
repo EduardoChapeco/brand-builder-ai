@@ -4,6 +4,7 @@ import MetricCard from '@/components/shared/MetricCard';
 import PageHeader from '@/components/shared/PageHeader';
 import SectionCard from '@/components/shared/SectionCard';
 import SwStatusBadge from '@/components/shared/SwStatusBadge';
+import { SwCard } from '@/components/shared/SwComponents';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { fromTable } from '@/integrations/supabase/db-custom';
 
@@ -116,28 +117,28 @@ export default function DashboardPage() {
               </div>
 
               <div className="space-y-3">
-                <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-3">
+                <SwCard elevated className="px-4 py-3">
                   <p className="text-sm font-medium text-[var(--text-primary)]">Brand Kit</p>
                   <p className="mt-1 text-sm text-[var(--text-secondary)]">
                     {brandKit
                       ? 'Configurado no schema sw_brand_kits e pronto para ser consumido por Sites, Bio Links e Posts.'
                       : 'Ainda não há Brand Kit migrado para o schema Simwork neste ambiente.'}
                   </p>
-                </div>
-                <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-3">
+                </SwCard>
+                <SwCard elevated className="px-4 py-3">
                   <p className="text-sm font-medium text-[var(--text-primary)]">Briefing</p>
                   <p className="mt-1 text-sm text-[var(--text-secondary)]">
                     {briefing
                       ? `Status atual: ${briefing.status}. Score de completude: ${briefing.completeness_score}%.`
                       : 'O briefing principal ainda não foi encontrado em sw_briefings.'}
                   </p>
-                </div>
-                <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-3">
+                </SwCard>
+                <SwCard elevated className="px-4 py-3">
                   <p className="text-sm font-medium text-[var(--text-primary)]">Workspace</p>
                   <p className="mt-1 text-sm text-[var(--text-secondary)]">
                     Fuso: {workspace?.timezone || 'America/Sao_Paulo'} · Idioma: {workspace?.locale || 'pt-BR'}
                   </p>
-                </div>
+                </SwCard>
               </div>
             </SectionCard>
 
@@ -149,17 +150,18 @@ export default function DashboardPage() {
               <div className="space-y-3">
                 {priorities.length > 0 ? (
                   priorities.map((priority) => (
-                    <div
+                    <SwCard
                       key={priority}
-                      className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-3 text-sm text-[var(--text-secondary)]"
+                      elevated
+                      className="px-4 py-3 text-sm text-[var(--text-secondary)]"
                     >
                       {priority}
-                    </div>
+                    </SwCard>
                   ))
                 ) : (
-                  <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-3 text-sm text-[var(--text-secondary)]">
+                  <SwCard elevated className="px-4 py-3 text-sm text-[var(--text-secondary)]">
                     O workspace já tem os blocos mínimos configurados. O próximo foco é aprofundar os fluxos de criação e publicação.
-                  </div>
+                  </SwCard>
                 )}
               </div>
             </SectionCard>

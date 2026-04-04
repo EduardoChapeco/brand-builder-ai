@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { fromTable } from '@/integrations/supabase/db-custom';
 import { supabase } from '@/integrations/supabase/client';
+import { SwButton, SwCard, SwInput, SwTextarea } from '@/components/shared/SwComponents';
 
 // ===================================
 // TIPAGENS
@@ -96,8 +97,9 @@ export default function BriefingPage() {
       const swPayload = {
         workspace_id: workspace.id,
         title: f.company_name || 'Briefing principal',
-        status: 'draft',
-        content: { ...contentPayload, completeness_score: score },
+        status: f.completeness_score > 80 ? 'ready' : 'draft',
+        content: contentPayload,
+        brand_dna: f.brand_dna || `${f.company_name} - ${f.segment}`,
         updated_at: new Date().toISOString(),
       };
 
@@ -205,17 +207,14 @@ export default function BriefingPage() {
             </h1>
           </div>
           <div className="flex gap-4">
-            <button onClick={handleAIMagic} disabled={isGenerating}
-              className="group relative flex items-center gap-2 px-6 py-2.5 rounded-xl font-medium overflow-hidden transition-all bg-[#111111] border border-[#333333] hover:border-[#10b981]">
-              <div className="absolute inset-0 bg-gradient-to-r from-[#10b981]/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <SwButton variant="ghost" onClick={handleAIMagic} disabled={isGenerating}>
               <Wand2 size={16} className="text-[#10b981]" />
-              <span className="relative">{isGenerating ? 'Processando...' : 'IA Auto-Completar'}</span>
-            </button>
-            <button onClick={() => handleSave()} disabled={isSaving}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-medium bg-[#10b981] hover:bg-[#059669] text-black transition-all shadow-[0_0_30px_rgba(16,185,129,0.2)] disabled:opacity-50">
+              {isGenerating ? 'Processando...' : 'IA Auto-Completar'}
+            </SwButton>
+            <SwButton variant="primary" onClick={() => handleSave()} disabled={isSaving} className="bg-[#10b981] hover:bg-[#059669] text-black shadow-[0_0_30px_rgba(16,185,129,0.2)]">
               <Save size={16} />
               {isSaving ? 'Salvando...' : 'Publicar V2'}
-            </button>
+            </SwButton>
           </div>
         </div>
 
@@ -330,31 +329,31 @@ export default function BriefingPage() {
 // COMPONENTS
 // ===================================
 
-const Section = ({ icon, title, desc, children }: any) => (
-  <div className="p-6 md:p-8 rounded-[24px] bg-[#121212]/80 backdrop-blur-xl border border-[#2A2A2A]">
+interface SectionProps { icon?: React.ReactNode; title: string; desc: string; children: React.ReactNode; }
+const Section = ({ icon, title, desc, children }: SectionProps) => (
+  <SwCard glass className="p-6 md:p-8 rounded-[24px]">
     <div className="flex items-center gap-3 mb-2">
-      <div className="p-2 rounded-lg bg-[#222] text-white/70">{icon}</div>
+      {icon && <div className="p-2 rounded-lg bg-[#222] text-white/70">{icon}</div>}
       <h3 className="text-lg font-bold font-display tracking-wide text-white">{title}</h3>
     </div>
-    <p className="text-sm text-stone-400 mb-6 font-medium border-b border-[#2A2A2A] pb-6">{desc}</p>
+    <p className="text-sm text-[#94a3b8] mb-6 font-medium border-b border-[var(--border)] pb-6">{desc}</p>
     {children}
+  </SwCard>
+);
+
+interface BaseProps { label: string; val: string; set: (v: string) => void; placeholder?: string; colspan?: boolean; }
+
+const Input = ({ label, val, set, placeholder, colspan }: BaseProps) => (
+  <div className={colspan ? "md:col-span-2" : ""}>
+    <label className="block text-[10px] font-bold mb-2 uppercase tracking-widest text-[#777] font-mono">{label}</label>
+    <SwInput value={val} onChange={(e: any) => set(e.target.value)} placeholder={placeholder} />
   </div>
 );
 
-const Input = ({ label, val, set, placeholder, colspan }: any) => (
+interface TextAreaProps extends BaseProps { rows?: number; }
+const TextArea = ({ label, val, set, placeholder, rows = 4, colspan }: TextAreaProps) => (
   <div className={colspan ? "md:col-span-2" : ""}>
     <label className="block text-[10px] font-bold mb-2 uppercase tracking-widest text-[#777] font-mono">{label}</label>
-    <div className="flex bg-[#1a1a1a] border border-[#333] rounded-xl overflow-hidden focus-within:border-[#10b981] transition-colors">
-      <input type="text" value={val} onChange={e => set(e.target.value)} placeholder={placeholder} className="w-full bg-transparent px-4 py-3 text-sm text-white outline-none placeholder-[#444]" />
-    </div>
-  </div>
-);
-
-const TextArea = ({ label, val, set, placeholder, rows = 4, colspan }: any) => (
-  <div className={colspan ? "md:col-span-2" : ""}>
-    <label className="block text-[10px] font-bold mb-2 uppercase tracking-widest text-[#777] font-mono">{label}</label>
-    <div className="flex bg-[#1a1a1a] border border-[#333] rounded-xl overflow-hidden focus-within:border-[#10b981] transition-colors">
-      <textarea value={val} onChange={e => set(e.target.value)} placeholder={placeholder} rows={rows} className="w-full bg-transparent px-4 py-3 text-sm text-white outline-none placeholder-[#444] resize-none" />
-    </div>
+    <SwTextarea value={val} onChange={(e: any) => set(e.target.value)} placeholder={placeholder} rows={rows} />
   </div>
 );

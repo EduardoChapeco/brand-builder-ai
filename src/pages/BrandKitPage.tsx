@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { fromTable } from '@/integrations/supabase/db-custom';
 import { supabase } from '@/integrations/supabase/client';
+import { SwButton, SwCard, SwInput, SwSelect } from '@/components/shared/SwComponents';
 
 // ===================================
 // TIPAGENS
@@ -91,7 +92,7 @@ export default function BrandKitPage() {
     setForm({
       ...EMPTY_FORM,
       ...wsBrandKit,
-      font_heading: (wsBrandKit as any).font_headline || (wsBrandKit as any).font_heading || EMPTY_FORM.font_heading,
+      font_heading: (wsBrandKit as Record<string, unknown>).font_headline as string || (wsBrandKit as Record<string, unknown>).font_heading as string || EMPTY_FORM.font_heading,
       custom_colors: Array.isArray(wsBrandKit.custom_colors) ? wsBrandKit.custom_colors as CustomColor[] : [],
     });
   }, [wsBrandKit]);
@@ -239,17 +240,14 @@ export default function BrandKitPage() {
             </h1>
           </div>
           <div className="flex gap-4">
-            <button onClick={handleAIMagic} disabled={isGenerating}
-              className="group relative flex items-center gap-2 px-6 py-2.5 rounded-xl font-medium overflow-hidden transition-all bg-[#111111] border border-[#333333] hover:border-[#a855f7]">
-              <div className="absolute inset-0 bg-gradient-to-r from-[#a855f7]/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-              <Wand2 size={16} className="text-[#a855f7]" />
-              <span className="relative">{isGenerating ? 'Gerando...' : 'Gerar com IA'}</span>
-            </button>
-            <button onClick={() => handleSave()} disabled={isSaving}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-medium bg-[#a855f7] hover:bg-[#8b3dcf] transition-all shadow-[0_0_30px_rgba(168,85,247,0.3)] disabled:opacity-50">
+            <SwButton variant="ghost" onClick={handleAIMagic} disabled={isGenerating}>
+              <Wand2 size={16} className="text-[var(--sw-accent)]" />
+              {isGenerating ? 'Gerando...' : 'Gerar com IA'}
+            </SwButton>
+            <SwButton variant="primary" onClick={() => handleSave()} disabled={isSaving}>
               <Save size={16} />
               {isSaving ? 'Salvando...' : 'Publicar V2'}
-            </button>
+            </SwButton>
           </div>
         </div>
 
@@ -296,10 +294,10 @@ export default function BrandKitPage() {
           {/* Seção: Estética & Borda */}
           <Section glass title="Estética & Feel" desc="Define o comportamento global de UI do sistema.">
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-              <SelectVal label="Arredondamento" val={form.border_radius_scale} options={['none','small','medium','large','pill']} set={(v:any) => updateForm({border_radius_scale:v})} />
-              <SelectVal label="Sombras" val={form.shadow_style} options={['none','subtle','medium','strong']} set={(v:any) => updateForm({shadow_style:v})} />
-              <SelectVal label="Motion" val={form.animation_style} options={['none','minimal','smooth','bouncy']} set={(v:any) => updateForm({animation_style:v})} />
-              <SelectVal label="Icon Set" val={form.icon_set} options={['lucide','phosphor','heroicons']} set={(v:any) => updateForm({icon_set:v})} />
+              <SelectVal label="Arredondamento" val={form.border_radius_scale} options={['none','small','medium','large','pill']} set={(v: string) => updateForm({border_radius_scale:v})} />
+              <SelectVal label="Sombras" val={form.shadow_style} options={['none','subtle','medium','strong']} set={(v: string) => updateForm({shadow_style:v})} />
+              <SelectVal label="Motion" val={form.animation_style} options={['none','minimal','smooth','bouncy']} set={(v: string) => updateForm({animation_style:v})} />
+              <SelectVal label="Icon Set" val={form.icon_set} options={['lucide','phosphor','heroicons']} set={(v: string) => updateForm({icon_set:v})} />
             </div>
           </Section>
 
@@ -400,45 +398,46 @@ export default function BrandKitPage() {
 // UTILS & COMPONENTS
 // ===================================
 
-const Section = ({ title, desc, children, glass }: any) => (
-  <div className={`p-6 md:p-8 rounded-[24px] ${glass ? 'bg-[#121212]/80 backdrop-blur-xl border border-[#2A2A2A]' : 'bg-[#151515] border border-[#2A2A2A]'}`}>
+interface SectionProps { title: string; desc: string; children: React.ReactNode; glass?: boolean; }
+const Section = ({ title, desc, children, glass }: SectionProps) => (
+  <SwCard glass={glass} className="p-6 md:p-8 rounded-[24px]">
     <h3 className="text-lg font-bold font-display tracking-wide mb-1 text-white">{title}</h3>
     <p className="text-sm text-stone-400 mb-6 font-medium">{desc}</p>
     {children}
-  </div>
+  </SwCard>
 );
 
-const ColorPicker = ({ label, val, set }: any) => (
+interface BaseProps { label?: string; val: string; set: (v: string) => void; }
+
+const ColorPicker = ({ label, val, set }: BaseProps) => (
   <div>
     <label className="block text-[10px] font-bold mb-2 uppercase tracking-widest text-[#777] font-mono">{label}</label>
-    <div className="flex bg-[#1a1a1a] border border-[#333] rounded-xl overflow-hidden focus-within:border-[#a855f7] transition-colors p-1.5 pr-3 items-center gap-2">
+    <div className="flex bg-[#1a1a1a] border border-[var(--border)] rounded-xl overflow-hidden focus-within:border-[var(--sw-accent)] transition-colors p-1.5 pr-3 items-center gap-2">
       <input type="color" value={val} onChange={e => set(e.target.value)} className="w-8 h-8 rounded shrink-0 border-0 bg-transparent cursor-pointer" />
       <input type="text" value={val} onChange={e => set(e.target.value)} className="w-full bg-transparent text-xs text-white outline-none font-mono tracking-wider font-semibold" />
     </div>
   </div>
 );
 
-const Input = ({ label, val, set }: any) => (
+const Input = ({ label, val, set }: BaseProps) => (
   <div>
     <label className="block text-[10px] font-bold mb-2 uppercase tracking-widest text-[#777] font-mono">{label}</label>
-    <div className="flex bg-[#1a1a1a] border border-[#333] rounded-xl overflow-hidden focus-within:border-[#a855f7] transition-colors">
-      <input type="text" value={val} onChange={e => set(e.target.value)} placeholder="https://..." className="w-full bg-transparent px-4 py-3 text-sm text-white outline-none placeholder-[#444]" />
-    </div>
+    <SwInput value={val} onChange={(e: any) => set(e.target.value)} placeholder="https://..." />
   </div>
 );
 
-const SelectVal = ({ label, val, options, set }: any) => (
+interface SelectProps extends BaseProps { options: string[]; }
+
+const SelectVal = ({ label, val, options, set }: SelectProps) => (
   <div>
     <label className="block text-[10px] font-bold mb-2 uppercase tracking-widest text-[#777] font-mono">{label}</label>
-    <div className="flex bg-[#1a1a1a] border border-[#333] rounded-xl overflow-hidden focus-within:border-[#a855f7] transition-colors">
-      <select value={val} onChange={e => set(e.target.value)} className="w-full bg-transparent px-4 py-3 text-sm text-white outline-none appearance-none cursor-pointer">
-        {options.map((o: string) => <option key={o} value={o} className="bg-[#111]">{o}</option>)}
-      </select>
-    </div>
+    <SwSelect value={val} onChange={(e: any) => set(e.target.value)}>
+      {options.map((o: string) => <option key={o} value={o} className="bg-[#111]">{o}</option>)}
+    </SwSelect>
   </div>
 );
 
-const FontSelect = ({ label, val, options, set }: any) => (
+const FontSelect = ({ label, val, options, set }: SelectProps) => (
   <div>
     <label className="block text-[10px] font-bold mb-2 uppercase tracking-widest text-[#777] font-mono">{label}</label>
     <div className="grid grid-cols-2 gap-2">

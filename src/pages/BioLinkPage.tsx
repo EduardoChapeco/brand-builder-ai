@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useBioLinkWorkspace } from "@/hooks/useBioLinkWorkspace";
 import { BioLinkRenderer } from "@/components/biolink/BioLinkRenderer";
+import { BioLinkBlockInspector } from "@/components/biolink/BioLinkBlockInspector";
 import { 
   BIO_LINK_BLOCK_DEFINITIONS, 
   BIO_LINK_THEMES, 
