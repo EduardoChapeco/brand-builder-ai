@@ -153,9 +153,33 @@ const GeneratorPage = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const hydratedPostIdRef = useRef<string | null>(null);
   const consumedPreloadRef = useRef<string | null>(null);
-  const brand: BrandKit = useMemo(() => (
-    wsBrandKit ? { ...DEFAULT_BRAND_KIT, ...wsBrandKit } : DEFAULT_BRAND_KIT
-  ), [wsBrandKit]);
+  // Adapta o BrandKit JSONB do banco (app.types.BrandKit) para o
+  // formato plano esperado pelo canvasEngine (canvasEngine.BrandKit).
+  // O banco armazena { colors: {primary, secondary...}, fonts: {heading...} }
+  // O motor de template espera { color_primary, font_headline... }
+  const brand: BrandKit = useMemo(() => {
+    if (!wsBrandKit) return DEFAULT_BRAND_KIT;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const bk = wsBrandKit as unknown as Record<string, any>;
+    const colors = bk.colors || {};
+    const fonts  = bk.fonts  || {};
+    const logos  = bk.logos  || {};
+    return {
+      ...DEFAULT_BRAND_KIT,
+      color_primary:    colors.primary    || DEFAULT_BRAND_KIT.color_primary,
+      color_secondary:  colors.secondary  || DEFAULT_BRAND_KIT.color_secondary,
+      color_accent:     colors.accent     || DEFAULT_BRAND_KIT.color_accent,
+      color_bg_dark:    colors.background || DEFAULT_BRAND_KIT.color_bg_dark,
+      color_bg_light:   colors.bg_light   || DEFAULT_BRAND_KIT.color_bg_light,
+      color_text_dark:  colors.text       || DEFAULT_BRAND_KIT.color_text_dark,
+      color_text_light: colors.text_light || DEFAULT_BRAND_KIT.color_text_light,
+      font_headline:    fonts.heading     || DEFAULT_BRAND_KIT.font_headline,
+      font_body:        fonts.body        || DEFAULT_BRAND_KIT.font_body,
+      font_accent:      fonts.display     || DEFAULT_BRAND_KIT.font_accent,
+      logo_url:         logos.main_url    || null,
+      watermark_text:   null,
+    };
+  }, [wsBrandKit]);
 
   // General Post State
   const [topic, setTopic] = useState('');
@@ -630,7 +654,9 @@ const GeneratorPage = () => {
           module_type: 'content_post',
           stimulus_type: configs.length > 1 ? 'social_carousel' : 'social_post',
           objective: topic.trim(),
-          audience_hint: briefing?.target_audience || null,
+          // target_audience está no JSONB briefing.audience.description
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          audience_hint: (briefing as any)?.audience?.description || null,
           variants: [{
             key: 'primary_candidate',
             label: data.post_title || topic,
@@ -788,10 +814,10 @@ const GeneratorPage = () => {
       };
 
       const saveQuery = editingPostId
-        // @ts-expect-error type
-        ? supabase.from('posts_v2').update(payload).eq('id', editingPostId).select().single()
-        // @ts-expect-error type
-        : supabase.from('posts_v2').insert(payload).select().single();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ? (supabase as any).from('posts_v2').update(payload).eq('id', editingPostId).select().single()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        : (supabase as any).from('posts_v2').insert(payload).select().single();
 
       const { data: savedPost, error } = await saveQuery;
       if (error || !savedPost) throw error || new Error('Falha ao salvar');

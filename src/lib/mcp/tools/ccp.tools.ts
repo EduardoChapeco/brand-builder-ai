@@ -15,10 +15,10 @@ type UntypedPostsQuery = {
 const xmlEscape = (value: string | null | undefined) =>
   value
     ? value
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
     : '';
 
 export const ccpTools: MCPTool[] = [
@@ -29,37 +29,48 @@ export const ccpTools: MCPTool[] = [
       'Retorna o snapshot completo do contexto da marca em XML compacto. Use antes de qualquer geracao de conteudo ou interface contextualizada.',
     inputSchema: {},
     handler: async ({ _workspaceId, _supabase }) => {
+      // Lê os campos JSONB reais do banco (company, audience, content, colors, fonts)
       const [briefingResult, brandKitResult] = await Promise.all([
         _supabase
           .from('briefings')
-          .select('company_name,segment,tone_of_voice,target_audience,main_differentials,content_pillars,keywords,brand_dna,completeness_score')
+          .select('company, audience, content, completeness_score')
           .eq('workspace_id', _workspaceId)
           .maybeSingle(),
         _supabase
           .from('brand_kits')
-          .select('color_primary,color_secondary,color_accent,color_bg_dark,color_bg_light,font_headline,font_body,logo_url')
+          .select('colors, fonts, logos')
           .eq('workspace_id', _workspaceId)
           .maybeSingle(),
       ]);
 
-      const briefing = briefingResult.data;
-      const brandKit = brandKitResult.data;
-      const pillars = Array.isArray(briefing?.content_pillars)
-        ? briefing.content_pillars.map((item) => `<p>${xmlEscape(typeof item === 'string' ? item : JSON.stringify(item))}</p>`).join('')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const briefing = briefingResult.data as Record<string, any> | null;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const brandKit = brandKitResult.data as Record<string, any> | null;
+
+      // Deserializa JSONB → valores para o XML CCP
+      const company  = briefing?.company  || {};
+      const audience = briefing?.audience || {};
+      const content  = briefing?.content  || {};
+      const colors   = brandKit?.colors   || {};
+      const fonts    = brandKit?.fonts    || {};
+
+      const pillars = Array.isArray(content.pillars)
+        ? content.pillars.map((item: unknown) => `<p>${xmlEscape(String(item))}</p>`).join('')
         : '';
-      const keywords = Array.isArray(briefing?.keywords)
-        ? briefing.keywords.map((item) => `<k>${xmlEscape(String(item))}</k>`).join('')
+      const keywords = Array.isArray(content.keywords)
+        ? content.keywords.map((item: unknown) => `<k>${xmlEscape(String(item))}</k>`).join('')
         : '';
 
-      return `<ccp v="1" ws="${_workspaceId}">
-  <brand name="${xmlEscape(briefing?.company_name || 'Empresa')}" segment="${xmlEscape(briefing?.segment)}" score="${briefing?.completeness_score ?? 0}"/>
-  <voice tone="${xmlEscape(briefing?.tone_of_voice || 'Profissional e direto')}" />
-  <audience target="${xmlEscape(briefing?.target_audience)}" />
-  <position differentials="${xmlEscape(briefing?.main_differentials)}" />
+      return `<ccp v="2" ws="${_workspaceId}">
+  <brand name="${xmlEscape(company.name || 'Empresa')}" segment="${xmlEscape(company.segment)}" score="${briefing?.completeness_score ?? 0}"/>
+  <voice tone="${xmlEscape(content.tone_of_voice || 'Profissional e direto')}" />
+  <audience target="${xmlEscape(audience.description)}" age="${xmlEscape(audience.age_range)}" personality="${xmlEscape(audience.personality)}" />
+  <position differentials="${xmlEscape(company.differentials)}" value_prop="${xmlEscape(company.value_proposition)}" />
   <pillars>${pillars}</pillars>
   <keywords>${keywords}</keywords>
-  <visual primary="${xmlEscape(brandKit?.color_primary || '#7C3AED')}" secondary="${xmlEscape(brandKit?.color_secondary || '#06B6D4')}" accent="${xmlEscape(brandKit?.color_accent || '#F59E0B')}" font_h="${xmlEscape(brandKit?.font_headline || 'Inter')}" font_b="${xmlEscape(brandKit?.font_body || 'Inter')}" />
-  ${briefing?.brand_dna ? `<dna>${xmlEscape(String(briefing.brand_dna).slice(0, 1000))}</dna>` : ''}
+  <visual primary="${xmlEscape(colors.primary || '#7C3AED')}" secondary="${xmlEscape(colors.secondary || '#06B6D4')}" accent="${xmlEscape(colors.accent || '#F59E0B')}" font_h="${xmlEscape(fonts.heading || 'Inter')}" font_b="${xmlEscape(fonts.body || 'Inter')}" />
+  ${company.brand_dna ? `<dna>${xmlEscape(String(company.brand_dna).slice(0, 1000))}</dna>` : ''}
 </ccp>`;
     },
   },
@@ -73,8 +84,8 @@ export const ccpTools: MCPTool[] = [
     handler: async ({ _workspaceId, _supabase, limit = 10 }) => {
       const postQueryClient = _supabase as unknown as UntypedPostsQuery;
       const { data } = await postQueryClient
-        .from('post_sessions_v2')
-        .select('id,title,format,status,created_at')
+        .from('content_items')
+        .select('id,title,type,status,created_at')
         .eq('workspace_id', _workspaceId)
         .order('created_at', { ascending: false })
         .limit(Number(limit) || 10);
@@ -90,11 +101,13 @@ export const ccpTools: MCPTool[] = [
     handler: async ({ _workspaceId, _supabase }) => {
       const { data } = await _supabase
         .from('briefings')
-        .select('brand_dna')
+        .select('company')
         .eq('workspace_id', _workspaceId)
         .maybeSingle();
 
-      return data?.brand_dna || null;
+      // brand_dna está dentro do JSONB company
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return (data as any)?.company?.brand_dna || null;
     },
   },
 ];

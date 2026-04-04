@@ -1,7 +1,8 @@
 // src/types/app.types.ts
 // CONTRATO SDD-1.0: Tipos de negócio do Simwork
-// Correspondem EXATAMENTE ao schema canônico do banco (sw020_canonical_schema_foundation)
-// Quando o schema mudar, este arquivo DEVE ser atualizado primeiro.
+// Espelha EXATAMENTE o schema canônico do banco de produção.
+// PRD Master: docs/SIMWORK-CANONICAL-MASTER.md (linhas 611-900)
+// REGRA: Quando o schema mudar, este arquivo DEVE ser atualizado primeiro.
 
 // ── Workspace ────────────────────────────────────────────────
 export type WorkspacePlan =
@@ -34,77 +35,135 @@ export interface WorkspaceMember {
   role: MemberRole;
   invited_by: string | null;
   joined_at: string;
+  // NOTA: Não há campo 'status' na tabela workspace_members do banco real.
 }
 
 // ── Brand Kit ────────────────────────────────────────────────
-export interface BrandColors {
+// Estrutura JSONB conforme banco real:
+//   id, workspace_id, colors (jsonb), fonts (jsonb), logos (jsonb), voice (jsonb), updated_at
+//
+// Comentários do PRD (linhas 654-664):
+//   colors: {primary, secondary, accent, background, text, palette: []}
+//   fonts: {heading: {family, weight}, body: {family, weight}, sizes: {}}
+//   logos: {main_url, icon_url, dark_url, light_url}
+//   voice: {tone, formality, use_words: [], avoid_words: []}
+
+export interface BrandKitColors {
   primary: string;
   secondary: string;
   accent: string;
-  background: string;
-  text: string;
-  palette: string[];
+  background?: string;     // bg_dark
+  bg_light?: string;
+  text?: string;           // text_dark
+  text_light?: string;
+  success?: string;
+  warning?: string;
+  danger?: string;
+  palette?: string[];      // cores customizadas extras
 }
 
-export interface BrandFonts {
-  heading: { family: string; weight: number };
-  body: { family: string; weight: number };
-  sizes: Record<string, string>;
+export interface BrandKitFonts {
+  heading?: string;        // família para headings (ex: "Inter")
+  body?: string;           // família para corpo de texto
+  mono?: string;           // família monoespaçada
+  display?: string;        // família display/decorativa
+  sizes?: Record<string, string>;
 }
 
-export interface BrandLogos {
-  main_url: string | null;
-  icon_url: string | null;
-  dark_url: string | null;
-  light_url: string | null;
+export interface BrandKitLogos {
+  main_url?: string | null;        // logo principal (fundo claro)
+  dark_url?: string | null;        // logo invertida (fundo escuro)
+  icon_url?: string | null;        // ícone / favicon
+  light_url?: string | null;       // wordmark / horizontal
 }
 
-export interface BrandVoice {
-  tone: string;
-  formality: "formal" | "neutro" | "descontraído";
-  use_words: string[];
-  avoid_words: string[];
+export interface BrandKitVoice {
+  tone?: string;                   // ex: "profissional", "descontraído"
+  formality?: string;              // ex: "formal", "casual"
+  use_words?: string[];
+  avoid_words?: string[];
+  // Metadados visuais (armazenados em voice para compatibilidade)
+  border_radius_scale?: 'none' | 'small' | 'medium' | 'large' | 'pill';
+  shadow_style?: 'none' | 'subtle' | 'medium' | 'strong';
+  animation_style?: 'none' | 'minimal' | 'smooth' | 'bouncy';
+  icon_set?: 'lucide' | 'phosphor' | 'heroicons';
 }
 
 export interface BrandKit {
   id: string;
   workspace_id: string;
-  colors: Partial<BrandColors>;
-  fonts: Partial<BrandFonts>;
-  logos: Partial<BrandLogos>;
-  voice: Partial<BrandVoice>;
+  colors: BrandKitColors;
+  fonts: BrandKitFonts;
+  logos: BrandKitLogos;
+  voice: BrandKitVoice;
   updated_at: string;
 }
 
 // ── Briefing ─────────────────────────────────────────────────
+// Estrutura JSONB conforme banco real:
+//   id, workspace_id, company (jsonb), audience (jsonb), market (jsonb),
+//   content (jsonb), channels (jsonb), completeness_score, updated_at
+//
+// Comentários do PRD (linhas 673-688):
+//   company: {name, segment, website, mission, vision, values, differentials}
+//   audience: {description, age_range, income, pain_points, desires}
+//   market: {competitors: [{name, url, notes}], position, opportunities}
+//   content: {pillars: [], keywords: [], avoid_topics, cadence}
+//   channels: [{platform, goal, frequency}]
+
 export interface BriefingCompany {
   name?: string;
   segment?: string;
   website?: string;
   mission?: string;
   vision?: string;
-  values?: string[];
-  differentials?: string[];
+  values?: string;
+  differentials?: string;
+  tagline?: string;
+  brand_dna?: string;
+  value_proposition?: string;
 }
 
 export interface BriefingAudience {
   description?: string;
   age_range?: string;
   income?: string;
-  pain_points?: string[];
-  desires?: string[];
+  pain_points?: string;
+  desires?: string;
+  personality?: string;  // brand personality
+}
+
+export interface BriefingMarket {
+  competitors?: Array<{ name: string; url?: string; notes?: string }>;
+  position?: string;
+  opportunities?: string;
+}
+
+export interface BriefingContent {
+  pillars?: string[];
+  keywords?: string[];
+  avoid_topics?: string;
+  cadence?: string;
+  tone_of_voice?: string;
+  value_proposition?: string;
+}
+
+export interface BriefingChannel {
+  platform: string;
+  goal?: string;
+  frequency?: string;
 }
 
 export interface Briefing {
   id: string;
   workspace_id: string;
-  company: Partial<BriefingCompany>;
-  audience: Partial<BriefingAudience>;
-  market: Record<string, unknown>;
-  content: Record<string, unknown>;
-  channels: Array<{ platform: string; goal: string; frequency: string }>;
+  company: BriefingCompany;
+  audience: BriefingAudience;
+  market: BriefingMarket;
+  content: BriefingContent;
+  channels: BriefingChannel[];
   completeness_score: number;
-  updated_at: string;
+  updated_at: string | null;
 }
 
 // ── Publication ──────────────────────────────────────────────
@@ -431,15 +490,68 @@ export interface Subscription {
 }
 
 // ── CCP Snapshot (contexto de marca para IA) ─────────────────
+// Usado pela função getCCPSnapshot() em src/lib/ccp.ts
 export interface CCPSnapshot {
   workspace: Pick<Workspace, "id" | "name" | "slug" | "plan">;
-  brand_kit: Partial<BrandKit> | null;
+  brand_kit: {
+    colors: BrandKitColors;
+    fonts: BrandKitFonts;
+    logos: BrandKitLogos;
+    voice: BrandKitVoice;
+  } | null;
   briefing: {
-    company: Record<string, unknown>;
-    audience: Record<string, unknown>;
-    content: Record<string, unknown>;
+    company: BriefingCompany;
+    audience: BriefingAudience;
+    content: BriefingContent;
     completeness_score: number;
   } | null;
   active_personas: Array<Pick<Agent, "id" | "name" | "config">>;
   completeness: "completo" | "parcial" | "vazio";
+}
+
+// ── Helper: Flatten BrandKit JSONB → form fields ─────────────
+// Usado por BrandKitPage para converter dados do banco para o formulário plano
+export interface BrandKitFormFlat {
+  color_primary: string;
+  color_secondary: string;
+  color_accent: string;
+  color_bg_dark: string;
+  color_bg_light: string;
+  color_text_dark: string;
+  color_text_light: string;
+  color_success: string;
+  color_warning: string;
+  color_danger: string;
+  font_heading: string;
+  font_body: string;
+  font_mono: string;
+  font_display: string;
+  logo_url: string;
+  logo_dark_url: string;
+  logo_icon_url: string;
+  logo_light_url: string;
+  border_radius_scale: 'none' | 'small' | 'medium' | 'large' | 'pill';
+  shadow_style: 'none' | 'subtle' | 'medium' | 'strong';
+  animation_style: 'none' | 'minimal' | 'smooth' | 'bouncy';
+  icon_set: 'lucide' | 'phosphor' | 'heroicons';
+  custom_colors: Array<{ name: string; hex: string }>;
+}
+
+// ── Helper: Flatten Briefing JSONB → form fields ─────────────
+// Usado por BriefingPage para converter dados do banco para o formulário plano
+export interface BriefingFormFlat {
+  company_name: string;
+  tagline: string;
+  segment: string;
+  brand_dna: string;
+  value_proposition: string;
+  main_differentials: string;
+  target_audience: string;
+  audience_age_range: string;
+  brand_personality: string;
+  tone_of_voice: string;
+  avoid_topics: string;
+  content_pillars: string[];
+  keywords: string[];
+  completeness_score: number;
 }

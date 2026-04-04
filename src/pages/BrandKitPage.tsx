@@ -1,51 +1,21 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Palette, Save, Wand2, History, CheckCircle2, LayoutTemplate } from 'lucide-react';
+import { Palette, Save, Wand2, History, CheckCircle2, LayoutTemplate, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { fromTable } from '@/integrations/supabase/db-custom';
 import { supabase } from '@/integrations/supabase/client';
 import { SwButton, SwCard, SwInput, SwSelect } from '@/components/shared/SwComponents';
+import type { BrandKitFormFlat } from '@/types/app.types';
 
 // ===================================
-// TIPAGENS
+// TIPAGEM LOCAL DE FORMULÁRIO
 // ===================================
+// BrandKitFormFlat vem de app.types.ts — campos planos da UI
+// No banco, são serializados em JSONB { colors, fonts, logos, voice }
+
 interface CustomColor { name: string; hex: string; }
 
-interface BrandKitForm {
-  // Cores Base
-  color_primary: string;
-  color_secondary: string;
-  color_accent: string;
-  color_bg_dark: string;
-  color_bg_light: string;
-  color_text_dark: string;
-  color_text_light: string;
-  color_success: string;
-  color_warning: string;
-  color_danger: string;
-
-  // Tipografia
-  font_heading: string;
-  font_body: string;
-  font_mono: string;
-  font_display: string;
-
-  // Logomarcas
-  logo_url: string;
-  logo_light_url: string;
-  logo_icon_url: string;
-  logo_horizontal_url: string;
-
-  // Estética
-  border_radius_scale: 'none' | 'small' | 'medium' | 'large' | 'pill';
-  shadow_style: 'none' | 'subtle' | 'medium' | 'strong';
-  animation_style: 'none' | 'minimal' | 'smooth' | 'bouncy';
-  icon_set: 'lucide' | 'phosphor' | 'heroicons';
-
-  custom_colors: CustomColor[];
-}
-
-const EMPTY_FORM: BrandKitForm = {
+const EMPTY_FORM: BrandKitFormFlat & { custom_colors: CustomColor[] } = {
   color_primary: '#7C3AED',
   color_secondary: '#06B6D4',
   color_accent: '#F59E0B',
@@ -61,9 +31,9 @@ const EMPTY_FORM: BrandKitForm = {
   font_mono: 'JetBrains Mono',
   font_display: 'Playfair Display',
   logo_url: '',
-  logo_light_url: '',
+  logo_dark_url: '',
   logo_icon_url: '',
-  logo_horizontal_url: '',
+  logo_light_url: '',
   border_radius_scale: 'medium',
   shadow_style: 'subtle',
   animation_style: 'smooth',
@@ -76,71 +46,125 @@ const FONTS_SERIF = ['Playfair Display', 'Merriweather', 'Lora', 'PT Serif'];
 const FONTS_MONO = ['JetBrains Mono', 'Fira Code', 'Roboto Mono', 'Space Mono'];
 const FONTS_DISPLAY = ['Bebas Neue', 'Oswald', 'Syne', 'Clash Display'];
 
+// ── Helpers de serialização JSONB ←→ Form ───────────────────
+/** Converte o registro JSONB do banco para o formulário plano da UI */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function dbToForm(bk: Record<string, any>): typeof EMPTY_FORM {
+  const colors = bk.colors || {};
+  const fonts  = bk.fonts  || {};
+  const logos  = bk.logos  || {};
+  const voice  = bk.voice  || {};
+
+  return {
+    ...EMPTY_FORM,
+    // Cores
+    color_primary:    colors.primary    || EMPTY_FORM.color_primary,
+    color_secondary:  colors.secondary  || EMPTY_FORM.color_secondary,
+    color_accent:     colors.accent     || EMPTY_FORM.color_accent,
+    color_bg_dark:    colors.background || EMPTY_FORM.color_bg_dark,
+    color_bg_light:   colors.bg_light   || EMPTY_FORM.color_bg_light,
+    color_text_dark:  colors.text       || EMPTY_FORM.color_text_dark,
+    color_text_light: colors.text_light || EMPTY_FORM.color_text_light,
+    color_success:    colors.success    || EMPTY_FORM.color_success,
+    color_warning:    colors.warning    || EMPTY_FORM.color_warning,
+    color_danger:     colors.danger     || EMPTY_FORM.color_danger,
+    custom_colors:    Array.isArray(colors.palette)
+      ? colors.palette.map((hex: string, i: number) => ({ name: `Custom ${i + 1}`, hex }))
+      : [],
+    // Tipografia
+    font_heading: fonts.heading || EMPTY_FORM.font_heading,
+    font_body:    fonts.body    || EMPTY_FORM.font_body,
+    font_mono:    fonts.mono    || fonts.sizes?.mono || EMPTY_FORM.font_mono,
+    font_display: fonts.display || fonts.sizes?.display || EMPTY_FORM.font_display,
+    // Logos
+    logo_url:      logos.main_url  || '',
+    logo_dark_url: logos.dark_url  || '',
+    logo_icon_url: logos.icon_url  || '',
+    logo_light_url: logos.light_url || '',
+    // Estética (guardada em voice)
+    border_radius_scale: voice.border_radius_scale || EMPTY_FORM.border_radius_scale,
+    shadow_style:        voice.shadow_style        || EMPTY_FORM.shadow_style,
+    animation_style:     voice.animation_style     || EMPTY_FORM.animation_style,
+    icon_set:            voice.icon_set            || EMPTY_FORM.icon_set,
+  };
+}
+
+/** Converte o formulário plano da UI para a estrutura JSONB do banco */
+function formToDb(f: typeof EMPTY_FORM, workspaceId: string) {
+  return {
+    workspace_id: workspaceId,
+    colors: {
+      primary:    f.color_primary,
+      secondary:  f.color_secondary,
+      accent:     f.color_accent,
+      background: f.color_bg_dark,
+      bg_light:   f.color_bg_light,
+      text:       f.color_text_dark,
+      text_light: f.color_text_light,
+      success:    f.color_success,
+      warning:    f.color_warning,
+      danger:     f.color_danger,
+      palette:    f.custom_colors.map((c) => c.hex),
+    },
+    fonts: {
+      heading: f.font_heading,
+      body:    f.font_body,
+      mono:    f.font_mono,
+      display: f.font_display,
+    },
+    logos: {
+      main_url:  f.logo_url      || null,
+      dark_url:  f.logo_dark_url  || null,
+      icon_url:  f.logo_icon_url  || null,
+      light_url: f.logo_light_url || null,
+    },
+    voice: {
+      border_radius_scale: f.border_radius_scale,
+      shadow_style:        f.shadow_style,
+      animation_style:     f.animation_style,
+      icon_set:            f.icon_set,
+    },
+    updated_at: new Date().toISOString(),
+  };
+}
+
 // ===================================
 // COMPONENTE PRINCIPAL
 // ===================================
 export default function BrandKitPage() {
   const { workspace, brandKit: wsBrandKit, refetch } = useWorkspace();
-  const [form, setForm] = useState<BrandKitForm>(EMPTY_FORM);
+  const [form, setForm] = useState<typeof EMPTY_FORM>(EMPTY_FORM);
   const [isSaving, setIsSaving] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
 
+  // Deserializa JSONB do banco → form plano da UI
   useEffect(() => {
     if (!wsBrandKit) { setForm(EMPTY_FORM); return; }
-    
-    // Fallback safe property maping
-    setForm({
-      ...EMPTY_FORM,
-      ...wsBrandKit,
-      font_heading: (wsBrandKit as Record<string, unknown>).font_headline as string || (wsBrandKit as Record<string, unknown>).font_heading as string || EMPTY_FORM.font_heading,
-      custom_colors: Array.isArray(wsBrandKit.custom_colors) ? wsBrandKit.custom_colors as CustomColor[] : [],
-    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    setForm(dbToForm(wsBrandKit as unknown as Record<string, any>));
   }, [wsBrandKit]);
 
   const handleSave = async (f = form) => {
     if (!workspace?.id) return;
     setIsSaving(true);
     try {
-      const swPayload = {
-        workspace_id: workspace.id,
-        brand_name: wsBrandKit?.brand_name ?? workspace.name,
-        tone_of_voice: null,
-        colors: {
-          primary: f.color_primary,
-          secondary: f.color_secondary,
-          accent: f.color_accent,
-          bg_dark: f.color_bg_dark,
-          bg_light: f.color_bg_light,
-          text_dark: f.color_text_dark,
-          text_light: f.color_text_light,
-          custom: f.custom_colors,
-        },
-        fonts: {
-          heading: f.font_heading,
-          body: f.font_body,
-          accent: f.font_display,
-        },
-        logos: {
-          primary: f.logo_url || null,
-          dark: f.logo_light_url || null,
-        },
-        updated_at: new Date().toISOString(),
-      };
+      // Serializa form plano → estrutura JSONB do banco
+      const payload = formToDb(f, workspace.id);
 
       if (wsBrandKit) {
         const { error } = await fromTable('brand_kits')
-          .update(swPayload)
+          .update(payload)
           .eq('workspace_id', workspace.id);
         if (error) throw error;
       } else {
-        const { error } = await fromTable('brand_kits').insert(swPayload);
+        const { error } = await fromTable('brand_kits').insert(payload);
         if (error) throw error;
       }
 
       await refetch();
       toast.success('DNA visual consolidado com sucesso!');
     } catch (error) {
-      console.error(error);
+      console.error('[BrandKitPage] handleSave error:', error);
       toast.error('Brand Kit falhou na atualização.');
     } finally {
       setIsSaving(false);
@@ -152,15 +176,25 @@ export default function BrandKitPage() {
     toast.info('Diretor de Arte IA operando...', { description: 'Sintetizando cores e tipografia a partir do seu DNA.' });
     setIsGenerating(true);
     try {
-      const { data: briefingData } = await fromTable('briefings')
-        .select('content')
+      // Leitura correta do briefing usando campos JSONB reais do banco
+      const { data: bData } = await fromTable('briefings')
+        .select('company, content')
         .eq('workspace_id', workspace.id)
         .maybeSingle();
+
+      // Normaliza para o formato esperado pela Edge Function
+      const briefingData = bData ? {
+        company_name:       bData.company?.name       || '',
+        segment:            bData.company?.segment     || '',
+        brand_dna:          bData.company?.brand_dna   || '',
+        value_proposition:  bData.content?.value_proposition || '',
+        tone_of_voice:      bData.content?.tone_of_voice     || '',
+      } : {};
 
       const { data, error } = await supabase.functions.invoke("sw-brand-generate", {
         body: {
           workspace_id: workspace.id,
-          briefing_data: briefingData?.content || {}
+          briefing_data: briefingData,
         }
       });
 
@@ -172,26 +206,26 @@ export default function BrandKitPage() {
         
         const nextForm = {
           ...form,
-          color_primary: aiResponse.colors?.primary || form.color_primary,
+          color_primary:   aiResponse.colors?.primary   || form.color_primary,
           color_secondary: aiResponse.colors?.secondary || form.color_secondary,
-          color_accent: aiResponse.colors?.accent || form.color_accent,
-          color_bg_dark: aiResponse.colors?.bg_dark || form.color_bg_dark,
-          color_bg_light: aiResponse.colors?.bg_light || form.color_bg_light,
-          color_text_dark: aiResponse.colors?.text_dark || form.color_text_dark,
-          color_text_light: aiResponse.colors?.text_light || form.color_text_light,
-          font_heading: aiResponse.fonts?.heading || form.font_heading,
-          font_body: aiResponse.fonts?.body || form.font_body,
-          font_display: aiResponse.fonts?.accent || form.font_display,
+          color_accent:    aiResponse.colors?.accent     || form.color_accent,
+          color_bg_dark:   aiResponse.colors?.bg_dark    || form.color_bg_dark,
+          color_bg_light:  aiResponse.colors?.bg_light   || form.color_bg_light,
+          color_text_dark: aiResponse.colors?.text_dark  || form.color_text_dark,
+          color_text_light:aiResponse.colors?.text_light || form.color_text_light,
+          font_heading:    aiResponse.fonts?.heading || form.font_heading,
+          font_body:       aiResponse.fonts?.body    || form.font_body,
+          font_display:    aiResponse.fonts?.accent  || form.font_display,
         };
         
         updateForm(nextForm);
         await handleSave(nextForm);
-        toast.success('DNA Visual (Brand Kit) gerado com extremo sucesso!');
+        toast.success('DNA Visual (Brand Kit) gerado com sucesso!');
       } else {
         throw new Error('Retorno vazio da Inteligência Artificial');
       }
     } catch (e) {
-      console.error(e);
+      console.error('[BrandKitPage] handleAIMagic error:', e);
       toast.error('Erro de conexão com o painel de criação digital.');
     } finally {
       setIsGenerating(false);
@@ -218,7 +252,7 @@ export default function BrandKitPage() {
     }
   `, [form]);
 
-  const updateForm = (updates: Partial<BrandKitForm>) => setForm(f => ({ ...f, ...updates }));
+  const updateForm = (updates: Partial<typeof EMPTY_FORM>) => setForm(f => ({ ...f, ...updates }));
 
   return (
     <div className="flex h-full bg-[#0a0a0a] text-white overflow-hidden">
@@ -233,20 +267,25 @@ export default function BrandKitPage() {
         <div className="sticky top-0 z-20 backdrop-blur-3xl bg-black/60 border-b border-[#1f1f1f] p-6 lg:p-8 flex justify-between items-center">
           <div>
             <div className="flex items-center gap-3 mb-2 opacity-70">
-              <Palette size={16} className="text-[#a855f7]" /> <span className="text-xs font-semibold tracking-widest uppercase">Design System & DNA</span>
+              <Palette size={16} className="text-[#a855f7]" /> <span className="text-xs font-semibold tracking-widest uppercase">Design System &amp; DNA</span>
             </div>
             <h1 className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-white to-[#a8a8a8] bg-clip-text text-transparent">
               Brand Kit
             </h1>
+            {wsBrandKit && (
+              <p className="text-xs text-stone-500 mt-1 font-mono">
+                Última atualização: {new Date(wsBrandKit.updated_at).toLocaleString('pt-BR')}
+              </p>
+            )}
           </div>
           <div className="flex gap-4">
             <SwButton variant="ghost" onClick={handleAIMagic} disabled={isGenerating}>
-              <Wand2 size={16} className="text-[var(--sw-accent)]" />
+              {isGenerating ? <RefreshCw size={16} className="animate-spin" /> : <Wand2 size={16} className="text-[var(--sw-accent)]" />}
               {isGenerating ? 'Gerando...' : 'Gerar com IA'}
             </SwButton>
             <SwButton variant="primary" onClick={() => handleSave()} disabled={isSaving}>
               <Save size={16} />
-              {isSaving ? 'Salvando...' : 'Publicar V2'}
+              {isSaving ? 'Salvando...' : 'Salvar Brand Kit'}
             </SwButton>
           </div>
         </div>
@@ -257,10 +296,10 @@ export default function BrandKitPage() {
           {/* Seção: Logomarcas */}
           <Section glass title="Logos e Identidade Gráfica" desc="Sincronize variações da logo para interfaces claras e escuras.">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input label="Logo Original (Fundo Claro)" val={form.logo_url} set={(v) => updateForm({logo_url:v})} />
-              <Input label="Logo Inversa (Fundo Escuro)" val={form.logo_light_url} set={(v) => updateForm({logo_light_url:v})} />
+              <Input label="Logo Principal (Fundo Claro)" val={form.logo_url} set={(v) => updateForm({logo_url:v})} />
+              <Input label="Logo Inversa (Fundo Escuro)" val={form.logo_dark_url} set={(v) => updateForm({logo_dark_url:v})} />
               <Input label="Ícone / Favicon" val={form.logo_icon_url} set={(v) => updateForm({logo_icon_url:v})} />
-              <Input label="Wordmark (Texto)" val={form.logo_horizontal_url} set={(v) => updateForm({logo_horizontal_url:v})} />
+              <Input label="Wordmark (Texto + Logo)" val={form.logo_light_url} set={(v) => updateForm({logo_light_url:v})} />
             </div>
           </Section>
 
@@ -275,6 +314,8 @@ export default function BrandKitPage() {
             </div>
             
             <div className="mt-6 border-t border-[#333] pt-6 grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 opacity-80">
+              <ColorPicker label="Bg Light" val={form.color_bg_light} set={(v) => updateForm({color_bg_light:v})} />
+              <ColorPicker label="Text Dark" val={form.color_text_dark} set={(v) => updateForm({color_text_dark:v})} />
               <ColorPicker label="Success" val={form.color_success} set={(v) => updateForm({color_success:v})} />
               <ColorPicker label="Warning" val={form.color_warning} set={(v) => updateForm({color_warning:v})} />
               <ColorPicker label="Danger" val={form.color_danger} set={(v) => updateForm({color_danger:v})} />
@@ -282,22 +323,22 @@ export default function BrandKitPage() {
           </Section>
 
           {/* Seção: Tipografia */}
-          <Section glass title="Pilha Tipográfica" desc="Importado automaticamente do Google Fonts ao gerar.">
+          <Section glass title="Pilha Tipográfica" desc="Importado automaticamente do Google Fonts ao salvar.">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FontSelect label="Font Heading" val={form.font_heading} options={FONTS_SANS} set={(v) => updateForm({font_heading:v})} />
               <FontSelect label="Font Body" val={form.font_body} options={FONTS_SANS} set={(v) => updateForm({font_body:v})} />
-              <FontSelect label="Font Display" val={form.font_display} options={FONTS_DISPLAY} set={(v) => updateForm({font_display:v})} />
+              <FontSelect label="Font Display" val={form.font_display} options={[...FONTS_SERIF, ...FONTS_DISPLAY]} set={(v) => updateForm({font_display:v})} />
               <FontSelect label="Font Mono" val={form.font_mono} options={FONTS_MONO} set={(v) => updateForm({font_mono:v})} />
             </div>
           </Section>
 
           {/* Seção: Estética & Borda */}
-          <Section glass title="Estética & Feel" desc="Define o comportamento global de UI do sistema.">
+          <Section glass title="Estética &amp; Feel" desc="Define o comportamento global de UI do sistema.">
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-              <SelectVal label="Arredondamento" val={form.border_radius_scale} options={['none','small','medium','large','pill']} set={(v: string) => updateForm({border_radius_scale:v})} />
-              <SelectVal label="Sombras" val={form.shadow_style} options={['none','subtle','medium','strong']} set={(v: string) => updateForm({shadow_style:v})} />
-              <SelectVal label="Motion" val={form.animation_style} options={['none','minimal','smooth','bouncy']} set={(v: string) => updateForm({animation_style:v})} />
-              <SelectVal label="Icon Set" val={form.icon_set} options={['lucide','phosphor','heroicons']} set={(v: string) => updateForm({icon_set:v})} />
+              <SelectVal label="Arredondamento" val={form.border_radius_scale} options={['none','small','medium','large','pill']} set={(v: string) => updateForm({border_radius_scale: v as typeof EMPTY_FORM['border_radius_scale']})} />
+              <SelectVal label="Sombras" val={form.shadow_style} options={['none','subtle','medium','strong']} set={(v: string) => updateForm({shadow_style: v as typeof EMPTY_FORM['shadow_style']})} />
+              <SelectVal label="Motion" val={form.animation_style} options={['none','minimal','smooth','bouncy']} set={(v: string) => updateForm({animation_style: v as typeof EMPTY_FORM['animation_style']})} />
+              <SelectVal label="Icon Set" val={form.icon_set} options={['lucide','phosphor','heroicons']} set={(v: string) => updateForm({icon_set: v as typeof EMPTY_FORM['icon_set']})} />
             </div>
           </Section>
 
@@ -326,8 +367,8 @@ export default function BrandKitPage() {
           
           {/* Mock Component 1: Login / Card */}
           <div className="pvw-card p-6 pvw-bg transition-all duration-300">
-            {form.logo_light_url ? (
-              <img src={form.logo_light_url} alt="Logo" className="h-6 mb-6 object-contain" />
+            {form.logo_url ? (
+              <img src={form.logo_url} alt="Logo" className="h-6 mb-6 object-contain" />
             ) : (
               <div className="w-10 h-10 mb-6 bg-gradient-to-br rounded-xl" style={{ backgroundImage: `linear-gradient(to bottom right, ${form.color_primary}, ${form.color_secondary})`}} />
             )}
@@ -354,6 +395,16 @@ export default function BrandKitPage() {
               <p className="pvw-display text-4xl mt-1 tracking-tighter text-white">$12k</p>
             </div>
           </div>
+
+          {/* Color palette preview */}
+          <div className="pvw-card p-4">
+            <p className="pvw-mono text-[10px] uppercase opacity-60 mb-3">Color Tokens</p>
+            <div className="flex gap-2 flex-wrap">
+              {[form.color_primary, form.color_secondary, form.color_accent, form.color_success, form.color_warning, form.color_danger].map((c, i) => (
+                <div key={i} className="w-8 h-8 rounded-lg border border-white/10" style={{ backgroundColor: c }} title={c} />
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -364,30 +415,41 @@ export default function BrandKitPage() {
       */}
       <div className="w-[300px] shrink-0 bg-[#0a0a0a] hidden 2xl:flex flex-col">
         <div className="p-6 border-b border-[#1f1f1f]">
-          <h2 className="text-sm font-bold flex gap-2 items-center text-white"><History size={16} /> Versões & Auditoria</h2>
+          <h2 className="text-sm font-bold flex gap-2 items-center text-white"><History size={16} /> Versões &amp; Auditoria</h2>
         </div>
         <div className="p-6 space-y-6">
           <div className="flex flex-col gap-4 relative pl-4 border-l border-[#333]">
             <div className="relative">
               <div className="absolute -left-[20.5px] top-1 rounded-full bg-[#10b981] w-[8px] h-[8px] shadow-[0_0_10px_#10b981]" />
-              <p className="text-[10px] font-mono text-stone-500 mb-0.5">ESTADO ATUAL (V2)</p>
-              <p className="text-sm text-stone-100 font-medium">Sincronizado</p>
+              <p className="text-[10px] font-mono text-stone-500 mb-0.5">ESTADO ATUAL</p>
+              <p className="text-sm text-stone-100 font-medium">{wsBrandKit ? 'Sincronizado com banco' : 'Não configurado'}</p>
             </div>
             <div className="relative opacity-40">
               <div className="absolute -left-[20.5px] top-1 rounded-full bg-[#555] w-[8px] h-[8px]" />
-              <p className="text-[10px] font-mono mb-0.5">HÁ 2 DIAS (V1)</p>
-              <p className="text-sm font-medium">Extração via IA falhou</p>
+              <p className="text-[10px] font-mono mb-0.5">SCHEMA</p>
+              <p className="text-sm font-medium">JSONB: colors / fonts / logos / voice</p>
             </div>
           </div>
 
           <div className="bg-[#111] p-4 rounded-xl border border-[#222]">
             <p className="text-xs font-bold mb-3 flex items-center gap-1.5"><CheckCircle2 className="text-[#a855f7]" size={14} /> Checklist do Motor</p>
             <ul className="text-xs space-y-2 text-stone-400">
-              <li>• Paleta Canônica (OK)</li>
-              <li>• Fontes H/B/D importadas</li>
-              <li>• Logo carregadas no bucket</li>
+              <li className={form.color_primary !== '#7C3AED' ? 'text-green-400' : ''}>• Paleta personalizada {form.color_primary !== '#7C3AED' ? '✓' : '(padrão)'}</li>
+              <li className={form.font_heading !== 'Inter' ? 'text-green-400' : ''}>• Fontes configuradas {form.font_heading !== 'Inter' ? '✓' : '(padrão)'}</li>
+              <li className={form.logo_url ? 'text-green-400' : ''}>• Logo carregada {form.logo_url ? '✓' : '(faltando)'}</li>
             </ul>
           </div>
+
+          {wsBrandKit && (
+            <div className="bg-[#0d0d0d] p-4 rounded-xl border border-[#1a1a1a]">
+              <p className="text-[10px] font-mono text-stone-500 mb-2 uppercase tracking-widest">Schema real no banco</p>
+              <pre className="text-[10px] text-stone-400 overflow-auto">
+{`colors.primary: "${form.color_primary}"
+fonts.heading: "${form.font_heading}"
+logos.main_url: "${form.logo_url || 'null'}"`}
+              </pre>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -422,7 +484,7 @@ const ColorPicker = ({ label, val, set }: BaseProps) => (
 const Input = ({ label, val, set }: BaseProps) => (
   <div>
     <label className="block text-[10px] font-bold mb-2 uppercase tracking-widest text-[#777] font-mono">{label}</label>
-    <SwInput value={val} onChange={(e: any) => set(e.target.value)} placeholder="https://..." />
+    <SwInput value={val} onChange={(e: React.ChangeEvent<HTMLInputElement>) => set(e.target.value)} placeholder="https://..." />
   </div>
 );
 
@@ -431,7 +493,7 @@ interface SelectProps extends BaseProps { options: string[]; }
 const SelectVal = ({ label, val, options, set }: SelectProps) => (
   <div>
     <label className="block text-[10px] font-bold mb-2 uppercase tracking-widest text-[#777] font-mono">{label}</label>
-    <SwSelect value={val} onChange={(e: any) => set(e.target.value)}>
+    <SwSelect value={val} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => set(e.target.value)}>
       {options.map((o: string) => <option key={o} value={o} className="bg-[#111]">{o}</option>)}
     </SwSelect>
   </div>

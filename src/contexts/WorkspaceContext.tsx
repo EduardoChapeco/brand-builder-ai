@@ -8,6 +8,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { logError } from "../lib/error-logger";
 import type { Workspace, MemberRole, BrandKit, Briefing } from "../types/app.types";
+import { WorkspaceThemeInjector } from "../components/workspace/WorkspaceThemeInjector";
 
 // Re-export types that other modules use from this context file
 export type { BrandKit, Briefing, Workspace, MemberRole };
@@ -88,8 +89,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           .maybeSingle(),
       ]);
 
-      setBrandKit(bkResult.data as BrandKit | null);
-      setBriefing(brResult.data as Briefing | null);
+      setBrandKit(bkResult.data as unknown as BrandKit | null);
+      setBriefing(brResult.data as unknown as Briefing | null);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erro desconhecido";
       const code = "ERR_WORKSPACE_LOAD_001";
@@ -124,6 +125,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     <WorkspaceContext.Provider
       value={{ workspace, role, brandKit, briefing, isLoading, error, errorCode, canEdit, refetch: fetchWorkspace }}
     >
+      <WorkspaceThemeInjector />
       {children}
     </WorkspaceContext.Provider>
   );

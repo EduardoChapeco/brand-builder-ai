@@ -1,76 +1,126 @@
 import { useEffect, useState } from 'react';
-import { Target, Wand2, Save, FileText, LayoutDashboard, BrainCircuit, Mic2, Users, Trash2 } from 'lucide-react';
+import { Target, Wand2, Save, BrainCircuit, Users, Trash2, RefreshCw, CheckCircle2, BarChart3 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { fromTable } from '@/integrations/supabase/db-custom';
 import { supabase } from '@/integrations/supabase/client';
 import { SwButton, SwCard, SwInput, SwTextarea } from '@/components/shared/SwComponents';
+import type { BriefingFormFlat } from '@/types/app.types';
 
-// ===================================
-// TIPAGENS
-// ===================================
-interface BriefingForm {
-  company_name: string;
-  tagline: string;
-  segment: string;
-  target_audience: string;
-  audience_age_range: string;
-  brand_personality: string;
-  tone_of_voice: string;
-  main_differentials: string;
-  value_proposition: string;
-  avoid_topics: string;
-  content_pillars: string[];
-  keywords: string[];
-  brand_dna: string;
-  completeness_score: number;
-}
+// ── Helpers de serialização JSONB ←→ Form ───────────────────
 
-const EMPTY_FORM: BriefingForm = {
+const EMPTY_FORM: BriefingFormFlat = {
   company_name: '',
   tagline: '',
   segment: '',
+  brand_dna: '',
+  value_proposition: '',
+  main_differentials: '',
   target_audience: '',
   audience_age_range: '',
   brand_personality: '',
   tone_of_voice: '',
-  main_differentials: '',
-  value_proposition: '',
   avoid_topics: '',
   content_pillars: [],
   keywords: [],
-  brand_dna: '',
   completeness_score: 0,
 };
 
+/** Converte o registro JSONB do banco para o formulário plano da UI */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function dbToForm(b: Record<string, any>): BriefingFormFlat {
+  const company  = b.company  || {};
+  const audience = b.audience || {};
+  const content  = b.content  || {};
+
+  return {
+    ...EMPTY_FORM,
+    // company
+    company_name:       company.name             || '',
+    tagline:            company.tagline          || '',
+    segment:            company.segment          || '',
+    brand_dna:          company.brand_dna        || '',
+    value_proposition:  company.value_proposition || content.value_proposition || '',
+    main_differentials: company.differentials    || '',
+    // audience
+    target_audience:    audience.description     || '',
+    audience_age_range: audience.age_range       || '',
+    brand_personality:  audience.personality     || '',
+    // content
+    tone_of_voice:  content.tone_of_voice  || '',
+    avoid_topics:   content.avoid_topics   || '',
+    content_pillars: Array.isArray(content.pillars) ? content.pillars : [],
+    keywords:        Array.isArray(content.keywords) ? content.keywords : [],
+    // score
+    completeness_score: b.completeness_score || 0,
+  };
+}
+
+/** Converte o formulário plano da UI para a estrutura JSONB do banco */
+function formToDb(f: BriefingFormFlat, workspaceId: string, score: number) {
+  return {
+    workspace_id: workspaceId,
+    company: {
+      name:               f.company_name,
+      tagline:            f.tagline,
+      segment:            f.segment,
+      brand_dna:          f.brand_dna,
+      differentials:      f.main_differentials,
+      value_proposition:  f.value_proposition,
+    },
+    audience: {
+      description:  f.target_audience,
+      age_range:    f.audience_age_range,
+      personality:  f.brand_personality,
+    },
+    market: {},   // Preenchido futuramente via análise de concorrentes
+    content: {
+      tone_of_voice:     f.tone_of_voice,
+      avoid_topics:      f.avoid_topics,
+      pillars:           f.content_pillars,
+      keywords:          f.keywords,
+      value_proposition: f.value_proposition,
+    },
+    channels: [],  // Preenchido futuramente via módulo de canais
+    completeness_score: score,
+    updated_at: new Date().toISOString(),
+  };
+}
+
+// ── Score de completude ──────────────────────────────────────
+function calculateCompleteness(f: BriefingFormFlat): number {
+  let score = 0;
+  if (f.company_name?.trim())       score += 10;
+  if (f.segment?.trim())            score += 10;
+  if (f.target_audience?.trim())    score += 15;
+  if (f.brand_personality?.trim())  score += 10;
+  if (f.main_differentials?.trim()) score += 10;
+  if (f.value_proposition?.trim())  score += 15;
+  if (f.content_pillars?.length >= 3) score += 15;
+  if (f.keywords?.length >= 5)      score += 15;
+  return Math.min(score, 100);
+}
+
+// ===================================
+// COMPONENTE PRINCIPAL
+// ===================================
 export default function BriefingPage() {
   const { workspace, briefing: wsBriefing, refetch } = useWorkspace();
-  const [form, setForm] = useState<BriefingForm>(EMPTY_FORM);
+  const [form, setForm] = useState<BriefingFormFlat>(EMPTY_FORM);
   const [isSaving, setIsSaving] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
 
+  // Deserializa JSONB do banco → form plano da UI
   useEffect(() => {
     if (!wsBriefing) { setForm(EMPTY_FORM); return; }
-    
-    setForm({
-      ...EMPTY_FORM,
-      ...wsBriefing.content,
-      content_pillars: Array.isArray(wsBriefing.content?.content_pillars) ? (wsBriefing.content?.content_pillars as unknown as string[]) : [],
-      keywords: Array.isArray(wsBriefing.content?.keywords) ? (wsBriefing.content?.keywords as unknown as string[]) : [],
-    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    setForm(dbToForm(wsBriefing as unknown as Record<string, any>));
   }, [wsBriefing]);
 
-  const calculateCompleteness = (f: BriefingForm): number => {
-    let score = 0;
-    if (f.company_name?.trim()) score += 10;
-    if (f.segment?.trim()) score += 10;
-    if (f.target_audience?.trim()) score += 15;
-    if (f.brand_personality?.trim()) score += 10;
-    if (f.main_differentials?.trim()) score += 10;
-    if (f.value_proposition?.trim()) score += 15;
-    if (f.content_pillars?.length >= 3) score += 15;
-    if (f.keywords?.length >= 5) score += 15;
-    return score > 100 ? 100 : score;
+  const updateForm = (updates: Partial<BriefingFormFlat>) => {
+    const next = { ...form, ...updates };
+    next.completeness_score = calculateCompleteness(next);
+    setForm(next);
   };
 
   const handleSave = async (f = form) => {
@@ -78,38 +128,16 @@ export default function BriefingPage() {
     setIsSaving(true);
     try {
       const score = calculateCompleteness(f);
-      const contentPayload = {
-        company_name: f.company_name,
-        tagline: f.tagline,
-        segment: f.segment,
-        target_audience: f.target_audience,
-        audience_age_range: f.audience_age_range,
-        brand_personality: f.brand_personality,
-        tone_of_voice: f.tone_of_voice,
-        main_differentials: f.main_differentials,
-        value_proposition: f.value_proposition,
-        avoid_topics: f.avoid_topics,
-        content_pillars: f.content_pillars,
-        keywords: f.keywords,
-        brand_dna: f.brand_dna,
-      };
-
-      const swPayload = {
-        workspace_id: workspace.id,
-        title: f.company_name || 'Briefing principal',
-        status: f.completeness_score > 80 ? 'ready' : 'draft',
-        content: contentPayload,
-        brand_dna: f.brand_dna || `${f.company_name} - ${f.segment}`,
-        updated_at: new Date().toISOString(),
-      };
+      // Serializa form plano → estrutura JSONB do banco
+      const payload = formToDb(f, workspace.id, score);
 
       if (wsBriefing) {
         const { error } = await fromTable('briefings')
-          .update(swPayload)
+          .update(payload)
           .eq('workspace_id', workspace.id);
         if (error) throw error;
       } else {
-        const { error } = await fromTable('briefings').insert(swPayload);
+        const { error } = await fromTable('briefings').insert(payload);
         if (error) throw error;
       }
 
@@ -117,17 +145,11 @@ export default function BriefingPage() {
       await refetch();
       toast.success('DNA Estratégico salvo com sucesso!');
     } catch (error) {
-      console.error(error);
+      console.error('[BriefingPage] handleSave error:', error);
       toast.error('Briefing falhou na atualização.');
     } finally {
       setIsSaving(false);
     }
-  };
-
-  const updateForm = (updates: Partial<BriefingForm>) => {
-    const next = { ...form, ...updates };
-    next.completeness_score = calculateCompleteness(next);
-    setForm(next);
   };
 
   const handleAIMagic = async () => {
@@ -140,10 +162,10 @@ export default function BriefingPage() {
         body: {
           workspace_id: workspace.id,
           form_data: {
-             company_name: form.company_name,
-             segment: form.segment,
-             target_audience: form.target_audience,
-             main_differentials: form.main_differentials
+            company_name:       form.company_name,
+            segment:            form.segment,
+            target_audience:    form.target_audience,
+            main_differentials: form.main_differentials,
           }
         }
       });
@@ -154,14 +176,18 @@ export default function BriefingPage() {
       if (aiResponse) {
         toast.info('Construindo interface...', { description: 'Aplicando novas estratégias na tela.' });
         
-        const nextForm = {
+        const nextForm: BriefingFormFlat = {
           ...form,
-          brand_dna: aiResponse.brand_dna || form.brand_dna,
-          tone_of_voice: aiResponse.tone_of_voice || form.tone_of_voice,
+          brand_dna:          aiResponse.brand_dna          || form.brand_dna,
+          tone_of_voice:      aiResponse.tone_of_voice      || form.tone_of_voice,
           main_differentials: aiResponse.main_differentials || form.main_differentials,
+          value_proposition:  aiResponse.value_proposition  || form.value_proposition,
           content_pillars: Array.isArray(aiResponse.content_pillars) 
             ? aiResponse.content_pillars 
-            : form.content_pillars
+            : form.content_pillars,
+          keywords: Array.isArray(aiResponse.keywords)
+            ? aiResponse.keywords
+            : form.keywords,
         };
         
         updateForm(nextForm);
@@ -171,7 +197,7 @@ export default function BriefingPage() {
         throw new Error('Retorno vazio da Inteligência Artificial');
       }
     } catch (e) {
-      console.error(e);
+      console.error('[BriefingPage] handleAIMagic error:', e);
       toast.error('Falha ao conectar com o estúdio de IA.');
     } finally {
       setIsGenerating(false);
@@ -184,8 +210,20 @@ export default function BriefingPage() {
     updateForm({ content_pillars: next });
   };
   
-  const addPillar = () => updateForm({ content_pillars: [...form.content_pillars, ''] });
-  const remPillar = (i: number) => updateForm({ content_pillars: form.content_pillars.filter((_, idx) => idx !== i) });
+  const addPillar    = () => updateForm({ content_pillars: [...form.content_pillars, ''] });
+  const removePillar = (i: number) => updateForm({ content_pillars: form.content_pillars.filter((_, idx) => idx !== i) });
+
+  const handleKeywordChange = (index: number, val: string) => {
+    const next = [...form.keywords];
+    next[index] = val;
+    updateForm({ keywords: next });
+  };
+
+  const addKeyword    = () => updateForm({ keywords: [...form.keywords, ''] });
+  const removeKeyword = (i: number) => updateForm({ keywords: form.keywords.filter((_, idx) => idx !== i) });
+
+  const score = calculateCompleteness(form);
+  const scoreColor = score >= 80 ? '#10b981' : score >= 50 ? '#f59e0b' : '#ef4444';
 
   return (
     <div className="flex h-full bg-[#0a0a0a] text-white overflow-hidden">
@@ -205,69 +243,112 @@ export default function BriefingPage() {
             <h1 className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-white to-[#a8a8a8] bg-clip-text text-transparent">
               Brand Briefing
             </h1>
+            {wsBriefing && (
+              <p className="text-xs text-stone-500 mt-1 font-mono">
+                Última sync: {new Date(wsBriefing.updated_at || '').toLocaleString('pt-BR')}
+              </p>
+            )}
           </div>
           <div className="flex gap-4">
             <SwButton variant="ghost" onClick={handleAIMagic} disabled={isGenerating}>
-              <Wand2 size={16} className="text-[#10b981]" />
-              {isGenerating ? 'Processando...' : 'IA Auto-Completar'}
+              {isGenerating ? <RefreshCw size={16} className="animate-spin" /> : <Wand2 size={16} className="text-[var(--sw-accent)]" />}
+              {isGenerating ? 'Gerando...' : 'Gerar com IA'}
             </SwButton>
-            <SwButton variant="primary" onClick={() => handleSave()} disabled={isSaving} className="bg-[#10b981] hover:bg-[#059669] text-black shadow-[0_0_30px_rgba(16,185,129,0.2)]">
+            <SwButton variant="primary" onClick={() => handleSave()} disabled={isSaving}>
               <Save size={16} />
-              {isSaving ? 'Salvando...' : 'Publicar V2'}
+              {isSaving ? 'Salvando...' : 'Salvar Briefing'}
             </SwButton>
           </div>
         </div>
 
-        {/* Formulário - Glass Cards */}
+        {/* Score de completude */}
+        <div className="px-6 lg:px-8 pt-6">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-mono text-stone-500 uppercase tracking-widest">Completude do DNA</p>
+            <p className="text-sm font-bold" style={{ color: scoreColor }}>{score}%</p>
+          </div>
+          <div className="h-1.5 bg-[#1a1a1a] rounded-full overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-700"
+              style={{ width: `${score}%`, background: `linear-gradient(to right, ${scoreColor}88, ${scoreColor})` }}
+            />
+          </div>
+        </div>
+
+        {/* Formulário */}
         <div className="p-6 lg:p-8 space-y-8 max-w-4xl">
-          
-          <Section icon={<Target />} title="Posicionamento Core" desc="O núcleo de quem você é e do que você faz.">
+
+          {/* Identidade da empresa */}
+          <Section glass title="Identidade da Empresa" desc="Informações fundamentais sobre a marca.">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input label="Nome da Marca" val={form.company_name} set={(v:any) => updateForm({company_name:v})} />
-              <Input label="Segmento (Ex: SaúdeTech)" val={form.segment} set={(v:any) => updateForm({segment:v})} />
-              <Input label="Tagline/Slogan" val={form.tagline} set={(v:any) => updateForm({tagline:v})} colspan />
-              <TextArea label="Unique Value Proposition (UVP)" val={form.value_proposition} set={(v:any) => updateForm({value_proposition:v})} colspan />
-              <TextArea label="Diferenciais Competitivos" val={form.main_differentials} set={(v:any) => updateForm({main_differentials:v})} colspan rows={3} />
+              <Field label="Nome da empresa *" val={form.company_name} set={(v) => updateForm({company_name:v})} placeholder="Simwork, Nubank, Apple..." />
+              <Field label="Segmento / Nicho *" val={form.segment} set={(v) => updateForm({segment:v})} placeholder="SaaS, Varejo, Moda, Saúde..." />
+              <Field label="Tagline" val={form.tagline} set={(v) => updateForm({tagline:v})} placeholder="Think different. Just do it. Etc." />
+              <Field label="Proposta de Valor *" val={form.value_proposition} set={(v) => updateForm({value_proposition:v})} placeholder="O que você entrega de único?" />
+            </div>
+            <div className="mt-4">
+              <FieldArea label="DNA da Marca (Brand DNA)" val={form.brand_dna} set={(v) => updateForm({brand_dna:v})} placeholder="Descreva a essência e personalidade da marca em um parágrafo profundo..." />
+            </div>
+            <div className="mt-4">
+              <FieldArea label="Diferenciais Competitivos *" val={form.main_differentials} set={(v) => updateForm({main_differentials:v})} placeholder="O que te faz único contra a concorrência?" />
             </div>
           </Section>
 
-          <Section icon={<Users />} title="Público & Personas" desc="Para quem estamos construindo isso.">
+          {/* Audiência */}
+          <Section glass title="Audiência e Persona" desc="Defina para quem você cria.">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <TextArea label="Descrição do Público (Dores/Desejos)" val={form.target_audience} set={(v:any) => updateForm({target_audience:v})} rows={3} />
-              <div className="space-y-4">
-                <Input label="Faixa Etária Principal" val={form.audience_age_range} placeholder="Ex: 25-45 anos" set={(v:any) => updateForm({audience_age_range:v})} />
-                <Input label="Tópicos a Evitar (Antipadrões)" val={form.avoid_topics} placeholder="Ex: Religião, promessas irrealistas" set={(v:any) => updateForm({avoid_topics:v})} />
-              </div>
+              <Field label="Faixa etária" val={form.audience_age_range} set={(v) => updateForm({audience_age_range:v})} placeholder="25-40 anos, Millennials..." />
+              <Field label="Tom de Voz" val={form.tone_of_voice} set={(v) => updateForm({tone_of_voice:v})} placeholder="Profissional, Descontraído, Inspiracional..." />
+              <Field label="Personalidade da Marca" val={form.brand_personality} set={(v) => updateForm({brand_personality:v})} placeholder="Inovadora, Acolhedora, Disruptiva..." />
+              <Field label="Evitar Tópicos" val={form.avoid_topics} set={(v) => updateForm({avoid_topics:v})} placeholder="Política, religião, concorrente X..." />
+            </div>
+            <div className="mt-4">
+              <FieldArea label="Descrição do Público-Alvo *" val={form.target_audience} set={(v) => updateForm({target_audience:v})} placeholder="Quem compra? Quais dores tem? O que deseja? Onde está?" />
             </div>
           </Section>
 
-          <Section icon={<Mic2 />} title="Voz e Personalidade" desc="Como a IA incorporará sua marca ao escrever.">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input label="Personalidade (3-5 adjetivos)" placeholder="Ex: Ousada, visionária, direta" val={form.brand_personality} set={(v:any) => updateForm({brand_personality:v})} />
-              <Input label="Tom de Voz" placeholder="Ex: Acolhedor sem jargões" val={form.tone_of_voice} set={(v:any) => updateForm({tone_of_voice:v})} />
-            </div>
-          </Section>
-
-          <Section icon={<LayoutDashboard />} title="Arquitetura de Conteúdo" desc="Pilares para a geração automática de posts e vídeos.">
-            <div className="space-y-4">
-              <div className="space-y-3 bg-[#131313] p-5 border border-[#222] rounded-2xl">
-                <div className="flex justify-between items-center mb-4">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-[#777] font-mono">Pilares Editoriais ({form.content_pillars.length})</label>
-                  <button onClick={addPillar} className="text-xs bg-[#222] font-semibold hover:bg-[#333] px-3 py-1 rounded transition-colors">+ Adicionar</button>
+          {/* Pilares de Conteúdo */}
+          <Section glass title="Pilares de Conteúdo" desc="Temas que guiam toda a produção de conteúdo da marca.">
+            <div className="space-y-3">
+              {form.content_pillars.map((p, i) => (
+                <div key={i} className="flex gap-2">
+                  <SwInput
+                    value={p}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handlePillarChange(i, e.target.value)}
+                    placeholder={`Pilar ${i + 1} — ex: Inovação, Sustentabilidade...`}
+                    className="flex-1"
+                  />
+                  <button onClick={() => removePillar(i)} className="p-2 text-stone-600 hover:text-red-400 transition-colors">
+                    <Trash2 size={16} />
+                  </button>
                 </div>
-                {form.content_pillars.length === 0 && <p className="text-sm text-[#555] italic">Nenhum pilar adicionado. A IA não saberá sobre o que gerar.</p>}
-                {form.content_pillars.map((pillar, idx) => (
-                  <div key={idx} className="flex gap-2">
-                    <input type="text" value={pillar} onChange={e => handlePillarChange(idx, e.target.value)}
-                      placeholder="Ex: Educação em Investimentos" className="w-full bg-[#1a1a1a] border border-[#333] px-4 py-3 rounded-xl text-sm focus:border-[#10b981] outline-none" />
-                    <button onClick={() => remPillar(idx)} className="px-4 bg-[#1a1a1a] border border-[#333] hover:border-red-500 hover:text-red-500 rounded-xl transition-all">
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-              <TextArea label="Keywords / SEO (separadas por vírgula)" val={(form.keywords || []).join(', ')} set={(v:any) => updateForm({keywords: v.split(',').map((s:string)=>s.trim())})} rows={2} />
+              ))}
             </div>
+            <SwButton variant="ghost" onClick={addPillar} className="mt-4 w-full border-dashed border-[#333]">
+              + Adicionar Pilar
+            </SwButton>
+          </Section>
+
+          {/* Palavras-chave */}
+          <Section glass title="Keywords Estratégicas" desc="Palavras-chave que aparecem em todo conteúdo gerado.">
+            <div className="flex flex-wrap gap-2 mb-4">
+              {form.keywords.map((k, i) => (
+                <div key={i} className="flex items-center gap-2 bg-[#1a1a1a] border border-[#333] rounded-lg px-3 py-1.5">
+                  <SwInput
+                    value={k}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleKeywordChange(i, e.target.value)}
+                    placeholder="keyword..."
+                    className="bg-transparent border-0 text-xs p-0 w-24 outline-none"
+                  />
+                  <button onClick={() => removeKeyword(i)} className="text-stone-600 hover:text-red-400">
+                    <Trash2 size={12} />
+                  </button>
+                </div>
+              ))}
+            </div>
+            <SwButton variant="ghost" onClick={addKeyword} className="border-dashed border-[#333]">
+              + Adicionar Keyword
+            </SwButton>
           </Section>
 
         </div>
@@ -275,50 +356,83 @@ export default function BriefingPage() {
 
       {/* 
         ========================================
-        COLUNA 2: COMPLETENESS SCORE & DNA
+        COLUNA 2: PAINEL LATERAL (Score & CCP)
         ========================================
       */}
-      <div className="w-[340px] shrink-0 bg-[#050505] hidden xl:flex flex-col relative overflow-hidden border-r border-[#1f1f1f]">
-        
-        {/* Dashboard de Completude */}
-        <div className="p-6 border-b border-[#1f1f1f] bg-black">
-          <p className="text-[10px] font-bold tracking-widest text-stone-500 mb-2 font-mono">READINESS SCORE</p>
-          <div className="flex items-end gap-2 mb-4">
-            <h2 className="text-6xl font-black tracking-tighter" style={{ color: form.completeness_score >= 80 ? '#10b981' : form.completeness_score >= 50 ? '#f59e0b' : '#ef4444' }}>
-              {form.completeness_score}<span className="text-2xl text-stone-600">%</span>
-            </h2>
-          </div>
-          
-          <div className="w-full h-1.5 bg-[#1a1a1a] rounded overflow-hidden">
-            <div className="h-full transition-all duration-1000 ease-out" style={{ 
-              width: `${form.completeness_score}%`,
-              backgroundColor: form.completeness_score >= 80 ? '#10b981' : form.completeness_score >= 50 ? '#f59e0b' : '#ef4444'
-            }} />
-          </div>
-
-          <p className="text-xs text-stone-400 font-medium mt-4">
-            {form.completeness_score >= 80 ? 'Excelente! A IA tem contexto profundo para gerar assets de alta conversão.' :
-             form.completeness_score >= 50 ? 'Bom. Mas fornecer detalhes como Diferenciais melhoraria as copys.' :
-             'Incompleto. Seus templates e agentes podem gerar conteúdo genérico.'}
-          </p>
+      <div className="w-[320px] shrink-0 bg-[#050505] hidden xl:flex flex-col">
+        <div className="p-6 border-b border-[#1f1f1f]">
+          <h2 className="text-sm font-bold flex gap-2 items-center text-white">
+            <BarChart3 size={16} /> Radar do DNA
+          </h2>
+          <p className="text-xs text-stone-400 mt-1">Score em tempo real de todas as dimensões.</p>
         </div>
 
-        {/* Brand DNA Box */}
-        <div className="flex-1 p-6 overflow-y-auto no-scrollbar font-sans space-y-5">
-           <div>
-             <div className="flex items-center gap-2 mb-3 text-stone-400">
-               <FileText size={16} /> <span className="text-sm font-bold tracking-wide">Brand DNA (IA)</span>
-             </div>
-             {form.brand_dna ? (
-               <div className="text-sm leading-relaxed text-stone-300 italic opacity-80" style={{ whiteSpace: 'pre-line' }}>
-                 "{form.brand_dna}"
-               </div>
-             ) : (
-               <div className="bg-[#111] p-4 rounded-xl border border-[#222] border-dashed text-xs text-stone-500 text-center">
-                 Execute o botão "IA Auto-Completar" para condensar suas regras num DNA canônico.
-               </div>
-             )}
-           </div>
+        <div className="p-6 space-y-4 overflow-y-auto no-scrollbar flex-1">
+          {/* Score visual */}
+          <div className="relative flex items-center justify-center">
+            <svg className="w-32 h-32" viewBox="0 0 36 36">
+              <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#1a1a1a" strokeWidth="3" />
+              <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke={scoreColor} strokeWidth="3" strokeDasharray={`${score}, 100`} strokeLinecap="round" style={{ transition: 'stroke-dasharray 0.7s ease' }} />
+            </svg>
+            <div className="absolute text-center">
+              <p className="text-3xl font-black" style={{ color: scoreColor }}>{score}</p>
+              <p className="text-[10px] text-stone-500 font-mono">/ 100</p>
+            </div>
+          </div>
+
+          {/* Dimensões */}
+          <div className="space-y-3">
+            {[
+              { label: 'Empresa', ok: !!form.company_name && !!form.segment },
+              { label: 'Audiência', ok: !!form.target_audience && !!form.brand_personality },
+              { label: 'Diferenciais', ok: !!form.main_differentials && !!form.value_proposition },
+              { label: 'Tom de Voz', ok: !!form.tone_of_voice },
+              { label: 'Pilares', ok: form.content_pillars.length >= 3 },
+              { label: 'Keywords', ok: form.keywords.length >= 5 },
+            ].map(({ label, ok }) => (
+              <div key={label} className="flex items-center justify-between">
+                <span className="text-xs text-stone-400">{label}</span>
+                <span className={`text-xs font-bold ${ok ? 'text-green-400' : 'text-stone-600'}`}>
+                  {ok ? '✓ OK' : '○ Faltando'}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Aviso de CCP */}
+          {score >= 60 && (
+            <div className="bg-[#a855f7]/10 border border-[#a855f7]/30 rounded-xl p-4">
+              <p className="text-xs font-bold text-[#a855f7] mb-1 flex items-center gap-1">
+                <CheckCircle2 size={12} /> CCP Ativo
+              </p>
+              <p className="text-[10px] text-stone-400">Este briefing alimenta automaticamente a geração de Posts, Vídeos, Sites e Bio Links da sua marca.</p>
+            </div>
+          )}
+
+          {/* Uso do CCP */}
+          <div className="bg-[#0d0d0d] border border-[#1a1a1a] rounded-xl p-4">
+            <p className="text-[10px] text-stone-500 font-mono mb-2 uppercase">Schema real no banco</p>
+            <pre className="text-[10px] text-stone-500 overflow-auto leading-relaxed">
+{`company.name: "${form.company_name || '—'}"
+company.segment: "${form.segment || '—'}"
+audience.personality: "${form.brand_personality || '—'}"
+content.pillars: [${form.content_pillars.length} itens]
+content.keywords: [${form.keywords.length} itens]`}
+            </pre>
+          </div>
+        </div>
+
+        {/* Users section */}
+        <div className="p-6 border-t border-[#1f1f1f]">
+          <div className="flex items-center gap-3 mb-3">
+            <Users size={14} className="text-stone-500" />
+            <p className="text-xs font-bold text-stone-400">Módulos que usam este briefing</p>
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            {['PostGen', 'Video Studio', 'Bio Link', 'Site Builder', 'Agentes'].map((m) => (
+              <span key={m} className="text-[10px] bg-[#1a1a1a] text-stone-400 px-2 py-1 rounded-md border border-[#2a2a2a]">{m}</span>
+            ))}
+          </div>
         </div>
       </div>
     </div>
@@ -326,34 +440,29 @@ export default function BriefingPage() {
 }
 
 // ===================================
-// COMPONENTS
+// UTILS & COMPONENTS
 // ===================================
-
-interface SectionProps { icon?: React.ReactNode; title: string; desc: string; children: React.ReactNode; }
-const Section = ({ icon, title, desc, children }: SectionProps) => (
-  <SwCard glass className="p-6 md:p-8 rounded-[24px]">
-    <div className="flex items-center gap-3 mb-2">
-      {icon && <div className="p-2 rounded-lg bg-[#222] text-white/70">{icon}</div>}
-      <h3 className="text-lg font-bold font-display tracking-wide text-white">{title}</h3>
-    </div>
-    <p className="text-sm text-[#94a3b8] mb-6 font-medium border-b border-[var(--border)] pb-6">{desc}</p>
+interface SectionProps { title: string; desc: string; children: React.ReactNode; glass?: boolean; }
+const Section = ({ title, desc, children, glass }: SectionProps) => (
+  <SwCard glass={glass} className="p-6 md:p-8 rounded-[24px]">
+    <h3 className="text-lg font-bold tracking-wide mb-1 text-white">{title}</h3>
+    <p className="text-sm text-stone-400 mb-6 font-medium">{desc}</p>
     {children}
   </SwCard>
 );
 
-interface BaseProps { label: string; val: string; set: (v: string) => void; placeholder?: string; colspan?: boolean; }
-
-const Input = ({ label, val, set, placeholder, colspan }: BaseProps) => (
-  <div className={colspan ? "md:col-span-2" : ""}>
+interface FieldProps { label: string; val: string; set: (v: string) => void; placeholder?: string; }
+const Field = ({ label, val, set, placeholder }: FieldProps) => (
+  <div>
     <label className="block text-[10px] font-bold mb-2 uppercase tracking-widest text-[#777] font-mono">{label}</label>
-    <SwInput value={val} onChange={(e: any) => set(e.target.value)} placeholder={placeholder} />
+    <SwInput value={val} onChange={(e: React.ChangeEvent<HTMLInputElement>) => set(e.target.value)} placeholder={placeholder} />
   </div>
 );
 
-interface TextAreaProps extends BaseProps { rows?: number; }
-const TextArea = ({ label, val, set, placeholder, rows = 4, colspan }: TextAreaProps) => (
-  <div className={colspan ? "md:col-span-2" : ""}>
+interface FieldAreaProps { label: string; val: string; set: (v: string) => void; placeholder?: string; }
+const FieldArea = ({ label, val, set, placeholder }: FieldAreaProps) => (
+  <div>
     <label className="block text-[10px] font-bold mb-2 uppercase tracking-widest text-[#777] font-mono">{label}</label>
-    <SwTextarea value={val} onChange={(e: any) => set(e.target.value)} placeholder={placeholder} rows={rows} />
+    <SwTextarea value={val} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => set(e.target.value)} placeholder={placeholder} rows={3} />
   </div>
 );

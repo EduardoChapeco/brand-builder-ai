@@ -211,15 +211,15 @@ export default function SiteEditorPage() {
                           )}
                         >
                            <div className="space-y-4">
-                              <h2 className="text-3xl font-black text-white">{section.content.headline as string || 'Sem Título'}</h2>
-                              <p className="text-stone-400">{section.content.subheadline as string || 'Sem subtítulo.'}</p>
+                              <h2 className="text-3xl font-black text-white" style={{ color: 'var(--sw-primary)' }}>{section.content.headline as string || 'Sem Título'}</h2>
+                              <p className="text-stone-400" style={{ fontFamily: 'var(--sw-font-body)' }}>{section.content.subheadline as string || 'Sem subtítulo.'}</p>
                            </div>
                            
                            {section.section_type === 'features' && (
                              <div className="grid grid-cols-3 gap-4 mt-8">
                                 {[1,2,3].map(i => (
-                                  <div key={i} className="p-6 rounded-2xl bg-white/5 border border-white/5">
-                                    <div className="w-10 h-10 bg-[#a855f7]/20 rounded-xl flex items-center justify-center text-[#a855f7] mb-4"><Zap size={18} /></div>
+                                  <div key={i} className="p-6 rounded-2xl bg-white/5 border border-white/5" style={{ borderRadius: 'var(--sw-radius)' }}>
+                                    <div className="w-10 h-10 bg-[var(--sw-accent)]/20 rounded-xl flex items-center justify-center text-[var(--sw-accent)] mb-4"><Zap size={18} /></div>
                                     <h4 className="text-white font-bold text-sm">Feature {i}</h4>
                                   </div>
                                 ))}

@@ -84,12 +84,17 @@ export default function DashboardPage() {
 
   const completenessScore = useMemo(() => {
     let score = 0;
-    if (workspace?.name || briefing?.content?.company_name) score += 20;
-    if (brandKit?.colors?.primary) score += 20;
-    if (brandKit?.fonts?.heading) score += 15;
-    if (briefing?.content?.segment) score += 15;
-    if (briefing?.content?.target_audience) score += 15;
-    if (briefing?.content?.brand_dna) score += 15;
+    // Acessando campos JSONB reais conforme PRD: briefing.company, briefing.audience
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const bk = brandKit as any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const br = briefing as any;
+    if (workspace?.name || br?.company?.name)  score += 20;
+    if (bk?.colors?.primary)                   score += 20;
+    if (bk?.fonts?.heading)                    score += 15;
+    if (br?.company?.segment)                  score += 15;
+    if (br?.audience?.description)             score += 15;
+    if (br?.company?.brand_dna)                score += 15;
     return score;
   }, [brandKit, briefing, workspace?.name]);
 

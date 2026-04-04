@@ -40,7 +40,7 @@ export default function CRMPage() {
     switch (status) {
       case 'new': return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
       case 'contacted': return 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20';
-      case 'qualified': return 'bg-[#a855f7]/10 text-[#a855f7] border-[#a855f7]/20';
+      case 'qualified': return 'bg-[var(--sw-accent)]/10 text-[var(--sw-accent)] border-[var(--sw-accent)]/20';
       case 'customer': return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
       case 'lost': return 'bg-red-500/10 text-red-400 border-red-500/20';
       default: return 'bg-stone-500/10 text-stone-400 border-stone-500/20';
@@ -86,7 +86,7 @@ export default function CRMPage() {
          {[
             { label: 'Total Base', count: leads.length, icon: Users, color: 'text-stone-400' },
             { label: 'Novos', count: leads.filter(c => c.status === 'new').length, icon: Zap, color: 'text-blue-400' },
-            { label: 'Qualificados', count: leads.filter(c => c.status === 'qualified').length, icon: Sparkles, color: 'text-[#a855f7]' },
+            { label: 'Qualificados', count: leads.filter(c => c.status === 'qualified').length, icon: Sparkles, color: 'text-[var(--sw-accent)]' },
             { label: 'Clientes', count: leads.filter(c => c.status === 'customer').length, icon: CheckCircle2, color: 'text-emerald-400' },
          ].map((stat, i) => (
             <SwCard key={i} className="p-6 border-white/5 bg-white/5 hover:bg-white/[0.08] transition-all group overflow-hidden relative">
