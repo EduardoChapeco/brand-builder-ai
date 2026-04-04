@@ -1,7 +1,7 @@
 import { Outlet, useLocation } from 'react-router-dom';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import WorkspaceSidebar from '@/components/shared/WorkspaceSidebar';
-import SwHelpSheet from '@/components/shared/SwHelpSheet';
+import { SwHelpSheet } from '@/components/shared/SwHelpSheet';
 import SwTopbar from '@/components/shared/SwTopbar';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { getWorkspaceRouteMeta } from '@/lib/workspaceNavigation';
@@ -41,11 +41,10 @@ export default function AppShell() {
       </div>
 
       <SwHelpSheet
-        open={helpOpen}
+        isOpen={helpOpen}
         onClose={() => setHelpOpen(false)}
-        title={routeMeta.helpTitle || routeMeta.label}
-        body={routeMeta.helpBody || routeMeta.description}
-        bullets={defaultBullets}
+        moduleName={routeMeta.helpTitle || routeMeta.label}
+        sections={defaultBullets.map((v, i) => ({ title: `Nota ${i+1}`, description: v, icon: null }))}
       />
     </SidebarProvider>
   );

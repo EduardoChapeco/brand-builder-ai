@@ -119,3 +119,25 @@ export const getBioLinkBlockDefinition = (type: BioLinkBlockType) =>
 
 export const getBioLinkThemeDefinition = (key: string) => 
   BIO_LINK_THEMES[key] || BIO_LINK_THEMES["brand-auto"];
+
+export const createBioLinkBlock = (type: BioLinkBlockType): BioLinkBlock => {
+  return {
+    id: crypto.randomUUID(),
+    type,
+    isVisible: true,
+    config: {}
+  };
+};
+
+export function slugifyBioLink(text: string) {
+  return (text || "").toString().toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^\w-]+/g, '')
+    .replace(/--+/g, '-')
+    .replace(/^-+/, '')
+    .replace(/-+$/, '');
+}
+
+export function isReservedBioLinkSlug(slug: string) {
+  return (BIO_LINK_RESERVED_SLUGS as readonly string[]).includes(slug);
+}

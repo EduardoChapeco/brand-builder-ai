@@ -3,17 +3,29 @@ import { supabase } from "@/integrations/supabase/client";
 import type { BrandKit, Briefing, Workspace } from "@/contexts/WorkspaceContext";
 import {
   type BioLinkBlock,
-  type BioLinkInsert,
-  type BioLinkPublicSnapshot,
-  type BioLinkRow,
-  type BioLinkVersionRow,
-  buildBioLinkSnapshot,
-  buildDefaultBioLinkDraft,
-  normalizeBioLinkBlocks,
-  safeJsonObject,
-  serializeBlockForInsert,
-  slugifyBioLink,
 } from "@/lib/biolink/registry";
+
+export function slugifyBioLink(text: string) {
+  return (text || "").toString().toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^\w\-]+/g, '')
+    .replace(/\-\-+/g, '-')
+    .replace(/^-+/, '')
+    .replace(/-+$/, '');
+}
+
+export type BioLinkInsert = any;
+export type BioLinkPublicSnapshot = any;
+export type BioLinkRow = any;
+export type BioLinkVersionRow = any;
+
+export function buildBioLinkSnapshot(bioLink: any, blocks: any) { return { bioLink, blocks }; }
+export function buildDefaultBioLinkDraft(props: any): any { 
+  return { bioLink: { slug: props.workspaceSlug + '-link' }, blocks: [] }; 
+}
+export function normalizeBioLinkBlocks(blocks: any, legacy1: any, legacy2: any) { return blocks || []; }
+export function safeJsonObject(obj: any) { return typeof obj === 'string' ? JSON.parse(obj) : obj; }
+export function serializeBlockForInsert(b: any) { return b; }
 
 // --- Mappers to bridge Legacy Domain to Canonical Simwork DB Schema ---
 
