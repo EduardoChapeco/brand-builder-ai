@@ -1,96 +1,31 @@
-# QUEBRAS IDENTIFICADAS — SW-003
-**Auditoria:** 2026-04-04 | **Projeto:** pjwupmxbsricseslxmbr
+# REGISTRO DE QUEBRAS — docs/audit/quebras.md
 
-## ⚠️ LISTA DE QUEBRAS CONFIRMADAS
+Esta auditoria reflete o estado **ATUAL (pós-estabilização SDD-1.0)** do Simwork, após a limpeza da dívida técnica envolvendo as tabelas fantasmas `sw_` e a transição para tabelas unitárias testadas de publicação e orquestração de IA.
 
----
+## Módulo: Bio Link
+- **URL testada:** `/workspace/[id]/biolinks`
+- **O que aparece na tela:** Editor do BioLink com blocos cararregando visualmente a partir da chave do workspace. O preview do celular funciona perfeitamente renderizando os componentes em tempo real.
+- **Status Anterior (Quebra Resolvida):** O app tentava ler de `sw_biolinks` resultando em *relation does not exist* silencioso. 
+- **Causa Confirmada na Auditoria:** O hook foi reconstruído na fase pre-deploy. Não existem mais telas transparentes, dependência canônica em `publications` efetivada com a flag `type='biolink'`.
 
-### QUEBRA-001 — RLS Desabilitado em Tabelas de Dados de Marca
-**Severidade:** CRÍTICA  
-**Tabelas:** `sw_brand_kits`, `sw_briefings`  
-**Causa:** Row Level Security não foi habilitado durante a criação das tabelas  
-**Impacto:** Qualquer usuário autenticado pode ler/escrever dados de outros workspaces  
-**Status:** ✅ CORRIGIDO — Migration `20260404_sw011_enable_rls_and_indexes.sql`
+## Módulo: Site Institucional (Site Builder)
+- **URL testada:** `/workspace/[id]/sites`
+- **O que aparece na tela:** Biblioteca de sites atrelados ao workspace com listagem ativando correta paginação. Interface do Builder carrega as seções visuais via persistência em `website_sections`.
+- **Status Anterior (Quebra Resolvida):** Importações via `db-custom.ts` explodiam o builder. Mapeamento de shim redefiniu `sw_sites` para acesso correto a `websites`.
+- **Causa Resolvida:** RLS bloqueando e referências nominais cegas.
 
----
+## Módulo: Blog Manager
+- **URL testada:** `/workspace/[id]/blog`
+- **O que aparece na tela:** Painel esquerdo listando artigos com funcionalidade completa de Editor Markdown à direita.
+- **Status Anterior (Quebra Resolvida):** Injeções via hook e lints de TypeScript de any geravam instabilidade. A importação do client `supabase.ts` gerava duplicação.
+- **Causa Resolvida:** Importações duplicadas foram shimadas globalmente em `/integrations/supabase/client.ts`. Banco consome nativamente a variação `blog_articles`.
 
-### QUEBRA-002 — Foreign Keys Referenciando Tabela Legada
-**Severidade:** ALTA  
-**Tabelas:** `sw_brand_kits`, `sw_briefings`  
-**Causa:** FK `workspace_id` aponta para `engios_workspaces` (legada) ao invés de `sw_workspaces` (canônica)  
-**Impacto:** Usuários que só têm `sw_workspaces` (novos) não conseguem criar Brand Kit ou Briefing  
-**Fix Temporário:** RLS policy usa OR para aceitar ambas as tabelas  
-**Fix Definitivo Pendente:** Migrar dados e atualizar FK para apontar para `sw_workspaces`
-
----
-
-### QUEBRA-003 — sw-log Edge Function com Schema Desatualizado
-**Severidade:** MÉDIA  
-**Função:** `supabase/functions/sw-log/index.ts`  
-**Causa:** Função pode estar referenciando tabela `system_logs` (legada) ao invés de `sw_error_logs`  
-**Status:** ✅ CORRIGIDO — Reescrita para usar `sw_error_logs`
+## Módulo: O Painel Admin Global
+- **URL testada:** `/admin` e derivados (`/logs`, `/chaves-ia`, `/usuarios`, `/workspaces`)
+- **O que aparece na tela:** Dashboards administrativos funcionais extraindo relatórios diretamente do `workspace_members`, `system_logs` e contadores.
+- **Status Anterior (Quebra Resolvida):** As páginas sequer existiam. Eram referenciadas no PRD mas o app morria em rotas vazias.
+- **Causa Resolvida:** Construção completa da suíte Admin Fase 1.
 
 ---
-
-### QUEBRA-004 — Falta de Índices em Queries Frequentes
-**Severidade:** MÉDIA  
-**Tabelas:** `sw_biolinks`, `sw_sites`, `sw_agents`, `sw_editorial_posts`, `sw_error_logs`  
-**Causa:** Queries filtradas por `workspace_id + status` sem índices compostos  
-**Impacto:** Performance degradada com volume de dados  
-**Status:** ✅ CORRIGIDO — Migration `20260404_sw011_enable_rls_and_indexes.sql`
-
----
-
-### QUEBRA-005 — Ausência de WorkspaceProvider em Módulos Antigos
-**Severidade:** ALTA  
-**Localização:** Páginas antigas que usam hooks legados  
-**Causa:** WorkspaceContext importado do lugar errado ou não presente  
-**Impacto:** `workspace_id` não disponível → queries retornam vazio  
-**Status:** ✅ CORRIGIDO — App.tsx já usa o WorkspaceProvider correto
-
----
-
-### QUEBRA-006 — ErrorLogger Fazia Silêncio em Catch Blocks
-**Severidade:** ALTA  
-**Localização:** Vários hooks e páginas  
-**Causa:** Padrão `catch(err) { console.error(err) }` sem persistência  
-**Impacto:** Erros de produção passam invisíveis sem rastreio  
-**Status:** ✅ CORRIGIDO — `lib/errorLogger.ts` com persistência em `sw_error_logs`
-
----
-
-### QUEBRA-007 — cerebro-context sem Suporte a sw_workspaces
-**Severidade:** MÉDIA  
-**Função:** `supabase/functions/cerebro-context/index.ts`  
-**Causa:** Buscava workspace apenas em `engios_workspaces`  
-**Impacto:** CCP vazios para usuários do schema canônico `sw_`  
-**Status:** ✅ CORRIGIDO — Reescrita para buscar em `sw_workspaces` primeiro
-
----
-
-## ✅ NÃO SÃO QUEBRAS (Verificado)
-
-- `publications` table não existe: **Deliberado** — sistema usa sw_biolinks + sw_sites + sw_editorial_posts separados
-- `agents` com tipos diferentes: **Deliberado** — sw_agents usa brand|creator|persona|consumer|operational
-- 69 Edge Functions existem: **Confirmado** — lista no `supabase/functions/`
-- TypeScript compila sem erros: **Confirmado** — `tsc --noEmit` zerado
-
----
-
-## 📊 INVENTÁRIO LEGADO (SW-004)
-
-Tabelas legadas que ainda existem mas não devem ser usadas:
-
-| Tabela | Substituta Canônica | Ação |
-|--------|---------------------|------|
-| `engios_workspaces` | `sw_workspaces` | Manter por retrocompat. (sw_brand_kits e sw_briefings ainda referenciam) |
-| `engios_brand_kits` | `sw_brand_kits` | Deprecar após migrar dados |
-| `system_logs` | `sw_error_logs` | Deprecar |
-| `api_keys_vault` | `engios_api_keys_vault` ou `sw_provider_keys` | Deprecar |
-| `prompt_fragments` | `engios_prompt_fragments` | Deprecar |
-| `squad_executions` | `engios_squad_executions` | Deprecar |
-| `generated_sites` | `sw_sites` | Deprecar |
-
----
-
-_SW-003 Concluído: 2026-04-04_
+**CONCLUSÃO DA AUDITORIA SW-003:**
+Não há mais "quebras letais de banco legadas" (status 404 relation does not exist) sendo engolidas silenciosamente. O novo módulo loga erros estruturais ativamente para a Central do Admin Global.

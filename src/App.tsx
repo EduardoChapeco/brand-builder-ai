@@ -4,7 +4,10 @@ import AppShell from '@/components/AppShell';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { WorkspaceProvider } from '@/contexts/WorkspaceContext';
-import AdminPage from '@/pages/AdminPage';
+import AdminDashboardPage from '@/pages/admin/AdminDashboardPage';
+import AdminSystemLogsPage from '@/pages/admin/AdminSystemLogsPage';
+import AdminUsersPage from '@/pages/admin/AdminUsersPage';
+import AdminWorkspacesPage from '@/pages/admin/AdminWorkspacesPage';
 import AgentsPage from '@/pages/AgentsPage';
 import AnalyticsPage from '@/pages/AnalyticsPage';
 import AuthPage from '@/pages/AuthPage';
@@ -38,6 +41,7 @@ import VideoStudioMotionPage from '@/pages/VideoStudioMotionPage';
 import VideoStudioPage from '@/pages/VideoStudioPage';
 import WorkspacesPage from '@/pages/WorkspacesPage';
 import BioLinkModuleLayout from '@/components/biolink/BioLinkModuleLayout';
+import AdminChavesIAPage from '@/pages/admin/AdminChavesIAPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -61,7 +65,11 @@ const App = () => (
           <Route path="/onboarding" element={<OnboardingPage />} />
           <Route path="/b/:slug" element={<PublicBioLink />} />
           <Route path="/l/:slug" element={<PublicBioLink />} />
-          <Route path="/admin" element={<AdminPage />} />
+          <Route path="/admin" element={<AdminDashboardPage />} />
+          <Route path="/admin/chaves-ia" element={<AdminChavesIAPage />} />
+          <Route path="/admin/logs" element={<AdminSystemLogsPage />} />
+          <Route path="/admin/usuarios" element={<AdminUsersPage />} />
+          <Route path="/admin/workspaces" element={<AdminWorkspacesPage />} />
 
           {/* Workspace — shell autenticado */}
           <Route

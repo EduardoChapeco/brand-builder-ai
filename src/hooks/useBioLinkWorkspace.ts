@@ -16,9 +16,10 @@ import {
 } from "react";
 import { toast } from "sonner";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import type { BioLinkBlock, BioLinkBlockType, BioLinkRow, BioLinkVersionRow } from "@/lib/biolink/registry";
-import { createBioLinkBlock } from "@/lib/biolink/registry";
+import type { BioLinkRow, BioLinkBlock, BioLinkVersionRow } from "@/lib/biolink/service";
 import { loadWorkspaceBioLink, saveWorkspaceBioLink } from "@/lib/biolink/service";
+import { createBioLinkBlock } from "@/lib/biolink/registry";
+import type { BioLinkBlockType } from "@/lib/biolink/registry";
 
 // ─── Public API ──────────────────────────────────────────────────────────────
 
@@ -111,10 +112,19 @@ const useBioLinkWorkspaceController = (): BioLinkWorkspaceValue => {
   }, []);
 
   const addBlock = useCallback((type: BioLinkBlockType) => {
-    const newBlock = createBioLinkBlock(type);
-    setBlocks((prev) => [...prev, newBlock]);
+    const lean = createBioLinkBlock(type);
+    const full: BioLinkBlock = {
+      id: lean.id,
+      publication_id: "", // will be assigned on save
+      workspace_id: workspace?.id ?? "",
+      type: lean.type,
+      config: lean.config ?? {},
+      position: blocks.length,
+      isVisible: lean.isVisible,
+    };
+    setBlocks((prev) => [...prev, full]);
     markDirty();
-  }, []);
+  }, [blocks.length, workspace?.id]);
 
   const updateBlock = useCallback((blockId: string, patch: Partial<BioLinkBlock["config"]>) => {
     setBlocks((prev) =>
