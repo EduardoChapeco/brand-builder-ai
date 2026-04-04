@@ -80,7 +80,7 @@ const FONTS_DISPLAY = ['Bebas Neue', 'Oswald', 'Syne', 'Clash Display'];
 // COMPONENTE PRINCIPAL
 // ===================================
 export default function BrandKitPage() {
-  const { workspace, brandKit: wsBrandKit, refreshBrandKit } = useWorkspace();
+  const { workspace, brandKit: wsBrandKit, refetch } = useWorkspace();
   const [form, setForm] = useState<BrandKitForm>(EMPTY_FORM);
   const [isSaving, setIsSaving] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -128,16 +128,16 @@ export default function BrandKitPage() {
       };
 
       if (wsBrandKit) {
-        const { error } = await fromTable('sw_brand_kits')
+        const { error } = await fromTable('brand_kits')
           .update(swPayload)
           .eq('workspace_id', workspace.id);
         if (error) throw error;
       } else {
-        const { error } = await fromTable('sw_brand_kits').insert(swPayload);
+        const { error } = await fromTable('brand_kits').insert(swPayload);
         if (error) throw error;
       }
 
-      await refreshBrandKit();
+      await refetch();
       toast.success('DNA visual consolidado com sucesso!');
     } catch (error) {
       console.error(error);
@@ -152,7 +152,7 @@ export default function BrandKitPage() {
     toast.info('Diretor de Arte IA operando...', { description: 'Sintetizando cores e tipografia a partir do seu DNA.' });
     setIsGenerating(true);
     try {
-      const { data: briefingData } = await fromTable('sw_briefings')
+      const { data: briefingData } = await fromTable('briefings')
         .select('content')
         .eq('workspace_id', workspace.id)
         .maybeSingle();

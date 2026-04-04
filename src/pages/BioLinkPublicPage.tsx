@@ -17,10 +17,11 @@ export default function BioLinkPublicPage() {
       if (!slug) return;
       
       try {
-        // @ts-ignore - Tabela sw_ criada dinamicamente no banco
+        // @ts-ignore - Usando tabela canônica operations
         const { data: profile, error: pError } = await supabase
-          .from("sw_biolinks")
-          .select("*")
+          .from("publications")
+          .select("id, workspace_id, name, slug, status, config, seo")
+          .eq("type", "biolink")
           .eq("slug", slug)
           .single();
 
@@ -30,20 +31,20 @@ export default function BioLinkPublicPage() {
           return;
         }
 
-        // @ts-ignore - Tabela sw_ criada dinamicamente no banco
+        // @ts-ignore - Usando tabela canônica operations
         const { data: blocks, error: bError } = await supabase
-          .from("sw_biolink_blocks")
-          .select("*")
-          .eq("biolink_id", profile.id)
-          .eq("is_visible", true);
+          .from("publication_blocks")
+          .select("id, block_type, is_active, content")
+          .eq("publication_id", profile.id)
+          .eq("is_active", true);
 
         setData({
           profile,
           blocks: (blocks || []).map((b: any) => ({
             id: b.id,
-            type: b.type as any,
-            isVisible: b.is_visible,
-            config: b.config
+            type: b.block_type as any,
+            isVisible: b.is_active,
+            config: b.content
           }))
         });
 

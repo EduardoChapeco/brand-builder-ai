@@ -33,13 +33,25 @@ export function useBiolinks(workspaceId: string | null): UseBiolinksReturn {
 
     try {
       const { data, error: dbErr } = await supabase
-        .from('sw_biolinks')
-        .select('id, workspace_id, title, slug, status, theme, settings, published_at, created_by, created_at, updated_at')
+        .from('publications')
+        .select('id, workspace_id, name, slug, status, config, published_at, created_at, updated_at')
         .eq('workspace_id', workspaceId)
+        .eq('type', 'biolink')
         .order('created_at', { ascending: false });
 
       if (dbErr) throw dbErr;
-      setBiolinks(data as SwBiolink[] ?? []);
+      setBiolinks(data?.map(d => ({
+        id: d.id,
+        workspace_id: d.workspace_id,
+        title: d.name,
+        slug: d.slug ?? '',
+        status: d.status,
+        theme: (d.config as any)?.theme || {},
+        settings: d.config,
+        published_at: d.published_at,
+        created_at: d.created_at,
+        updated_at: d.updated_at
+      })) as any[] ?? []);
     } catch (err) {
       const code = 'ERR_BIOLINK_LOAD_001';
       const message = err instanceof Error ? err.message : String(err);
@@ -68,13 +80,13 @@ export function useBiolinks(workspaceId: string | null): UseBiolinksReturn {
       const { data: { user } } = await supabase.auth.getUser();
 
       const { data, error: dbErr } = await supabase
-        .from('sw_biolinks')
+        .from('publications')
         .insert({
           workspace_id: workspaceId,
-          title,
+          type: 'biolink',
+          name: title,
           slug,
           status: 'draft',
-          created_by: user?.id ?? null,
         })
         .select()
         .single();
@@ -99,10 +111,11 @@ export function useBiolinks(workspaceId: string | null): UseBiolinksReturn {
   const deleteBiolink = useCallback(async (id: string): Promise<boolean> => {
     try {
       const { error: dbErr } = await supabase
-        .from('sw_biolinks')
+        .from('publications')
         .delete()
         .eq('id', id)
-        .eq('workspace_id', workspaceId ?? '');
+        .eq('workspace_id', workspaceId ?? '')
+        .eq('type', 'biolink');
 
       if (dbErr) throw dbErr;
       await fetchBiolinks();

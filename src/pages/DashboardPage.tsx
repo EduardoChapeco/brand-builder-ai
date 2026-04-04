@@ -24,10 +24,14 @@ const INITIAL_COUNTS: DashboardCounts = {
   agents: 0,
 };
 
-const countTable = async (table: string, workspaceId: string) => {
-  const response = await fromTable(table)
+const countTable = async (table: string, workspaceId: string, filterColumn?: string, filterValue?: string) => {
+  let query = fromTable(table)
     .select('id', { head: true, count: 'exact' })
     .eq('workspace_id', workspaceId);
+  if (filterColumn && filterValue) {
+    query = query.eq(filterColumn, filterValue);
+  }
+  const response = await query;
 
   if (response.error?.code === '42P01') return 0;
   if (response.error) throw response.error;
@@ -47,11 +51,11 @@ export default function DashboardPage() {
       setIsLoading(true);
       try {
         const [sites, biolinks, posts, videos, agents] = await Promise.all([
-          countTable('sw_sites', workspace.id),
-          countTable('sw_biolinks', workspace.id),
-          countTable('sw_social_posts', workspace.id),
-          countTable('sw_video_projects', workspace.id),
-          countTable('sw_agents', workspace.id),
+          countTable('publications', workspace.id, 'type', 'site'),
+          countTable('publications', workspace.id, 'type', 'biolink'),
+          countTable('content_items', workspace.id, 'type', 'post'),
+          countTable('content_items', workspace.id, 'type', 'video'),
+          countTable('agents', workspace.id),
         ]);
 
         if (!active) return;
@@ -83,10 +87,10 @@ export default function DashboardPage() {
   }, [brandKit, briefing]);
 
   const priorities = [
-    counts.sites === 0 ? 'Criar o primeiro site do workspace no fluxo sw_sites.' : null,
+    counts.sites === 0 ? 'Criar o primeiro site do workspace em publicações.' : null,
     counts.biolinks === 0 ? 'Publicar um Bio Link com blocos rastreáveis e tema do workspace.' : null,
     completenessScore < 70 ? 'Completar Brand Kit e Briefing para destravar geração contextual real.' : null,
-    counts.posts === 0 ? 'Ativar o módulo de Posts em cima de sw_social_posts.' : null,
+    counts.posts === 0 ? 'Ativar o módulo de Posts.' : null,
   ].filter(Boolean) as string[];
 
   return (
@@ -121,7 +125,7 @@ export default function DashboardPage() {
                   <p className="text-sm font-medium text-[var(--text-primary)]">Brand Kit</p>
                   <p className="mt-1 text-sm text-[var(--text-secondary)]">
                     {brandKit
-                      ? 'Configurado no schema sw_brand_kits e pronto para ser consumido por Sites, Bio Links e Posts.'
+                      ? 'Configurado em brand_kits e pronto para ser consumido por Sites, Bio Links e Posts.'
                       : 'Ainda não há Brand Kit migrado para o schema Simwork neste ambiente.'}
                   </p>
                 </SwCard>
@@ -129,14 +133,14 @@ export default function DashboardPage() {
                   <p className="text-sm font-medium text-[var(--text-primary)]">Briefing</p>
                   <p className="mt-1 text-sm text-[var(--text-secondary)]">
                     {briefing
-                      ? `Status atual: ${briefing.status}. Score de completude: ${briefing.completeness_score}%.`
-                      : 'O briefing principal ainda não foi encontrado em sw_briefings.'}
+                      ? `Status atual: ${(briefing as any).status || 'ativo'}. Score de completude: ${(briefing as any).completeness_score || 0}%.`
+                      : 'O briefing principal ainda não foi encontrado em briefings.'}
                   </p>
                 </SwCard>
                 <SwCard elevated className="px-4 py-3">
                   <p className="text-sm font-medium text-[var(--text-primary)]">Workspace</p>
                   <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                    Fuso: {workspace?.timezone || 'America/Sao_Paulo'} · Idioma: {workspace?.locale || 'pt-BR'}
+                    Fuso: {(workspace as any)?.timezone || 'America/Sao_Paulo'} · Idioma: {(workspace as any)?.locale || 'pt-BR'}
                   </p>
                 </SwCard>
               </div>

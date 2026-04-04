@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Users, Search, Filter, Mail, Phone, ExternalLink, MoreVertical, Plus, Zap, UserCheck, UserMinus, Clock } from 'lucide-react';
+import { Users, Search, Filter, Mail, Phone, ExternalLink, MoreVertical, Plus, Zap, UserCheck, UserMinus, Clock, Sparkles } from 'lucide-react';
 import { SwButton, SwInput, SwBadge, SwCard, SwSpinner } from '@/components/shared/SwComponents';
 import { SwHelpSheet } from '@/components/shared/SwHelpSheet';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 export default function CRMPage() {
   const [loading, setLoading] = useState(true);
@@ -20,9 +21,9 @@ export default function CRMPage() {
   useEffect(() => {
     async function loadContacts() {
       try {
-        // @ts-ignore - Tabela sw_ criada dinamicamente
+        // @ts-ignore - Tabela sw_ substituída pela canônica
         const { data, error } = await supabase
-          .from('sw_contacts')
+          .from('leads')
           .select('*')
           .order('created_at', { ascending: false });
 

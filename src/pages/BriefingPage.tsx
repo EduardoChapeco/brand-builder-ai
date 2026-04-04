@@ -44,7 +44,7 @@ const EMPTY_FORM: BriefingForm = {
 };
 
 export default function BriefingPage() {
-  const { workspace, briefing: wsBriefing, refreshBriefing } = useWorkspace();
+  const { workspace, briefing: wsBriefing, refetch } = useWorkspace();
   const [form, setForm] = useState<BriefingForm>(EMPTY_FORM);
   const [isSaving, setIsSaving] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -54,9 +54,9 @@ export default function BriefingPage() {
     
     setForm({
       ...EMPTY_FORM,
-      ...wsBriefing,
-      content_pillars: Array.isArray(wsBriefing.content_pillars) ? (wsBriefing.content_pillars as unknown as string[]) : [],
-      keywords: Array.isArray(wsBriefing.keywords) ? (wsBriefing.keywords as unknown as string[]) : [],
+      ...wsBriefing.content,
+      content_pillars: Array.isArray(wsBriefing.content?.content_pillars) ? (wsBriefing.content?.content_pillars as unknown as string[]) : [],
+      keywords: Array.isArray(wsBriefing.content?.keywords) ? (wsBriefing.content?.keywords as unknown as string[]) : [],
     });
   }, [wsBriefing]);
 
@@ -104,17 +104,17 @@ export default function BriefingPage() {
       };
 
       if (wsBriefing) {
-        const { error } = await fromTable('sw_briefings')
+        const { error } = await fromTable('briefings')
           .update(swPayload)
           .eq('workspace_id', workspace.id);
         if (error) throw error;
       } else {
-        const { error } = await fromTable('sw_briefings').insert(swPayload);
+        const { error } = await fromTable('briefings').insert(swPayload);
         if (error) throw error;
       }
 
       setForm(prev => ({ ...prev, completeness_score: score }));
-      await refreshBriefing();
+      await refetch();
       toast.success('DNA Estratégico salvo com sucesso!');
     } catch (error) {
       console.error(error);

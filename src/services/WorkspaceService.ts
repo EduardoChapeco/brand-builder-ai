@@ -16,28 +16,30 @@ export const WorkspaceService = {
   async getSummary(workspaceId: string): Promise<WorkspaceStats> {
     try {
       // 1. Contagem de Sites
-      const { count: sc } = await fromTable('sw_sites')
+      const { count: sc } = await fromTable('publications')
         .select('*', { count: 'exact', head: true })
+        .eq('type', 'site')
         .eq('workspace_id', workspaceId);
 
       // 2. Contagem de Bio Links
-      const { count: blc } = await fromTable('sw_biolinks')
+      const { count: blc } = await fromTable('publications')
         .select('*', { count: 'exact', head: true })
+        .eq('type', 'biolink')
         .eq('workspace_id', workspaceId);
 
       // 3. Contagem de Leads
-      const { count: lc } = await fromTable('sw_leads')
+      const { count: lc } = await fromTable('leads')
         .select('*', { count: 'exact', head: true })
         .eq('workspace_id', workspaceId);
 
       // 4. Status de Briefing
-      const { data: brief } = await fromTable('sw_briefings')
+      const { data: brief } = await fromTable('briefings')
         .select('completeness_score')
         .eq('workspace_id', workspaceId)
         .maybeSingle();
 
       // 5. Status de Brand Kit
-      const { data: bk } = await fromTable('sw_brand_kits')
+      const { data: bk } = await fromTable('brand_kits')
         .select('id')
         .eq('workspace_id', workspaceId)
         .maybeSingle();

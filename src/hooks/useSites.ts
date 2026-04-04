@@ -31,13 +31,27 @@ export function useSites(workspaceId: string | null): UseSitesReturn {
 
     try {
       const { data, error: dbErr } = await supabase
-        .from('sw_sites')
-        .select('id, workspace_id, name, slug, status, domain, favicon_url, seo, settings, published_at, created_by, created_at, updated_at')
+        .from('publications')
+        .select('id, workspace_id, name, slug, status, config, seo, settings, published_at, created_at, updated_at')
         .eq('workspace_id', workspaceId)
+        .eq('type', 'site')
         .order('created_at', { ascending: false });
 
       if (dbErr) throw dbErr;
-      setSites(data as SwSite[] ?? []);
+      setSites(data?.map(d => ({
+        id: d.id,
+        workspace_id: d.workspace_id,
+        name: d.name,
+        slug: d.slug ?? '',
+        status: d.status,
+        domain: (d.config as any)?.domain ?? null,
+        favicon_url: (d.config as any)?.favicon_url ?? null,
+        seo: d.seo ?? {},
+        settings: d.settings ?? {},
+        published_at: d.published_at,
+        created_at: d.created_at,
+        updated_at: d.updated_at
+      })) as any[] ?? []);
     } catch (err) {
       const code = 'ERR_SITE_LOAD_001';
       const message = err instanceof Error ? err.message : String(err);
@@ -66,13 +80,13 @@ export function useSites(workspaceId: string | null): UseSitesReturn {
       const { data: { user } } = await supabase.auth.getUser();
 
       const { data, error: dbErr } = await supabase
-        .from('sw_sites')
+        .from('publications')
         .insert({
           workspace_id: workspaceId,
+          type: 'site',
           name,
           slug,
           status: 'draft',
-          created_by: user?.id ?? null,
         })
         .select()
         .single();
