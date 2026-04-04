@@ -75,7 +75,7 @@ SwTextarea.displayName = 'SwTextarea';
 
 interface SwBadgeProps {
   children: React.ReactNode;
-  variant?: 'draft' | 'pub' | 'error' | 'warning' | 'accent' | 'outline' | 'ghost';
+  variant?: 'draft' | 'pub' | 'error' | 'warning' | 'accent' | 'outline' | 'ghost' | 'brand';
   className?: string;
 }
 
@@ -87,7 +87,8 @@ export const SwBadge = ({ children, variant = 'draft', className }: SwBadgeProps
     warning: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
     accent: 'bg-[#3b82f6]/10 text-[#3b82f6] border-[#3b82f6]/20',
     outline: 'bg-transparent border-white/20 text-stone-300',
-    ghost: 'bg-transparent border-transparent text-stone-500'
+    ghost: 'bg-transparent border-transparent text-stone-500',
+    brand: 'bg-violet-500/10 text-violet-400 border-violet-500/20',
   };
 
   return (

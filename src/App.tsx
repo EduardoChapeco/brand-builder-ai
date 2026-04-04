@@ -4,6 +4,7 @@ import AppShell from '@/components/AppShell';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { WorkspaceProvider } from '@/contexts/WorkspaceContext';
+import { ErrorBoundary } from '@/components/shared/ErrorBoundary';
 import AdminDashboardPage from '@/pages/admin/AdminDashboardPage';
 import AdminSystemLogsPage from '@/pages/admin/AdminSystemLogsPage';
 import AdminUsersPage from '@/pages/admin/AdminUsersPage';
@@ -53,10 +54,11 @@ const queryClient = new QueryClient({
 });
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster position="top-right" richColors />
-      <BrowserRouter>
+  <ErrorBoundary module="app">
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster position="top-right" richColors />
+        <BrowserRouter>
         <Routes>
           {/* Rotas públicas */}
           <Route path="/" element={<Navigate to="/workspaces" replace />} />
@@ -151,9 +153,10 @@ const App = () => (
           {/* 404 global */}
           <Route path="*" element={<NotFound />} />
         </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;

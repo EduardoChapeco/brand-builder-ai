@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
-import { Users, Search, Filter, Mail, Phone, ExternalLink, MoreVertical, Plus, Zap, UserCheck, UserMinus, Clock, Sparkles } from 'lucide-react';
+import { Users, Search, Filter, Mail, Phone, MoreVertical, Plus, Zap, UserCheck, Clock, Sparkles } from 'lucide-react';
 import { SwButton, SwInput, SwBadge, SwCard, SwSpinner } from '@/components/shared/SwComponents';
 import { SwHelpSheet } from '@/components/shared/SwHelpSheet';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { supabase } from '@/lib/supabase';
+import { logError } from '@/lib/error-logger';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { cn } from '@/lib/utils';
 
 export default function CRMPage() {
+  const { workspace } = useWorkspace();
   const [loading, setLoading] = useState(true);
   const [contacts, setContacts] = useState<any[]>([]);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
@@ -19,24 +21,31 @@ export default function CRMPage() {
   ];
 
   useEffect(() => {
+    if (!workspace?.id) return;
     async function loadContacts() {
       try {
-        // @ts-ignore - Tabela sw_ substituída pela canônica
         const { data, error } = await supabase
           .from('leads')
           .select('*')
+          .eq('workspace_id', workspace!.id)
           .order('created_at', { ascending: false });
 
         if (error) throw error;
         setContacts(data || []);
       } catch (err) {
-        console.error('Erro ao carregar contatos:', err);
+        await logError({
+          code: 'ERR_CRM_LOAD_001',
+          module: 'crm',
+          message: 'Falha ao carregar leads do CRM',
+          detail: { error: String(err) },
+          workspaceId: workspace?.id,
+        });
       } finally {
         setLoading(false);
       }
     }
     loadContacts();
-  }, []);
+  }, [workspace?.id]);
 
   const getStatusColor = (status: string) => {
     switch (status) {

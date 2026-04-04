@@ -7,6 +7,7 @@ import SwStatusBadge from '@/components/shared/SwStatusBadge';
 import { SwCard } from '@/components/shared/SwComponents';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { fromTable } from '@/integrations/supabase/db-custom';
+import { logError } from '@/lib/error-logger';
 
 type DashboardCounts = {
   sites: number;
@@ -61,7 +62,13 @@ export default function DashboardPage() {
         if (!active) return;
         setCounts({ sites, biolinks, posts, videos, agents });
       } catch (error) {
-        console.error(error);
+        await logError({
+          code: 'ERR_DASHBOARD_LOAD_001',
+          module: 'dashboard',
+          message: 'Falha ao carregar métricas do painel',
+          detail: { error: String(error) },
+          workspaceId: workspace?.id,
+        });
         if (!active) return;
         setCounts(INITIAL_COUNTS);
       } finally {
@@ -77,14 +84,14 @@ export default function DashboardPage() {
 
   const completenessScore = useMemo(() => {
     let score = 0;
-    if (brandKit?.brand_name || briefing?.content?.company_name) score += 20;
+    if (workspace?.name || briefing?.content?.company_name) score += 20;
     if (brandKit?.colors?.primary) score += 20;
     if (brandKit?.fonts?.heading) score += 15;
     if (briefing?.content?.segment) score += 15;
     if (briefing?.content?.target_audience) score += 15;
     if (briefing?.content?.brand_dna) score += 15;
     return score;
-  }, [brandKit, briefing]);
+  }, [brandKit, briefing, workspace?.name]);
 
   const priorities = [
     counts.sites === 0 ? 'Criar o primeiro site do workspace em publicações.' : null,
@@ -133,14 +140,14 @@ export default function DashboardPage() {
                   <p className="text-sm font-medium text-[var(--text-primary)]">Briefing</p>
                   <p className="mt-1 text-sm text-[var(--text-secondary)]">
                     {briefing
-                      ? `Status atual: ${(briefing as any).status || 'ativo'}. Score de completude: ${(briefing as any).completeness_score || 0}%.`
+                      ? `Briefing ativo. Score de completude: ${completenessScore}%.`
                       : 'O briefing principal ainda não foi encontrado em briefings.'}
                   </p>
                 </SwCard>
                 <SwCard elevated className="px-4 py-3">
                   <p className="text-sm font-medium text-[var(--text-primary)]">Workspace</p>
                   <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                    Fuso: {(workspace as any)?.timezone || 'America/Sao_Paulo'} · Idioma: {(workspace as any)?.locale || 'pt-BR'}
+                    Fuso: America/Sao_Paulo · Idioma: pt-BR
                   </p>
                 </SwCard>
               </div>
