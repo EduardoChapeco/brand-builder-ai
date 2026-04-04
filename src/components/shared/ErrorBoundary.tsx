@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { logError } from '@/lib/errorLogger';
+import { logError } from '../../lib/error-logger';
 import { ErrorBadge } from './ErrorBadge';
 import { AlertTriangle } from 'lucide-react';
 
