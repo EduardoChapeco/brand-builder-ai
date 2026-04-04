@@ -34,7 +34,7 @@ const WorkspacesPage = () => {
         }
 
         // 1. Buscar memberships do usuário
-        const { data: memberships, error: mErr } = await fromTable('sw_workspace_members')
+        const { data: memberships, error: mErr } = await fromTable('workspace_members')
           .select('workspace_id')
           .eq('user_id', user.id);
 
@@ -48,11 +48,11 @@ const WorkspacesPage = () => {
 
         // 2. Buscar workspaces + brand kits em paralelo
         const [wsRes, bkRes] = await Promise.all([
-          fromTable('sw_workspaces')
+          fromTable('workspaces')
             .select('id,name,slug,avatar_url,created_at')
             .in('id', wsIds)
             .order('created_at', { ascending: false }),
-          fromTable('sw_brand_kits')
+          fromTable('brand_kits')
             .select('workspace_id,colors')
             .in('workspace_id', wsIds),
         ]);
