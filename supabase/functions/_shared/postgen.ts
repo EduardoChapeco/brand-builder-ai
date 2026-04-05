@@ -65,12 +65,11 @@ export const listWorkspaceKeys = async (
   providers: string[],
 ) => {
   const { data, error } = await supabase
-    .from("api_keys")
-    .select("id,provider,alias,key_value,key_preview,key_encrypted,calls_today,daily_limit,is_active,last_429_at")
+    .from("workspace_api_keys")
+    .select("id,provider:service,alias:label,key_value,key_preview,key_encrypted,calls_today,daily_limit,is_active,last_429_at")
     .eq("workspace_id", workspaceId)
     .eq("is_active", true)
-    .in("provider", providers)
-    .is("deleted_at", null)
+    .in("service", providers)
     .order("calls_today", { ascending: true });
 
   if (error) throw error;
@@ -119,7 +118,7 @@ export const markKeyUsage = async (
 ) => {
   const nextCalls = options.exhausted ? Math.max(key.daily_limit || 0, (key.calls_today || 0) + 1) : (key.calls_today || 0) + 1;
   await supabase
-    .from("api_keys")
+    .from("workspace_api_keys")
     .update({
       calls_today: nextCalls,
       last_used_at: new Date().toISOString(),

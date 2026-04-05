@@ -62,12 +62,11 @@ export async function getNextKey(
   supabase: ReturnType<typeof createClient>,
 ): Promise<{ keyId: string; keyDecrypted: string; keyPreview: string | null } | null> {
   const { data, error } = await supabase
-    .from("api_keys")
-    .select("id,provider,alias,key_value,key_encrypted,key_preview,calls_today,daily_limit,last_429_at,is_active")
+    .from("workspace_api_keys")
+    .select("id,provider:service,alias:label,key_value,key_encrypted,key_preview,calls_today,daily_limit,last_429_at,is_active")
     .eq("workspace_id", opts.workspaceId)
-    .eq("provider", opts.provider)
+    .eq("service", opts.provider)
     .eq("is_active", true)
-    .is("deleted_at", null)
     .order("calls_today", { ascending: true });
 
   if (error) throw error;
@@ -84,7 +83,7 @@ export async function getNextKey(
     if (!decrypted) continue;
 
     void supabase
-      .from("api_keys")
+      .from("workspace_api_keys")
       .update({
         calls_today: (key.calls_today || 0) + 1,
         last_used_at: new Date().toISOString(),
@@ -106,7 +105,7 @@ export async function markKeyAs429(
   supabase: ReturnType<typeof createClient>,
 ): Promise<void> {
   await supabase
-    .from("api_keys")
+    .from("workspace_api_keys")
     .update({ last_429_at: new Date().toISOString() })
     .eq("id", keyId);
 }

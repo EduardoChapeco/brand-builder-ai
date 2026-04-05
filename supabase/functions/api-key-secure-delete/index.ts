@@ -27,11 +27,8 @@ serve(async (req: Request) => {
     }
 
     const { error } = await supabase
-      .from("api_keys")
-      .update({
-        deleted_at: new Date().toISOString(),
-        is_active: false,
-      })
+      .from("workspace_api_keys")
+      .delete()
       .eq("id", keyId)
       .eq("workspace_id", workspaceId);
 

@@ -22,7 +22,7 @@ const markKeyError = async (
   exhausted = false,
 ) => {
   await supabase
-    .from("api_keys")
+    .from("workspace_api_keys")
     .update({
       calls_today: exhausted ? 99999 : undefined,
       last_error: message.slice(0, 500),

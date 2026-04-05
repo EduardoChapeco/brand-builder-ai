@@ -108,7 +108,7 @@ const fetchArticleContext = async (
     const title = payload?.data?.metadata?.title || payload?.metadata?.title || null;
 
     await supabase
-      .from("api_keys")
+      .from("workspace_api_keys")
       .update({
         last_used_at: new Date().toISOString(),
       })
