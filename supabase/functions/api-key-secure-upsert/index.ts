@@ -1,56 +1,92 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { corsHeaders, createServiceClient, safeJsonResponse } from "../_shared/postgen.ts";
-import { validateWorkspaceAdminAccess } from "../_shared/workspace-access.ts";
+/**
+ * api-key-secure-upsert — SDD-1.0
+ *
+ * Armazena chaves de API do workspace de forma segura.
+ * Alinhado com schema real: usa 'service' e 'label' (não 'provider'/'alias').
+ *
+ * Body: { workspace_id, service, label, key_value }
+ */
+import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
+import { createClient } from 'jsr:@supabase/supabase-js@2';
 
-serve(async (req: Request) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
+Deno.serve(async (req: Request) => {
+  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
   try {
-    const body = (await req.json()) as {
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    );
+
+    // Validar JWT do usuário
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Token de autorização é obrigatório.' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser(
+      authHeader.replace('Bearer ', '')
+    );
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Usuário não autenticado.' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const body = await req.json() as {
       workspace_id?: string;
-      provider?: string;
-      alias?: string | null;
+      service?: string;
+      label?: string;
       key_value?: string;
-      daily_limit?: number;
-      monthly_limit?: number;
     };
 
-    const workspaceId = typeof body.workspace_id === "string" ? body.workspace_id : "";
-    const provider = typeof body.provider === "string" ? body.provider.trim() : "";
-    const keyValue = typeof body.key_value === "string" ? body.key_value.trim() : "";
+    const { workspace_id, service, label, key_value } = body;
 
-    if (!workspaceId || !provider || !keyValue) {
-      return safeJsonResponse({ error: "workspace_id, provider e key_value sao obrigatorios." }, 400);
+    if (!workspace_id || !service || !key_value) {
+      return new Response(JSON.stringify({ error: 'workspace_id, service e key_value são obrigatórios.' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    const supabase = createServiceClient();
-    const user = await validateWorkspaceAdminAccess(req, supabase, workspaceId);
-    if (!user) {
-      return safeJsonResponse({ error: "Acesso negado ao workspace." }, 403);
+    // Verificar que o usuário é membro do workspace
+    const { data: member } = await supabase
+      .from('workspace_members')
+      .select('role')
+      .eq('workspace_id', workspace_id)
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (!member) {
+      return new Response(JSON.stringify({ error: 'Acesso negado ao workspace.' }), {
+        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    const appSecret = Deno.env.get("APP_ENCRYPTION_SECRET");
-    if (!appSecret) {
-      return safeJsonResponse({ error: "APP_ENCRYPTION_SECRET nao configurado." }, 500);
-    }
-
-    const { data, error } = await supabase.rpc("secure_store_api_key", {
-      p_workspace_id: workspaceId,
-      p_provider: provider,
-      p_alias: typeof body.alias === "string" ? body.alias : null,
-      p_key_value: keyValue,
-      p_app_secret: appSecret,
-      p_daily_limit: typeof body.daily_limit === "number" ? body.daily_limit : 200,
-      p_monthly_limit: typeof body.monthly_limit === "number" ? body.monthly_limit : 5000,
+    // Chamar stored procedure segura
+    const { data, error } = await supabase.rpc('secure_store_api_key', {
+      p_workspace_id: workspace_id,
+      p_service: service,
+      p_label: label || service,
+      p_key_value: key_value,
     });
 
     if (error) throw error;
 
-    const record = Array.isArray(data) ? data[0] : data;
-    return safeJsonResponse(record ?? { ok: true });
-  } catch (error) {
-    return safeJsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+    return new Response(JSON.stringify(data), {
+      status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  } catch (err) {
+    console.error('[api-key-secure-upsert]', err);
+    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), {
+      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 });

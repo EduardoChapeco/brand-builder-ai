@@ -2,21 +2,16 @@ import { supabase } from '@/integrations/supabase/client';
 
 export type SecureApiKeyRecord = {
   id: string;
-  provider: string;
-  alias: string | null;
-  key_preview: string | null;
-  calls_today: number | null;
-  daily_limit: number | null;
-  is_active: boolean | null;
+  service: string;   // coluna real = 'service' (não 'provider')
+  label: string;     // coluna real = 'label' (não 'alias')
+  is_active: boolean;
 };
 
 type SecureUpsertPayload = {
   workspaceId: string;
-  provider: string;
-  alias: string | null;
+  service: string;   // renomeado de 'provider' para 'service'
+  label: string;     // renomeado de 'alias' para 'label'
   keyValue: string;
-  dailyLimit: number;
-  monthlyLimit?: number;
 };
 
 type SecureDeletePayload = {
@@ -28,11 +23,9 @@ export async function createSecureApiKey(payload: SecureUpsertPayload): Promise<
   const { data, error } = await supabase.functions.invoke('api-key-secure-upsert', {
     body: {
       workspace_id: payload.workspaceId,
-      provider: payload.provider,
-      alias: payload.alias,
+      service: payload.service,
+      label: payload.label,
       key_value: payload.keyValue,
-      daily_limit: payload.dailyLimit,
-      monthly_limit: payload.monthlyLimit ?? 5000,
     },
   });
 

@@ -234,6 +234,7 @@ export interface PublicationSection {
   styles: Record<string, unknown>;
   is_active: boolean;
   created_at: string;
+  updated_at: string;   // ✅ confirmado no banco live (20260404)
 }
 
 // ── Blog Article ─────────────────────────────────────────────
