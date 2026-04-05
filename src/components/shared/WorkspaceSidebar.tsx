@@ -46,7 +46,7 @@ const WorkspaceSidebar = () => {
           </div>
           {!collapsed && (
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-bold text-white tracking-tight">{workspace?.name || "Simwork"}</p>
+              <p className="truncate text-sm font-bold text-white tracking-tight">{workspace?.name || "Carregando..."}</p>
               <div className="flex items-center gap-1">
                  <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
                  <p className="truncate text-[9px] text-stone-500 font-bold uppercase tracking-widest">Workspace Ativo</p>

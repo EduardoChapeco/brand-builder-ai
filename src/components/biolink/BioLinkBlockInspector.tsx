@@ -3,6 +3,7 @@ import { SwInput, SwButton, SwCard, SwSelect } from "@/components/shared/SwCompo
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Palette, Link as LinkIcon, Type, Image as ImageIcon, Trash2, Layout } from "lucide-react";
+import { MediaUploader } from "@/components/shared/MediaUploader";
 
 interface BioLinkBlockInspectorProps {
   block: BioLinkBlock;
@@ -51,33 +52,44 @@ export function BioLinkBlockInspector({ block, updateBlock, deleteBlock }: BioLi
             />
           </div>
 
-          {(block.type === 'link' || block.type === 'button') && (
-            <div>
-              <Label className="text-xs text-stone-400 mb-1.5 block">URL de Destino</Label>
-              <div className="relative">
-                <LinkIcon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-500" />
-                <SwInput 
-                  className="pl-10"
-                  value={block.config.url || ''} 
-                  onChange={(e: any) => updateConfig({ url: e.target.value })}
-                  placeholder="https://sua-marca.com/oferta"
-                />
+          {(block.type === 'link_simple' || block.type === 'link_thumbnail') && (
+            <div className="space-y-4">
+              <div>
+                <Label className="text-xs text-stone-400 mb-1.5 block">URL de Destino</Label>
+                <div className="relative">
+                  <LinkIcon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-500" />
+                  <SwInput 
+                    className="pl-10"
+                    value={block.config.url || ''} 
+                    onChange={(e: any) => updateConfig({ url: e.target.value })}
+                    placeholder="https://sua-marca.com/oferta"
+                  />
+                </div>
               </div>
+
+              {block.type === 'link_thumbnail' && (
+                <div className="space-y-2">
+                  <Label className="text-xs text-stone-400">Miniatura (Thumbnail)</Label>
+                  <MediaUploader
+                    value={block.config.thumbnailUrl || ''}
+                    onChange={(url) => updateConfig({ thumbnailUrl: url })}
+                    folderPath="biolink"
+                    label="Upload Miniatura"
+                  />
+                </div>
+              )}
             </div>
           )}
 
           {block.type === 'image' && (
-            <div>
-              <Label className="text-xs text-stone-400 mb-1.5 block">URL da Imagem</Label>
-              <div className="relative">
-                <ImageIcon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-500" />
-                <SwInput 
-                  className="pl-10"
-                  value={block.config.imageUrl || ''} 
-                  onChange={(e: any) => updateConfig({ imageUrl: e.target.value })}
-                  placeholder="https://..."
-                />
-              </div>
+            <div className="space-y-2">
+              <Label className="text-xs text-stone-400">Conteúdo da Imagem</Label>
+              <MediaUploader
+                value={block.config.imageUrl || ''}
+                onChange={(url) => updateConfig({ imageUrl: url })}
+                folderPath="biolink"
+                label="Fazer upload de imagem"
+              />
             </div>
           )}
         </div>

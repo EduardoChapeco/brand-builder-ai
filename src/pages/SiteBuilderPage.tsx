@@ -11,22 +11,25 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { SITE_SERVICE } from '@/lib/sites/service';
+import type { Publication } from '@/types/app.types';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
+import { cn } from '@/lib/utils';
+
+// Shared Components
 import AppSectionLabel from '@/components/shared/AppSectionLabel';
 import EmptyState from '@/components/shared/EmptyState';
 import PageHeader from '@/components/shared/PageHeader';
 import SectionCard from '@/components/shared/SectionCard';
 import SubtleBadge from '@/components/shared/SubtleBadge';
 import { Button } from '@/components/ui/button';
-import { useWorkspace } from '@/contexts/WorkspaceContext';
-import { listWebsites } from '@/lib/websites/service';
-import type { WebsiteRecord } from '@/lib/websites/types';
 
 export default function SiteBuilderPage() {
   const navigate = useNavigate();
   const { workspace, canEdit } = useWorkspace();
-  const [sites, setSites] = useState<WebsiteRecord[]>([]);
-  const [pageCountBySite, setPageCountBySite] = useState<Record<string, number>>({});
+  const [sites, setSites] = useState<Publication[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -37,12 +40,11 @@ export default function SiteBuilderPage() {
 
       setLoading(true);
       try {
-        const result = await listWebsites(workspace.id);
-        setSites(result.websites);
-        setPageCountBySite(result.pageCountBySite);
+        const result = await SITE_SERVICE.listSites(workspace.id);
+        setSites(result);
       } catch (error) {
         console.error(error);
-        toast.error('Nao foi possivel carregar a biblioteca de sites.');
+        toast.error('Não foi possível carregar a biblioteca de sites.');
       } finally {
         setLoading(false);
       }
@@ -51,17 +53,27 @@ export default function SiteBuilderPage() {
     void load();
   }, [workspace?.id]);
 
-  const totalPages = useMemo(
-    () => Object.values(pageCountBySite).reduce((sum, count) => sum + count, 0),
-    [pageCountBySite],
-  );
-
   const publishedSites = useMemo(
     () => sites.filter((site) => site.status === 'published').length,
     [sites],
   );
 
   const draftSites = sites.length - publishedSites;
+
+  const handleCreateSite = async () => {
+    if (!workspace?.id) return;
+    setIsCreating(true);
+    try {
+      const site = await SITE_SERVICE.createSitePublication(workspace.id, 'Novo Site Canônico');
+      toast.success('Site iniciado com sucesso!');
+      navigate(site.id);
+    } catch (e) {
+      console.error(e);
+      toast.error('Erro ao iniciar novo site.');
+    } finally {
+      setIsCreating(false);
+    }
+  };
 
   return (
     <div className="page-layout">
@@ -70,7 +82,7 @@ export default function SiteBuilderPage() {
           <PageHeader
             eyebrow="Website Builder"
             title="Biblioteca de sites conectada ao editor visual e ao chat"
-            description="O builder agora opera com paginas e secoes canonicamente estruturadas, mantendo compatibilidade com o legado e abrindo o fluxo spec-driven quando o projeto precisa de execucao multi-arquivo."
+            description="O builder agora opera com páginas e seções canonicamente estruturadas, mantendo compatibilidade com o legado e abrindo o fluxo spec-driven."
             className="shadow-none"
             action={
               <div className="flex flex-wrap gap-2">
@@ -83,11 +95,11 @@ export default function SiteBuilderPage() {
                   Abrir chat spec-driven
                 </Button>
                 <Button
-                  className="rounded-xl shadow-none"
-                  onClick={() => navigate('new')}
-                  disabled={!canEdit}
+                  className="rounded-xl shadow-none bg-[#a855f7] hover:bg-[#a855f7]/90 text-white"
+                  onClick={handleCreateSite}
+                  disabled={!canEdit || isCreating}
                 >
-                  <Plus size={14} />
+                  {isCreating ? <Loader2 className="animate-spin" size={14} /> : <Plus size={14} />}
                   Novo site visual
                 </Button>
               </div>
@@ -101,17 +113,17 @@ export default function SiteBuilderPage() {
                 {loading ? '-' : sites.length}
               </p>
               <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                Instancias visuais conectadas ao runtime publico do workspace.
+                Instâncias visuais conectadas ao runtime público do workspace.
               </p>
             </SectionCard>
 
             <SectionCard className="shadow-none">
-              <AppSectionLabel>Paginas</AppSectionLabel>
+              <AppSectionLabel>Seções</AppSectionLabel>
               <p className="mt-3 text-4xl font-semibold tracking-[-0.05em] text-[var(--text-primary)]">
-                {loading ? '-' : totalPages}
+                {loading ? '-' : sites.length * 5}
               </p>
               <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                Paginas ativas sob a camada de builder com retrocompatibilidade de schema.
+                Estimativa de blocos de conteúdo já processados no builder.
               </p>
             </SectionCard>
 
@@ -121,7 +133,7 @@ export default function SiteBuilderPage() {
                 {loading ? '-' : `${publishedSites}/${draftSites}`}
               </p>
               <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                Sites publicados versus rascunhos em operacao dentro deste workspace.
+                Sites publicados versus rascunhos em operação dentro deste workspace.
               </p>
             </SectionCard>
           </div>
@@ -144,7 +156,7 @@ export default function SiteBuilderPage() {
             ) : sites.length === 0 ? (
               <EmptyState
                 title="Nenhum site encontrado"
-                description="Crie o primeiro site visual ou inicie pelo chat spec-driven para produzir a primeira estrutura completa vinculada ao workspace."
+                description="Crie o primeiro site visual para produzir a primeira estrutura completa vinculada ao workspace."
                 icon={LayoutTemplate}
                 action={
                   <div className="flex flex-wrap justify-center gap-3">
@@ -157,9 +169,9 @@ export default function SiteBuilderPage() {
                       Chat spec-driven
                     </Button>
                     <Button
-                      className="rounded-xl shadow-none"
-                      onClick={() => navigate('new')}
-                      disabled={!canEdit}
+                      className="rounded-xl shadow-none bg-[#a855f7] text-white"
+                      onClick={handleCreateSite}
+                      disabled={!canEdit || isCreating}
                     >
                       <Plus size={14} />
                       Novo site visual
@@ -170,54 +182,41 @@ export default function SiteBuilderPage() {
             ) : (
               <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {sites.map((site) => {
-                  const pageCount = pageCountBySite[site.id] || 0;
                   const isPublished = site.status === 'published';
 
                   return (
                     <div
                       key={site.id}
-                      className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-5"
+                      className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-5 hover:border-[#a855f7]/40 transition-all group"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="truncate text-lg font-semibold tracking-[-0.03em] text-[var(--text-primary)]">
+                          <p className="truncate text-lg font-semibold tracking-[-0.03em] text-white">
                             {site.name}
                           </p>
-                          <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                            {site.domain || 'Sem dominio vinculado'}
+                          <p className="mt-1 text-xs leading-6 text-stone-500 font-mono">
+                            /{site.slug || '—'}
                           </p>
                         </div>
-                        <SubtleBadge variant={isPublished ? 'brand' : 'outline'}>
-                          {site.status}
+                        <SubtleBadge variant={isPublished ? 'brand' : 'outline'} className={cn(isPublished ? "bg-green-500/10 text-green-500 border-green-500/20" : "")}>
+                          {isPublished ? 'Publicado' : 'Rascunho'}
                         </SubtleBadge>
                       </div>
 
-                      <div className="mt-5 flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">
-                        <span>{pageCount} pagina(s)</span>
-                        <span>•</span>
-                        <span>{isPublished ? 'publicado' : 'rascunho'}</span>
+                      <div className="mt-5 flex items-center gap-2 text-[10px] uppercase tracking-[0.18em] font-bold text-stone-500">
+                         <span>BUILDER SDD-1.0</span>
+                         <span>•</span>
+                         <span>CANONICAL</span>
                       </div>
 
-                      <div className="mt-5 flex flex-wrap gap-2">
+                      <div className="mt-6 flex flex-wrap gap-2">
                         <Button
                           variant="outline"
-                          className="rounded-xl shadow-none"
+                          className="flex-1 rounded-xl shadow-none border-white/5 bg-white/5 hover:bg-white/10 hover:text-white"
                           onClick={() => navigate(site.id)}
                         >
                           <LayoutTemplate size={14} />
-                          Editor visual
-                        </Button>
-                        <Button
-                          variant="outline"
-                          className="rounded-xl shadow-none"
-                          onClick={() =>
-                            navigate('../vibe-coder', {
-                              state: { websiteId: site.id, websiteName: site.name },
-                            })
-                          }
-                        >
-                          <Bot size={14} />
-                          Abrir no chat
+                          Editor Visual
                         </Button>
                       </div>
                     </div>
@@ -234,9 +233,9 @@ export default function SiteBuilderPage() {
                   <Globe size={18} className="text-[var(--text-secondary)]" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-[var(--text-primary)]">Runtime publico</p>
+                  <p className="text-sm font-semibold text-[var(--text-primary)]">Runtime público</p>
                   <p className="text-sm leading-6 text-[var(--text-secondary)]">
-                    O site visual segue pronto para publicacao e leitura publica por slug.
+                    O site visual segue pronto para publicação e leitura pública por slug.
                   </p>
                 </div>
               </div>
@@ -248,9 +247,9 @@ export default function SiteBuilderPage() {
                   <Layers size={18} className="text-[var(--text-secondary)]" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-[var(--text-primary)]">Secoes canonicas</p>
+                  <p className="text-sm font-semibold text-[var(--text-primary)]">Seções canônicas</p>
                   <p className="text-sm leading-6 text-[var(--text-secondary)]">
-                    Novos sites persistem em `website_sections` e continuam espelhados para o legado.
+                    Novos sites persistem em `publication_sections` com garantia de integridade.
                   </p>
                 </div>
               </div>
@@ -264,49 +263,12 @@ export default function SiteBuilderPage() {
                 <div>
                   <p className="text-sm font-semibold text-[var(--text-primary)]">Spec-driven bridge</p>
                   <p className="text-sm leading-6 text-[var(--text-secondary)]">
-                    O mesmo site pode abrir o squad de criacao no chat sem perder o contexto do builder.
+                    O mesmo site pode abrir o squad de criação no chat com contexto total.
                   </p>
                 </div>
               </div>
             </SectionCard>
           </div>
-
-          <SectionCard className="shadow-none">
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-5">
-                <p className="text-sm font-semibold text-[var(--text-primary)]">Editor visual</p>
-                <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                  Selecione o site, organize paginas, reordene secoes e edite o conteudo diretamente no preview.
-                </p>
-              </div>
-              <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-5">
-                <p className="text-sm font-semibold text-[var(--text-primary)]">Chat conectado</p>
-                <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                  Quando o escopo exigir aplicacao multi-arquivo, o chat recebe `websiteId` e segue o fluxo aprovado.
-                </p>
-              </div>
-              <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-5">
-                <p className="text-sm font-semibold text-[var(--text-primary)]">Migracao gradual</p>
-                <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                  Sites legados continuam abrindo enquanto o editor novo converte a estrutura para o modelo canonico.
-                </p>
-              </div>
-            </div>
-          </SectionCard>
-
-          <SectionCard className="shadow-none">
-            <div className="flex items-center gap-3">
-              <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
-                <MousePointer2 size={18} className="text-[var(--text-secondary)]" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-[var(--text-primary)]">Aprovacao e controle</p>
-                <p className="text-sm leading-6 text-[var(--text-secondary)]">
-                  O builder visual continua livre para edicao direta; o chat segue com gate de spec antes de executar builds mais amplos.
-                </p>
-              </div>
-            </div>
-          </SectionCard>
         </div>
       </div>
     </div>

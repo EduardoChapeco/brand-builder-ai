@@ -111,7 +111,7 @@ export default function DashboardPage() {
         <div className="page-inner space-y-6 py-6">
           <PageHeader
             eyebrow="Painel"
-            title={workspace?.name || 'Simwork'}
+            title={workspace?.name || 'Carregando...'}
             description="Visão operacional do workspace, com progresso de configuração e status da camada Simwork."
             action={<SwStatusBadge variant="brand">{role ? `Perfil ${role}` : 'Sem perfil'}</SwStatusBadge>}
           />

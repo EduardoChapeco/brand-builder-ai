@@ -16,6 +16,13 @@ export type BioLinkRow = Publication & {
   // Extended local state for the editor
   theme_id?: string;
   display_name?: string;
+  seo_title?: string;
+  seo_description?: string;
+  seo_image_url?: string | null;
+  meta_pixel_id?: string | null;
+  ga4_measurement_id?: string | null;
+  tiktok_pixel_id?: string | null;
+  gtm_id?: string | null;
 };
 export type BioLinkVersionRow = { id: string; created_at: string };
 
@@ -127,10 +134,20 @@ export async function loadWorkspaceBioLink(
 
   // Map config fields as extended props for the editor
   const config = bioLinkRow.config as Record<string, unknown>;
+  const seo = (bioLinkRow.seo as Record<string, unknown>) || {};
+  const pixels = (config.pixels as Record<string, unknown>) || {};
+
   const bioLink: BioLinkRow = {
     ...bioLinkRow,
     theme_id: (config.theme_id as string) || "dark",
     display_name: (config.display_name as string) || bioLinkRow.name,
+    seo_title: (seo.title as string) || "",
+    seo_description: (seo.description as string) || "",
+    seo_image_url: (seo.og_image as string) || null,
+    meta_pixel_id: (pixels.meta_pixel_id as string) || null,
+    ga4_measurement_id: (pixels.ga4_measurement_id as string) || null,
+    tiktok_pixel_id: (pixels.tiktok_pixel_id as string) || null,
+    gtm_id: (pixels.gtm_id as string) || null,
   };
 
   return { bioLink, blocks, versions: [] };
@@ -154,6 +171,18 @@ export async function saveWorkspaceBioLink(params: {
     avatar_url: (bioLink.config as Record<string, unknown>)?.avatar_url || null,
     social_links: (bioLink.config as Record<string, unknown>)?.social_links || [],
     background_config: (bioLink.config as Record<string, unknown>)?.background_config || {},
+    pixels: {
+      meta_pixel_id: bioLink.meta_pixel_id || null,
+      ga4_measurement_id: bioLink.ga4_measurement_id || null,
+      tiktok_pixel_id: bioLink.tiktok_pixel_id || null,
+      gtm_id: bioLink.gtm_id || null,      
+    }
+  };
+
+  const seoUpdate = {
+    title: bioLink.seo_title || undefined,
+    description: bioLink.seo_description || undefined,
+    og_image: bioLink.seo_image_url || undefined,
   };
 
   // 1. Upsert the publication row
@@ -165,6 +194,7 @@ export async function saveWorkspaceBioLink(params: {
         name: bioLink.name,
         slug: slugifyBioLink(bioLink.slug || ""),
         config: configUpdate,
+        seo: seoUpdate,
         updated_at: new Date().toISOString(),
       })
       .eq("id", bioLinkId)

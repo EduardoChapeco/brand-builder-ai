@@ -6,6 +6,7 @@ import confetti from 'canvas-confetti';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import type { Json } from '@/integrations/supabase/types';
+import { MediaUploader } from '@/components/shared/MediaUploader';
 
 const SEGMENTS = [
   'Marketing Digital',
@@ -117,6 +118,9 @@ const OnboardingPage = () => {
 
     setIsSaving(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Usuário não autenticado');
+
       const slug = form.name
         .toLowerCase()
         .normalize('NFD')
@@ -124,35 +128,72 @@ const OnboardingPage = () => {
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-+|-+$/g, '');
 
-      // 1. Cria o workspace (o Trigger no BD vai inserir vc como Dono via RLS)
+      // 1. Cria o workspace
       const { data: workspace, error: workspaceError } = await supabase
         .from('workspaces')
         .insert({
-          name: form.name,
-          slug,
+          name: form.name.trim() || 'Meu Workspace',
+          slug: slug || `ws-${Math.random().toString(36).slice(2, 7)}`,
           logo_url: form.logoUrl || null,
+          owner_id: user.id,
         })
         .select()
         .single();
 
       if (workspaceError || !workspace) throw workspaceError || new Error('Falha ao criar workspace');
 
-      // 2. Agora o usuario ja e dono. Pode inserir nos modulos.
+      // 2. Inserção manual de membro (fail-safe para o Trigger)
+      await supabase.from('workspace_members').insert({
+        workspace_id: workspace.id,
+        user_id: user.id,
+        role: 'owner'
+      });
+
+      // 3. Agora o usuario ja e dono. Pode inserir nos modulos (JSONB conforme SDD-1.0)
       await Promise.all([
         supabase.from('briefings').insert({
           workspace_id: workspace.id,
-          company: { name: form.name, segment: form.segment },
-          audience: { description: form.targetAudience },
-          voice: { tone: form.tone },
-          company_differentials: form.differentials,
-          market: { competitors: competitors as unknown as Json },
-        } as any),
+          company: { 
+            name: form.name, 
+            segment: form.segment,
+            brand_dna: form.differentials, // Usando diferenciais como DNA inicial
+            differentials: form.differentials,
+            value_proposition: `Nossa marca foca em entregar ${form.segment} com excelência para nosso público.`,
+          },
+          audience: { 
+            description: form.targetAudience,
+            personality: form.tone,
+          },
+          content: { 
+            tone_of_voice: form.tone,
+          },
+          market: { 
+            competitors: competitors as any[] 
+          },
+          completeness_score: 40,
+        }),
         supabase.from('brand_kits').insert({
           workspace_id: workspace.id,
-          colors: { primary: form.colorPrimary, secondary: form.colorSecondary },
-          fonts: { headline: form.fontHeadline },
-          logos: { main_url: form.logoUrl || null },
-          voice: { watermark: form.instagramHandle ? `@${form.instagramHandle.replace('@', '')}` : null }
+          colors: { 
+            primary: form.colorPrimary, 
+            secondary: form.colorSecondary,
+            accent: form.colorSecondary,
+            background: '#09090f',
+            text: '#ffffff',
+          },
+          fonts: { 
+            heading: form.fontHeadline,
+            body: 'Inter',
+            display: form.fontHeadline,
+            mono: 'JetBrains Mono'
+          },
+          logos: { 
+            main_url: form.logoUrl || null 
+          },
+          voice: { 
+            instagram_handle: form.instagramHandle || null,
+            watermark: form.instagramHandle ? `@${form.instagramHandle.replace('@', '')}` : null 
+          }
         }),
       ]);
 
@@ -164,7 +205,7 @@ const OnboardingPage = () => {
       });
 
       setStep(4);
-      setTimeout(() => navigate(`/workspace/${workspace.id}/painel`), 1800);
+      setTimeout(() => navigate(`/workspace/${workspace.id}/hub`), 1800);
     } catch (error) {
       console.error(error);
       toast.error(error instanceof Error ? error.message : 'Erro ao criar workspace');
@@ -235,12 +276,15 @@ const OnboardingPage = () => {
                     </option>
                   ))}
                 </select>
-                <input
-                  value={form.logoUrl}
-                  onChange={event => setField('logoUrl', event.target.value)}
-                  placeholder="URL do logo (opcional)"
-                  className="w-full px-4 py-3 rounded-xl text-sm outline-none bg-[var(--surface-2)] text-white border border-[var(--border)] focus:border-purple-500 transition-colors placeholder:text-[var(--text-muted)]"
-                />
+                <div className="mt-2">
+                  <p className="text-xs text-[var(--text-secondary)] mb-2 font-medium">Logo da Marca (Opcional)</p>
+                  <MediaUploader
+                    value={form.logoUrl}
+                    onChange={(url) => setField('logoUrl', url)}
+                    folderPath="onboarding"
+                    label="Fazer upload do Logo"
+                  />
+                </div>
               </div>
             </motion.div>
           )}
@@ -280,15 +324,15 @@ const OnboardingPage = () => {
                 <textarea
                   value={form.targetAudience}
                   onChange={event => setField('targetAudience', event.target.value)}
-                  placeholder="Descreva o publico-alvo..."
-                  rows={3}
+                  placeholder="Quem sao seus clientes ideais? (Ex: Mulheres 25-40 que buscam produtividade)"
+                  rows={2}
                   className="w-full px-4 py-3 rounded-xl text-sm resize-none outline-none bg-[var(--surface-2)] text-white border border-[var(--border)] focus:border-purple-500 transition-colors placeholder:text-[var(--text-muted)]"
                 />
 
                 <textarea
                   value={form.differentials}
                   onChange={event => setField('differentials', event.target.value)}
-                  placeholder="Principais diferenciais da marca..."
+                  placeholder="DNA e Diferenciais: O que te torna único no mercado?"
                   rows={3}
                   className="w-full px-4 py-3 rounded-xl text-sm resize-none outline-none bg-[var(--surface-2)] text-white border border-[var(--border)] focus:border-purple-500 transition-colors placeholder:text-[var(--text-muted)]"
                 />

@@ -6,6 +6,7 @@ import { fromTable } from '@/integrations/supabase/db-custom';
 import { supabase } from '@/integrations/supabase/client';
 import { SwButton, SwCard, SwInput, SwSelect } from '@/components/shared/SwComponents';
 import type { BrandKitFormFlat } from '@/types/app.types';
+import { MediaUploader } from '@/components/shared/MediaUploader';
 
 // ===================================
 // TIPAGEM LOCAL DE FORMULÁRIO
@@ -255,16 +256,16 @@ export default function BrandKitPage() {
   const updateForm = (updates: Partial<typeof EMPTY_FORM>) => setForm(f => ({ ...f, ...updates }));
 
   return (
-    <div className="flex h-full bg-[#0a0a0a] text-white overflow-hidden">
+    <div className="flex h-full bg-[var(--surface-app)] text-[var(--text-primary)] overflow-hidden">
       {/* 
         ========================================
         COLUNA 1: EDITOR (Settings)
         ========================================
       */}
-      <div className="flex-1 overflow-y-auto no-scrollbar border-r border-[#1f1f1f]">
+      <div className="flex-1 overflow-y-auto no-scrollbar border-r border-[var(--border)]">
         
         {/* Header Premium */}
-        <div className="sticky top-0 z-20 backdrop-blur-3xl bg-black/60 border-b border-[#1f1f1f] p-6 lg:p-8 flex justify-between items-center">
+        <div className="sticky top-0 z-20 backdrop-blur-3xl bg-[var(--surface-app)]/60 border-b border-[var(--border)] p-6 lg:p-8 flex justify-between items-center">
           <div>
             <div className="flex items-center gap-3 mb-2 opacity-70">
               <Palette size={16} className="text-[#a855f7]" /> <span className="text-xs font-semibold tracking-widest uppercase">Design System &amp; DNA</span>
@@ -296,10 +297,22 @@ export default function BrandKitPage() {
           {/* Seção: Logomarcas */}
           <Section glass title="Logos e Identidade Gráfica" desc="Sincronize variações da logo para interfaces claras e escuras.">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input label="Logo Principal (Fundo Claro)" val={form.logo_url} set={(v) => updateForm({logo_url:v})} />
-              <Input label="Logo Inversa (Fundo Escuro)" val={form.logo_dark_url} set={(v) => updateForm({logo_dark_url:v})} />
-              <Input label="Ícone / Favicon" val={form.logo_icon_url} set={(v) => updateForm({logo_icon_url:v})} />
-              <Input label="Wordmark (Texto + Logo)" val={form.logo_light_url} set={(v) => updateForm({logo_light_url:v})} />
+              <div>
+                <p className="text-xs text-[var(--text-secondary)] mb-2 font-medium">Logo Principal (Fundo Claro)</p>
+                <MediaUploader folderPath={workspace?.id} value={form.logo_url} onChange={(v) => updateForm({logo_url:v})} label="Upload Logo Claro" />
+              </div>
+              <div>
+                <p className="text-xs text-[var(--text-secondary)] mb-2 font-medium">Logo Inversa (Fundo Escuro)</p>
+                <MediaUploader folderPath={workspace?.id} value={form.logo_dark_url} onChange={(v) => updateForm({logo_dark_url:v})} label="Upload Logo Escuro" />
+              </div>
+              <div>
+                <p className="text-xs text-[var(--text-secondary)] mb-2 font-medium">Ícone / Favicon</p>
+                <MediaUploader folderPath={workspace?.id} value={form.logo_icon_url} onChange={(v) => updateForm({logo_icon_url:v})} label="Upload Ícone" />
+              </div>
+              <div>
+                <p className="text-xs text-[var(--text-secondary)] mb-2 font-medium">Wordmark (Texto + Logo)</p>
+                <MediaUploader folderPath={workspace?.id} value={form.logo_light_url} onChange={(v) => updateForm({logo_light_url:v})} label="Upload Wordmark" />
+              </div>
             </div>
           </Section>
 
@@ -350,7 +363,7 @@ export default function BrandKitPage() {
         COLUNA 2: PREVIEW LIVE
         ========================================
       */}
-      <div className="w-[380px] shrink-0 border-r border-[#1f1f1f] bg-[#050505] hidden xl:flex flex-col relative overflow-hidden">
+      <div className="w-[380px] shrink-0 border-r border-[var(--border)] bg-[var(--surface-app)] hidden xl:flex flex-col relative overflow-hidden">
         <style>{injectedCSS}</style>
         
         {/* Fundo do preview com degradê das cores do kit */}
@@ -358,7 +371,7 @@ export default function BrandKitPage() {
           background: `radial-gradient(circle at 50% 0%, ${form.color_primary} 0%, transparent 70%), radial-gradient(circle at 100% 100%, ${form.color_secondary} 0%, transparent 70%)`
         }} />
 
-        <div className="p-6 border-b border-[#1f1f1f] z-10 bg-black/50 backdrop-blur-md">
+        <div className="p-6 border-b border-[var(--border)] z-10 bg-[var(--surface-app)]/50 backdrop-blur-md">
           <h2 className="text-sm font-bold flex gap-2 items-center text-white"><LayoutTemplate size={16} /> Live Preview</h2>
           <p className="text-xs text-stone-400 mt-1">Sua interface será gerada com estes tokens exatos.</p>
         </div>
@@ -413,7 +426,7 @@ export default function BrandKitPage() {
         COLUNA 3: HISTÓRICO & STATUS
         ========================================
       */}
-      <div className="w-[300px] shrink-0 bg-[#0a0a0a] hidden 2xl:flex flex-col">
+      <div className="w-[300px] shrink-0 bg-[var(--surface-app)] hidden 2xl:flex flex-col">
         <div className="p-6 border-b border-[#1f1f1f]">
           <h2 className="text-sm font-bold flex gap-2 items-center text-white"><History size={16} /> Versões &amp; Auditoria</h2>
         </div>
@@ -431,7 +444,7 @@ export default function BrandKitPage() {
             </div>
           </div>
 
-          <div className="bg-[#111] p-4 rounded-xl border border-[#222]">
+          <div className="bg-[var(--surface-2)] p-4 rounded-xl border border-[var(--border)]">
             <p className="text-xs font-bold mb-3 flex items-center gap-1.5"><CheckCircle2 className="text-[#a855f7]" size={14} /> Checklist do Motor</p>
             <ul className="text-xs space-y-2 text-stone-400">
               <li className={form.color_primary !== '#7C3AED' ? 'text-green-400' : ''}>• Paleta personalizada {form.color_primary !== '#7C3AED' ? '✓' : '(padrão)'}</li>
@@ -441,7 +454,7 @@ export default function BrandKitPage() {
           </div>
 
           {wsBrandKit && (
-            <div className="bg-[#0d0d0d] p-4 rounded-xl border border-[#1a1a1a]">
+            <div className="bg-[var(--surface-2)] p-4 rounded-xl border border-[var(--border)]">
               <p className="text-[10px] font-mono text-stone-500 mb-2 uppercase tracking-widest">Schema real no banco</p>
               <pre className="text-[10px] text-stone-400 overflow-auto">
 {`colors.primary: "${form.color_primary}"
@@ -474,7 +487,7 @@ interface BaseProps { label?: string; val: string; set: (v: string) => void; }
 const ColorPicker = ({ label, val, set }: BaseProps) => (
   <div>
     <label className="block text-[10px] font-bold mb-2 uppercase tracking-widest text-[#777] font-mono">{label}</label>
-    <div className="flex bg-[#1a1a1a] border border-[var(--border)] rounded-xl overflow-hidden focus-within:border-[var(--sw-accent)] transition-colors p-1.5 pr-3 items-center gap-2">
+    <div className="flex bg-[var(--surface-2)] border border-[var(--border)] rounded-xl overflow-hidden focus-within:border-[var(--sw-accent)] transition-colors p-1.5 pr-3 items-center gap-2">
       <input type="color" value={val} onChange={e => set(e.target.value)} className="w-8 h-8 rounded shrink-0 border-0 bg-transparent cursor-pointer" />
       <input type="text" value={val} onChange={e => set(e.target.value)} className="w-full bg-transparent text-xs text-white outline-none font-mono tracking-wider font-semibold" />
     </div>

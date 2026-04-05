@@ -59,7 +59,7 @@ export default function BioLinkPage() {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
   const selectedBlock = useMemo(() => blocks.find((b) => b.id === selectedBlockId) || null, [blocks, selectedBlockId]);
-  const publicUrl = bioLink?.slug ? `https://biolink.cerebro.io/${bioLink.slug}` : null;
+  const publicUrl = bioLink?.slug ? `${window.location.origin}/b/${bioLink.slug}` : null;
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -175,6 +175,17 @@ export default function BioLinkPage() {
            </div>
 
            <div className="flex items-center gap-4">
+             <button 
+               onClick={() => {
+                 if (publicUrl) window.open(publicUrl, '_blank');
+                 else toast.error("Configure um slug primeiro!");
+               }}
+               className="p-2.5 text-stone-400 hover:text-white bg-[#111] hover:bg-[#222] rounded-full transition-all flex items-center gap-2 border border-[#222]"
+               title="Pre-Visualizar"
+             >
+               <Eye size={18}/>
+             </button>
+
              <button onClick={() => navigate('../biolink-crm')} className="px-4 py-2 text-xs font-bold text-stone-400 hover:text-white bg-[#111] hover:bg-[#222] rounded-full transition-all flex items-center gap-2">
                <Users size={14}/> Smart CRM
              </button>
@@ -182,7 +193,7 @@ export default function BioLinkPage() {
                <Activity size={14}/> Analytics View
              </button>
              
-             <button onClick={handlePublish} disabled={isPublishing || !canEdit} className="bg-white hover:bg-stone-200 text-black font-bold text-sm px-6 py-2.5 rounded-full flex items-center gap-2 transition-transform hover:scale-105 shadow-[0_0_20px_rgba(255,255,255,0.1)] active:scale-95 ml-4">
+             <button onClick={handlePublish} disabled={isPublishing || !canEdit} className="bg-white hover:bg-stone-200 text-black font-bold text-sm px-6 py-2.5 rounded-full flex items-center gap-2 transition-transform hover:scale-105 shadow-[0_0_20px_rgba(255,255,255,0.1)] active:scale-95 ml-2">
                 {isPublishing ? <Sparkles size={16} className="animate-spin text-[#a855f7]"/> : <UploadCloud size={16}/>}
                 Push Live
              </button>

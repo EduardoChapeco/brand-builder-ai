@@ -56,24 +56,30 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      // Load workspace + member role
-      const { data, error: wsError } = await supabase
+      // Load workspace (RLS allows if owner or member)
+      const { data: wsData, error: wsError } = await supabase
         .from("workspaces")
-        .select(
-          `id, name, slug, logo_url, plan, status,
-          trial_ends_at, settings, created_at, updated_at,
-          workspace_members!inner(role)`,
-        )
+        .select(`
+          id, name, slug, logo_url, plan, status,
+          trial_ends_at, settings, created_at, updated_at
+        `)
         .eq("id", workspaceId)
-        .eq("workspace_members.user_id", user.id)
         .single();
 
       if (wsError) throw wsError;
-      if (!data) throw new Error("Workspace não encontrado ou acesso negado");
+      if (!wsData) throw new Error("Workspace não encontrado ou acesso negado");
 
-      setWorkspace(data as unknown as Workspace);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      setRole((data as any).workspace_members?.[0]?.role ?? null);
+      setWorkspace(wsData as unknown as Workspace);
+
+      // Load member role separately (non-fatal if missing, fallback to 'viewer' if owner)
+      const { data: memberData } = await supabase
+        .from("workspace_members")
+        .select("role")
+        .eq("workspace_id", workspaceId)
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      setRole(memberData?.role ?? null);
 
       // Load brand kit and briefing in parallel (non-fatal if missing)
       const [bkResult, brResult] = await Promise.all([
@@ -91,21 +97,22 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
       setBrandKit(bkResult.data as unknown as BrandKit | null);
       setBriefing(brResult.data as unknown as Briefing | null);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Erro desconhecido";
-      const code = "ERR_WORKSPACE_LOAD_001";
+    } catch (err: any) {
+      const message = err?.message || (err instanceof Error ? err.message : "Erro desconhecido");
+      const details = err?.details || err?.hint || JSON.stringify(err);
+      const code = err?.code || "ERR_WORKSPACE_LOAD_001";
 
       setError(message);
       setErrorCode(code);
 
-      if (message.includes("não encontrado ou acesso negado")) {
+      if (message.includes("não encontrado ou acesso negado") || message.includes("JSON object requested")) {
         navigate('/workspaces');
       } else {
         await logError({
           code,
           module: "workspace",
           message: `Não foi possível carregar o workspace ${workspaceId}`,
-          detail: { error: message, workspaceId },
+          detail: { error: message, details, workspaceId },
           workspaceId,
         });
       }

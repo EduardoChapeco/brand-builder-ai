@@ -3,6 +3,44 @@ import type { Publication, PublicationSection } from '@/types/app.types';
 
 export const SITE_SERVICE = {
   /**
+   * Lista todas as publicações do tipo 'site' no workspace
+   */
+  async listSites(workspaceId: string) {
+    const { data: publications, error } = await supabase
+      .from('publications')
+      .select('*')
+      .eq('workspace_id', workspaceId)
+      .eq('type', 'site')
+      .order('updated_at', { ascending: false });
+
+    if (error) throw error;
+
+    // Converte para um formato compatível ou retorna direto
+    return publications as Publication[];
+  },
+
+  /**
+   * Cria uma nova publicação do tipo 'site'
+   */
+  async createSitePublication(workspaceId: string, name: string) {
+    const { data, error } = await supabase
+      .from('publications')
+      .insert({
+        workspace_id: workspaceId,
+        type: 'site',
+        name,
+        slug: name.toLowerCase().replace(/ /g, '-'),
+        status: 'draft',
+        config: { theme_id: 'dark' },
+        seo: { title: name, description: '' }
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as Publication;
+  },
+  /**
    * Carrega os dados de um site (publication + seções)
    */
   async getSiteData(id: string, workspaceId: string) {
@@ -96,5 +134,30 @@ export const SITE_SERVICE = {
 
     if (error) throw error;
     return true;
+  },
+
+  /**
+   * Carrega os dados de um site pelo slug (público)
+   */
+  async getSiteBySlug(slug: string) {
+    const { data: publication, error: pubError } = await supabase
+      .from('publications')
+      .select('*')
+      .eq('slug', slug)
+      .eq('type', 'site')
+      .maybeSingle();
+
+    if (pubError) throw pubError;
+    if (!publication) return null;
+
+    const { data: sections, error: secError } = await supabase
+      .from('publication_sections')
+      .select('*')
+      .eq('publication_id', publication.id)
+      .order('position', { ascending: true });
+
+    if (secError) throw secError;
+
+    return { publication: publication as Publication, sections: (sections || []) as PublicationSection[] };
   }
 };

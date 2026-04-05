@@ -9,6 +9,10 @@ import { SwButton, SwBadge, SwInput, SwSpinner } from '@/components/shared/SwCom
 import { SwHelpSheet } from '@/components/shared/SwHelpSheet';
 import { useWebsiteBuilder } from '@/hooks/useWebsiteBuilder';
 import { cn } from '@/lib/utils';
+import WebsiteSectionRenderer from '@/components/website/WebsiteSectionRenderer';
+import WebsiteSectionInspector from '@/components/website/WebsiteSectionInspector';
+import type { WebsiteSectionRecord } from '@/lib/websites/types';
+import type { PublicationSection } from '@/types/app.types';
 
 export default function SiteEditorPage() {
   const { workspaceId, siteId } = useParams();
@@ -40,9 +44,22 @@ export default function SiteEditorPage() {
     { title: 'Injeção de Marca', description: 'As cores do seu Brand Kit são aplicadas automaticamente em cada seção.', icon: Layers }
   ];
 
+  const mapSectionToRecord = (s: PublicationSection): WebsiteSectionRecord => ({
+    id: s.id,
+    section_type: s.section_type,
+    content: s.content,
+    bg_type: (s.styles?.bg_type as any) || 'color',
+    bg_value: (s.styles?.bg_value as any) || null,
+    padding_top: (s.styles?.padding_top as any) || 'md',
+    padding_bottom: (s.styles?.padding_bottom as any) || 'md',
+    scroll_animation: (s.styles?.scroll_animation as any) || 'none',
+    is_visible: s.is_active,
+    version: 1
+  });
+
   if (loading) {
     return (
-      <div className="fixed inset-0 bg-[#0a0a0f] flex items-center justify-center z-50">
+      <div className="fixed inset-0 bg-[var(--surface-app)] flex items-center justify-center z-50">
         <div className="text-center space-y-4">
           <SwSpinner className="w-12 h-12 border-t-[#a855f7]" />
           <p className="text-stone-500 font-bold text-xs uppercase tracking-widest animate-pulse">Iniciando Canvas Canonical...</p>
@@ -52,9 +69,9 @@ export default function SiteEditorPage() {
   }
 
   return (
-    <div className="fixed inset-0 bg-[#0a0a0f] flex flex-col z-50 overflow-hidden font-sans">
+    <div className="fixed inset-0 bg-[var(--surface-app)] flex flex-col z-50 overflow-hidden font-sans">
       {/* Topbar do Editor */}
-      <header className="h-16 border-b border-white/5 bg-black/40 backdrop-blur-xl flex items-center justify-between px-6 z-20">
+      <header className="h-16 border-b border-[var(--border)] bg-[var(--surface-app)]/40 backdrop-blur-xl flex items-center justify-between px-6 z-20">
          <div className="flex items-center gap-4">
             <button 
               onClick={() => navigate(`/workspace/${workspaceId}/sites`)}
@@ -86,6 +103,16 @@ export default function SiteEditorPage() {
          </div>
 
          <div className="flex items-center gap-3">
+            <button 
+              className="p-2 text-stone-500 hover:text-white transition-all flex items-center gap-2" 
+              onClick={() => {
+                if (publication?.slug) window.open(`${window.location.origin}/s/${publication.slug}`, '_blank');
+              }}
+            >
+              <Eye size={18} />
+              <span className="text-[10px] uppercase font-bold tracking-widest hidden lg:block">Pre-Visualizar</span>
+            </button>
+
             <button className="p-2 text-stone-500 hover:text-white transition-all" onClick={() => setIsHelpOpen(true)}><HelpCircle size={20} /></button>
             
             <SwButton 
@@ -114,7 +141,7 @@ export default function SiteEditorPage() {
 
       <main className="flex-1 flex overflow-hidden">
         {/* Coluna 1 & 2: Toolbar e Estrutura */}
-        <aside className="w-80 border-r border-white/5 bg-black/20 backdrop-blur-md flex flex-col z-10 shadow-2xl">
+        <aside className="w-80 border-r border-[var(--border)] bg-[var(--surface-app)]/20 backdrop-blur-md flex flex-col z-10 shadow-2xl">
            <div className="flex border-b border-white/5 p-1 m-4 bg-white/5 rounded-2xl">
               <button 
                 onClick={() => setActiveTab('structure')} 
@@ -182,18 +209,17 @@ export default function SiteEditorPage() {
            </div>
         </aside>
 
-        {/* Coluna 3: Canvas */}
-        <section className="flex-1 bg-stone-900/50 relative overflow-hidden flex flex-col items-center justify-center p-8 lg:p-16">
+        {/* Coluna 3: Canvas — Visual Renderer Engine */}
+        <section className="flex-1 bg-stone-900/40 relative overflow-hidden flex flex-col items-center justify-center p-8 lg:p-16">
            <div 
              className={cn(
                "bg-[#0a0a0f] rounded-3xl shadow-2xl overflow-y-auto no-scrollbar transition-all duration-300 ring-1 ring-white/10",
-               device === 'desktop' ? "w-full max-w-5xl h-full" : device === 'tablet' ? "w-[768px] h-full" : "w-[390px] h-[844px]"
+               device === 'desktop' ? "w-full max-w-5xl h-full" : device === 'tablet' ? "w-[768px] h-full" : "w-[390px] h-844px]"
              )}
            >
-              {/* Site Content Simulation */}
               <div className="w-full">
                  {sections.length === 0 ? (
-                   <div className="p-12 text-center space-y-6">
+                   <div className="p-12 text-center py-32 space-y-6">
                       <div className="animate-pulse flex flex-col items-center gap-4">
                          <div className="w-20 h-1 bg-[#a855f7] rounded-full mx-auto" />
                          <h2 className="text-4xl lg:text-6xl font-black text-white tracking-tighter">O Site Está Ganhando Vida</h2>
@@ -201,43 +227,23 @@ export default function SiteEditorPage() {
                       </div>
                    </div>
                  ) : (
-                   <div className="divide-y divide-white/5">
-                      {sections.map((section) => (
-                        <div 
-                          key={section.id} 
-                          className={cn(
-                            "p-12 transition-all relative group",
-                            selectedSectionId === section.id && "bg-[#a855f7]/5"
-                          )}
-                        >
-                           <div className="space-y-4">
-                              <h2 className="text-3xl font-black text-white" style={{ color: 'var(--sw-primary)' }}>{section.content.headline as string || 'Sem Título'}</h2>
-                              <p className="text-stone-400" style={{ fontFamily: 'var(--sw-font-body)' }}>{section.content.subheadline as string || 'Sem subtítulo.'}</p>
-                           </div>
-                           
-                           {section.section_type === 'features' && (
-                             <div className="grid grid-cols-3 gap-4 mt-8">
-                                {[1,2,3].map(i => (
-                                  <div key={i} className="p-6 rounded-2xl bg-white/5 border border-white/5" style={{ borderRadius: 'var(--sw-radius)' }}>
-                                    <div className="w-10 h-10 bg-[var(--sw-accent)]/20 rounded-xl flex items-center justify-center text-[var(--sw-accent)] mb-4"><Zap size={18} /></div>
-                                    <h4 className="text-white font-bold text-sm">Feature {i}</h4>
-                                  </div>
-                                ))}
-                             </div>
-                           )}
-                           
-                           {/* Overlay de edição rápida */}
-                           <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
-                              <SwButton variant="ghost" size="sm" onClick={() => setSelectedSectionId(section.id)}>Configurar</SwButton>
-                           </div>
-                        </div>
+                   <div className="w-full">
+                      {sections.map(section => (
+                        <WebsiteSectionRenderer
+                          key={section.id}
+                          section={mapSectionToRecord(section)}
+                          previewMode={device}
+                          selected={selectedSectionId === section.id}
+                          onSelect={() => setSelectedSectionId(section.id)}
+                          onUpdateContent={(patch) => updateSectionContent(section.id, patch)}
+                        />
                       ))}
                    </div>
                  )}
               </div>
            </div>
-           
-           {/* Floating Tools Bottons */}
+
+           {/* Ferramentas Flutuantes Simples */}
            <div className="fixed bottom-12 bg-black/60 backdrop-blur-2xl border border-white/10 p-2 rounded-2xl flex gap-1 shadow-2xl z-30 ring-1 ring-white/10">
               <button className="p-3 text-stone-500 hover:text-white transition-all"><MousePointer2 size={18} /></button>
               <button className="p-3 text-[#a855f7] bg-[#a855f7]/10 rounded-xl transition-all"><Type size={18} /></button>
@@ -246,61 +252,24 @@ export default function SiteEditorPage() {
            </div>
         </section>
 
-        {/* Coluna 4: Inspeção */}
-        <aside className={cn("w-80 border-l border-white/5 bg-black/20 backdrop-blur-md flex flex-col z-10 transition-all", selectedSectionId ? "mr-0" : "-mr-80")}>
-           <div className="p-6 border-b border-white/5">
-              <div className="flex items-center justify-between mb-4">
-                 <h2 className="text-sm font-bold text-white uppercase tracking-widest">Inspetor</h2>
-                 <button onClick={() => setSelectedSectionId(null)} className="text-stone-500 hover:text-white"><Plus size={18} className="rotate-45" /></button>
-              </div>
-              <p className="text-[10px] text-stone-500 font-bold uppercase tracking-widest">
-                Editando: {selectedSection?.section_type}
-              </p>
-           </div>
-
-           {selectedSection && (
-             <div className="flex-1 overflow-y-auto p-6 space-y-8 no-scrollbar">
-                <section className="space-y-4">
-                   <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-stone-500 uppercase tracking-widest ml-1">Título</label>
-                      <SwInput 
-                        value={selectedSection.content.headline as string || ''} 
-                        onChange={(e) => updateSectionContent(selectedSection.id, { headline: e.target.value })}
-                        className="bg-white/5 border-white/10 rounded-xl" 
-                      />
-                   </div>
-                   <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-stone-500 uppercase tracking-widest ml-1">Subtítulo</label>
-                      <SwInput 
-                        value={selectedSection.content.subheadline as string || ''} 
-                        onChange={(e) => updateSectionContent(selectedSection.id, { subheadline: e.target.value })}
-                        className="bg-white/5 border-white/10 rounded-xl" 
-                      />
-                   </div>
-                </section>
-
-                <section className="space-y-4">
-                   <label className="text-[10px] font-bold text-stone-500 uppercase tracking-widest">Ações da Seção</label>
-                   <div className="space-y-2">
-                     <SwButton 
-                       variant="ghost" 
-                       className="w-full h-10 border-white/5 text-stone-400"
-                       onClick={() => setSelectedSectionId(null)}
-                     >
-                       Concluir Edição
-                     </SwButton>
-                   </div>
-                </section>
-
-                <section className="pt-8 space-y-4">
-                   <SwButton 
-                     variant="ghost" 
-                     className="w-full border-red-500/20 text-red-500 hover:bg-red-500/10"
-                     onClick={() => removeSection(selectedSection.id)}
-                   >
-                      <Trash2 size={16} /> Excluir Seção
-                   </SwButton>
-                </section>
+        {/* Coluna 4: Inspector sidepanel */}
+        <aside className={cn(
+          "w-[340px] lg:w-[420px] border-l border-white/5 bg-[var(--surface-app)] flex flex-col z-10 overflow-y-auto no-scrollbar py-6 transition-all",
+          selectedSectionId ? "mr-0" : "-mr-[425px]"
+        )}>
+           {publication && (
+             <div className="px-6">
+                <WebsiteSectionInspector
+                  website={publication as any}
+                  activePage={null}
+                  selectedSection={selectedSection ? mapSectionToRecord(selectedSection) : null}
+                  canEdit={true}
+                  updateWebsite={(patch) => {}} 
+                  updatePage={() => {}}
+                  updateSection={(id, patch) => updateSection(id, patch as any)}
+                  updateSectionContent={(id, patch) => updateSectionContent(id, patch)}
+                  onChangeStatus={() => {}}
+                />
              </div>
            )}
         </aside>

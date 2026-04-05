@@ -226,7 +226,7 @@ export default function BriefingPage() {
   const scoreColor = score >= 80 ? '#10b981' : score >= 50 ? '#f59e0b' : '#ef4444';
 
   return (
-    <div className="flex h-full bg-[#0a0a0a] text-white overflow-hidden">
+    <div className="flex h-full bg-[var(--surface-app)] text-[var(--text-primary)] overflow-hidden">
       {/* 
         ========================================
         COLUNA 1: EDITOR (Estratégia)
@@ -235,7 +235,7 @@ export default function BriefingPage() {
       <div className="flex-1 overflow-y-auto no-scrollbar border-r border-[#1f1f1f]">
         
         {/* Header Premium */}
-        <div className="sticky top-0 z-20 backdrop-blur-3xl bg-black/60 border-b border-[#1f1f1f] p-6 lg:p-8 flex justify-between items-center">
+        <div className="sticky top-0 z-20 backdrop-blur-3xl bg-[var(--surface-app)]/60 border-b border-[var(--border)] p-6 lg:p-8 flex justify-between items-center">
           <div>
             <div className="flex items-center gap-3 mb-2 opacity-70">
               <BrainCircuit size={16} className="text-[#a855f7]" /> <span className="text-xs font-semibold tracking-widest uppercase">Estratégia Engine</span>
@@ -267,7 +267,7 @@ export default function BriefingPage() {
             <p className="text-xs font-mono text-stone-500 uppercase tracking-widest">Completude do DNA</p>
             <p className="text-sm font-bold" style={{ color: scoreColor }}>{score}%</p>
           </div>
-          <div className="h-1.5 bg-[#1a1a1a] rounded-full overflow-hidden">
+          <div className="h-1.5 bg-[var(--surface-2)] rounded-full overflow-hidden">
             <div
               className="h-full rounded-full transition-all duration-700"
               style={{ width: `${score}%`, background: `linear-gradient(to right, ${scoreColor}88, ${scoreColor})` }}
@@ -359,8 +359,8 @@ export default function BriefingPage() {
         COLUNA 2: PAINEL LATERAL (Score & CCP)
         ========================================
       */}
-      <div className="w-[320px] shrink-0 bg-[#050505] hidden xl:flex flex-col">
-        <div className="p-6 border-b border-[#1f1f1f]">
+      <div className="w-[320px] shrink-0 bg-[var(--surface-app)] hidden xl:flex flex-col">
+        <div className="p-6 border-b border-[var(--border)]">
           <h2 className="text-sm font-bold flex gap-2 items-center text-white">
             <BarChart3 size={16} /> Radar do DNA
           </h2>
@@ -371,7 +371,7 @@ export default function BriefingPage() {
           {/* Score visual */}
           <div className="relative flex items-center justify-center">
             <svg className="w-32 h-32" viewBox="0 0 36 36">
-              <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#1a1a1a" strokeWidth="3" />
+              <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="var(--border)" strokeWidth="3" />
               <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke={scoreColor} strokeWidth="3" strokeDasharray={`${score}, 100`} strokeLinecap="round" style={{ transition: 'stroke-dasharray 0.7s ease' }} />
             </svg>
             <div className="absolute text-center">
@@ -410,7 +410,7 @@ export default function BriefingPage() {
           )}
 
           {/* Uso do CCP */}
-          <div className="bg-[#0d0d0d] border border-[#1a1a1a] rounded-xl p-4">
+          <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-4">
             <p className="text-[10px] text-stone-500 font-mono mb-2 uppercase">Schema real no banco</p>
             <pre className="text-[10px] text-stone-500 overflow-auto leading-relaxed">
 {`company.name: "${form.company_name || '—'}"
@@ -423,7 +423,7 @@ content.keywords: [${form.keywords.length} itens]`}
         </div>
 
         {/* Users section */}
-        <div className="p-6 border-t border-[#1f1f1f]">
+        <div className="p-6 border-t border-[var(--border)]">
           <div className="flex items-center gap-3 mb-3">
             <Users size={14} className="text-stone-500" />
             <p className="text-xs font-bold text-stone-400">Módulos que usam este briefing</p>

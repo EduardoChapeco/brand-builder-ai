@@ -36,6 +36,7 @@ import OnboardingPage from '@/pages/OnboardingPage';
 import SettingsPage from '@/pages/SettingsPage';
 import SiteBuilderPage from '@/pages/SiteBuilderPage';
 import SiteEditorPage from '@/pages/SiteEditorPage';
+import SitePublicPage from '@/pages/SitePublicPage';
 import SupportPage from '@/pages/SupportPage';
 import WorkspacesPage from '@/pages/WorkspacesPage';
 import AdminGuard from '@/components/shared/AdminGuard';
@@ -72,6 +73,7 @@ const App = () => (
           <Route path="/onboarding" element={<OnboardingPage />} />
           <Route path="/b/:slug" element={<BioLinkPublicPage />} />
           <Route path="/l/:slug" element={<BioLinkPublicPage />} />
+          <Route path="/s/:slug" element={<SitePublicPage />} />
  
            {/* === ADMIN AREA === */}
            <Route

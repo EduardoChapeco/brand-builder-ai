@@ -10,7 +10,7 @@ interface SwWorkspace {
   id: string;
   name: string;
   slug: string;
-  avatar_url: string | null;
+  logo_url: string | null;
   created_at: string;
   brand_color?: string;
 }
@@ -49,7 +49,7 @@ const WorkspacesPage = () => {
         // 2. Buscar workspaces + brand kits em paralelo
         const [wsRes, bkRes] = await Promise.all([
           fromTable('workspaces')
-            .select('id,name,slug,avatar_url,created_at')
+            .select('id,name,slug,logo_url,created_at')
             .in('id', wsIds)
             .order('created_at', { ascending: false }),
           fromTable('brand_kits')
@@ -73,9 +73,17 @@ const WorkspacesPage = () => {
         }));
 
         setWorkspaces(enriched);
-      } catch (e) {
+      } catch (e: any) {
         console.error(e);
         toast.error('Erro ao carregar workspaces Simwork');
+        const errMessage = e?.message || e?.details || JSON.stringify(e);
+        await fromTable('system_logs').insert({
+          level: 'error',
+          code: e?.code || 'ERR_WORKSPACES_PAGE',
+          module: 'workspace',
+          message: 'Falha ao carregar lista de workspaces',
+          detail: { error: errMessage }
+        });
       } finally {
         setIsLoading(false);
       }
@@ -177,8 +185,8 @@ const WorkspacesPage = () => {
                         className="w-12 h-12 rounded-2xl flex items-center justify-center text-base font-bold text-white mb-4"
                         style={{ background: color }}
                       >
-                        {ws.avatar_url ? (
-                          <img src={ws.avatar_url} alt={ws.name} className="w-full h-full object-cover rounded-2xl" />
+                        {ws.logo_url ? (
+                          <img src={ws.logo_url} alt={ws.name} className="w-full h-full object-cover rounded-2xl" />
                         ) : getInitials(ws.name)}
                       </div>
 

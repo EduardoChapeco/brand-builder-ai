@@ -11,6 +11,7 @@ import type {
   WebsiteStatus,
 } from '@/lib/websites/types';
 import { cn } from '@/lib/utils';
+import { MediaUploader } from '@/components/shared/MediaUploader';
 
 type InspectorTab = 'content' | 'style' | 'animation';
 
@@ -539,12 +540,20 @@ export default function WebsiteSectionInspector({
             </select>
           </Field>
           <Field label="Background value">
-            <Input
-              value={selectedSection.bg_value || ''}
-              onChange={(event) => updateSection(selectedSection.id, { bg_value: event.target.value || null })}
-              disabled={!canEdit}
-              className="shadow-none"
-            />
+            {selectedSection.bg_type === 'image' ? (
+              <MediaUploader
+                value={selectedSection.bg_value || ''}
+                onChange={(url) => updateSection(selectedSection.id, { bg_value: url })}
+                label="Imagem de Fundo"
+              />
+            ) : (
+              <Input
+                value={selectedSection.bg_value || ''}
+                onChange={(event) => updateSection(selectedSection.id, { bg_value: event.target.value || null })}
+                disabled={!canEdit}
+                className="shadow-none"
+              />
+            )}
           </Field>
           <div className="grid gap-4 md:grid-cols-2">
             <Field label="Padding top">
