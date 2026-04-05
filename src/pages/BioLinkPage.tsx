@@ -177,8 +177,8 @@ export default function BioLinkPage() {
            <div className="flex items-center gap-4">
              <button 
                onClick={() => {
-                 if (publicUrl) window.open(publicUrl, '_blank');
-                 else toast.error("Configure um slug primeiro!");
+                 if (bioLink?.slug) window.open(`${window.location.origin}/b/${bioLink.slug}`, '_blank');
+                 else toast.error("Salve o BioLink para gerar o slug!");
                }}
                className="p-2.5 text-stone-400 hover:text-white bg-[#111] hover:bg-[#222] rounded-full transition-all flex items-center gap-2 border border-[#222]"
                title="Pre-Visualizar"

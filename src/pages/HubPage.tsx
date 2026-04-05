@@ -119,7 +119,9 @@ export default function HubPage() {
       <div className="text-center max-w-2xl mx-auto space-y-4">
         <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/10 rounded-full">
            <Sparkles size={14} className="text-amber-400" />
-           <span className="text-[10px] font-bold uppercase tracking-widest text-stone-400">Creative Hub Simwork</span>
+           <span className="text-[10px] font-bold uppercase tracking-widest text-stone-400">
+             {workspace?.name ? `${workspace.name} Command Center` : "Creative Command Hub"}
+           </span>
         </div>
         <h1 className="text-5xl font-bold text-white font-display tracking-tight leading-tight">
           O que vamos <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#10b981] via-[#3b82f6] to-[#a855f7]">construir</span> hoje?
